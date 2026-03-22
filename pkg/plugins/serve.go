@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/mwantia/forge/pkg/log"
 )
 
 // Handshake is the plugin handshake configuration.
@@ -17,15 +16,12 @@ var Handshake = goplugin.HandshakeConfig{
 }
 
 // DriverContextFactory creates a Driver with context support (external plugins only).
-type DriverContextFactory func(ctx func() context.Context, log log.Logger) Driver
+type DriverContextFactory func(ctx func() context.Context, log hclog.Logger) Driver
 
 // Serve starts the plugin process and serves the Driver over gRPC.
 // A single Driver can support multiple plugin types (provider, memory, channel, tools).
 func Serve(df DriverFactory) {
-	logger := log.New(
-		log.WithName("plugin"),
-		log.WithLogLevel("TRACE"),
-	)
+	logger := hclog.Default().Named("plugin")
 	driver := df(logger)
 
 	serveDriver(driver)
@@ -33,10 +29,7 @@ func Serve(df DriverFactory) {
 
 // ServeContext starts the plugin with context support for cancellation.
 func ServeContext(dcf DriverContextFactory) {
-	logger := log.New(
-		log.WithName("plugin"),
-		log.WithLogLevel("TRACE"),
-	)
+	logger := hclog.Default().Named("plugin")
 
 	ctx := func() context.Context {
 		return context.Background()
@@ -61,12 +54,12 @@ func serveDriver(driver Driver) {
 }
 
 // ServeWithLogger starts the plugin with a custom logger.
-func ServeWithLogger(df DriverFactory, logger log.Logger) {
+func ServeWithLogger(df DriverFactory, logger hclog.Logger) {
 	serveDriver(df(logger))
 }
 
 // ServeContextWithLogger starts the plugin with context support and a custom logger.
-func ServeContextWithLogger(dcf DriverContextFactory, logger log.Logger) {
+func ServeContextWithLogger(dcf DriverContextFactory, logger hclog.Logger) {
 	ctx := func() context.Context {
 		return context.Background()
 	}

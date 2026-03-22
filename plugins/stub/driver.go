@@ -3,25 +3,27 @@ package stub
 import (
 	"context"
 
-	"github.com/mwantia/forge/pkg/log"
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
+const PluginName = "stub"
+
 func init() {
-	plugins.Register("stub", NewStubDriver)
+	plugins.Register(PluginName, NewStubDriver)
 }
 
 // StubDriver is a reference implementation of the Driver interface.
 // It demonstrates how to implement a multi-type plugin.
 type StubDriver struct {
-	log  log.Logger
+	log  hclog.Logger
 	caps *plugins.DriverCapabilities
 }
 
 // NewStubDriver creates a new stub driver that supports all plugin types.
-func NewStubDriver(log log.Logger) plugins.Driver {
+func NewStubDriver(log hclog.Logger) plugins.Driver {
 	return &StubDriver{
-		log: log,
+		log: log.Named(PluginName),
 		caps: &plugins.DriverCapabilities{
 			Types: []string{
 				plugins.PluginTypeProvider,
@@ -50,7 +52,7 @@ func NewStubDriver(log log.Logger) plugins.Driver {
 
 // Lifecycle methods
 func (d *StubDriver) Name() string {
-	return "stub-driver"
+	return PluginName
 }
 
 func (d *StubDriver) ProbePlugin(ctx context.Context) (bool, error) {

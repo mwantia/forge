@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	pluginloader "github.com/mwantia/forge/internal/plugin"
-	"github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
 // Sandbox provides a testing environment for plugins.
 type Sandbox struct {
-	log    log.Logger
+	log    hclog.Logger
 	loader *pluginloader.Loader
 }
 
@@ -47,9 +47,10 @@ type Options struct {
 
 // New creates a new Sandbox instance.
 func New() *Sandbox {
+	log := hclog.Default().Named("sandbox")
 	return &Sandbox{
-		log:    log.Named("sandbox"),
-		loader: pluginloader.NewLoader(),
+		log:    log,
+		loader: pluginloader.NewLoader(log),
 	}
 }
 
@@ -155,6 +156,8 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
 
+	s.log.Debug("Available tools from plugins", "tools", allTools)
+
 	// If no specific tools requested, use all loaded tools plugins
 	toolPluginsToUse := opts.Tools
 	if len(toolPluginsToUse) == 0 {
@@ -177,6 +180,10 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 					Parameters:  t.Parameters,
 				})
 				toolToPlugin[t.Name] = toolPlugin
+
+				// Debug: log each tool definition
+				paramsJSON, _ := json.Marshal(t.Parameters)
+				s.log.Debug("Tool definition", "name", t.Name, "description", t.Description, "parameters", string(paramsJSON))
 			}
 		}
 	}
@@ -200,16 +207,30 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 			Tools:       reqTools,
 		}
 
+		// Debug: log the request before sending
+		s.log.Debug("Generate request", "model", modelName, "tools", len(reqTools), "messages", len(messages))
+		for j, msg := range messages {
+			s.log.Debug("Message", "index", j, "role", msg.Role, "content_len", len(msg.Content), "tool_calls", len(msg.ToolCalls))
+		}
+		for j, tool := range reqTools {
+			paramsJSON, _ := json.Marshal(tool.Parameters)
+			s.log.Debug("Tool in request", "index", j, "name", tool.Name, "parameters", string(paramsJSON))
+		}
+
 		resp, err := provider.Generate(ctx, req)
 		if err != nil {
 			return nil, fmt.Errorf("generation failed: %w", err)
 		}
 
-		// Add assistant message to history
-		messages = append(messages, plugins.Message{
+		// Add assistant message to history (including tool calls if present)
+		assistantMsg := plugins.Message{
 			Role:    resp.Role,
 			Content: resp.Content,
-		})
+		}
+		if len(resp.ToolCalls) > 0 {
+			assistantMsg.ToolCalls = resp.ToolCalls
+		}
+		messages = append(messages, assistantMsg)
 
 		if resp.Usage != nil {
 			result.TokensUsed += resp.Usage.InputTokens + resp.Usage.OutputTokens
@@ -229,8 +250,10 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 			if !ok {
 				s.log.Warn("No plugin found for tool '%s'", tc.Name)
 				messages = append(messages, plugins.Message{
-					Role:    "tool",
-					Content: fmt.Sprintf(`{"error": "tool not found: %s"}`, tc.Name),
+					Role:       "tool",
+					Content:    fmt.Sprintf(`{"error": "tool not found: %s"}`, tc.Name),
+					ToolCallID: tc.ID,
+					Name:       tc.Name,
 				})
 				continue
 			}
@@ -242,8 +265,10 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 			if err != nil {
 				s.log.Warn("Tool '%s' execution failed: %v", tc.Name, err)
 				messages = append(messages, plugins.Message{
-					Role:    "tool",
-					Content: fmt.Sprintf(`{"error": %s}`, err.Error()),
+					Role:       "tool",
+					Content:    fmt.Sprintf(`{"error": %s}`, err.Error()),
+					ToolCallID: tc.ID,
+					Name:       tc.Name,
 				})
 				continue
 			}
@@ -258,8 +283,10 @@ func (s *Sandbox) Execute(ctx context.Context, opts Options) (*Result, error) {
 			// Append tool result as a message
 			resultJSON, _ := json.Marshal(execResp.Result)
 			messages = append(messages, plugins.Message{
-				Role:    "tool",
-				Content: string(resultJSON),
+				Role:       "tool",
+				Content:    string(resultJSON),
+				ToolCallID: tc.ID,
+				Name:       tc.Name,
 			})
 		}
 	}

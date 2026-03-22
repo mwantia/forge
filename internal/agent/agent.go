@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/metrics"
 	pluginloader "github.com/mwantia/forge/internal/plugin"
 	"github.com/mwantia/forge/internal/server"
-	"github.com/mwantia/forge/pkg/log"
 )
 
 type Agent struct {
@@ -17,17 +17,18 @@ type Agent struct {
 	wait     sync.WaitGroup
 	cleanups []func() error
 
-	log    log.Logger
+	log    hclog.Logger
 	cfg    config.AgentConfig
 	loader *pluginloader.Loader
 }
 
 func NewAgent(cfg config.AgentConfig) *Agent {
+	log := hclog.Default().Named("agent")
 	return &Agent{
 		cleanups: make([]func() error, 0),
-		log:      log.Named("agent"),
+		log:      log,
 		cfg:      cfg,
-		loader:   pluginloader.NewLoader(),
+		loader:   pluginloader.NewLoader(log),
 	}
 }
 
@@ -60,7 +61,7 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 	if a.cfg.Server != nil {
 		a.log.Debug("Server config set - Starting server runner...")
 
-		server, err := server.NewServer(a.cfg)
+		server, err := server.NewServer(a.cfg, a.log)
 		if err != nil {
 			return fmt.Errorf("error during server creation: %w", err)
 		}
@@ -73,7 +74,7 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 	if a.cfg.Metrics != nil {
 		a.log.Debug("Metrics config set - Starting metrics runner...")
 
-		metrics, err := metrics.NewMetrics(a.cfg)
+		metrics, err := metrics.NewMetrics(a.cfg, a.log)
 		if err != nil {
 			return fmt.Errorf("error during metrics creation: %w", err)
 		}

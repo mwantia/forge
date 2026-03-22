@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
-	"github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -18,7 +18,7 @@ func init() {
 
 // SkillsDriver implements plugins.Driver for the skills plugin.
 type SkillsToolsDriver struct {
-	log    log.Logger
+	log    hclog.Logger
 	config *SkillsToolsConfig
 	skills map[string]*Skill
 }
@@ -28,7 +28,7 @@ type SkillsToolsConfig struct {
 }
 
 // NewSkillsDriver creates a new skills driver that supports tools plugin type.
-func NewSkillsDriver(log log.Logger) plugins.Driver {
+func NewSkillsDriver(log hclog.Logger) plugins.Driver {
 	return &SkillsToolsDriver{
 		log: log.Named(PluginName),
 	}

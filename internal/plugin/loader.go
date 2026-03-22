@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl/v2"
-	"github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -23,13 +23,13 @@ type LoadResult struct {
 
 // Loader manages plugin loading and lifecycle.
 type Loader struct {
-	log     log.Logger
+	log     hclog.Logger
 	clients map[string]*plugins.Client // Plugin clients for subprocess management
 	drivers map[string]plugins.Driver  // Connected drivers
 }
 
 // NewLoader creates a new plugin loader.
-func NewLoader() *Loader {
+func NewLoader(log hclog.Logger) *Loader {
 	return &Loader{
 		log:     log.Named("plugin"),
 		clients: make(map[string]*plugins.Client),
@@ -87,7 +87,7 @@ func (l *Loader) loadPlugin(ctx context.Context, pluginDir, name string, config 
 }
 
 func (l *Loader) startPlugin(ctx context.Context, name string, cmd *exec.Cmd, config map[string]any, start time.Time) (plugins.Driver, error) {
-	client := plugins.NewClientFromCmd(cmd, l.log.Named(name))
+	client := plugins.NewClientFromCmd(cmd) // l.log.Named(name)
 
 	driver, err := client.Start(ctx)
 	if err != nil {

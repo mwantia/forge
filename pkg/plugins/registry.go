@@ -1,9 +1,9 @@
 package plugins
 
-import "github.com/mwantia/forge/pkg/log"
+import "github.com/hashicorp/go-hclog"
 
 // DriverFactory creates a Driver implementation with a logger.
-type DriverFactory func(log log.Logger) Driver
+type DriverFactory func(log hclog.Logger) Driver
 
 // registry holds all registered plugin factories.
 var registry = make(map[string]DriverFactory)

@@ -6,20 +6,20 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/server/api"
-	"github.com/mwantia/forge/pkg/log"
 )
 
 type Server struct {
-	log log.Logger
+	log hclog.Logger
 	cfg config.ServerConfig
 
 	engine *gin.Engine
 	srv    *http.Server
 }
 
-func NewServer(cfg config.AgentConfig) (*Server, error) {
+func NewServer(cfg config.AgentConfig, log hclog.Logger) (*Server, error) {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	srv := &http.Server{

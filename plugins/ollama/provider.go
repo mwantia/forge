@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -53,10 +54,30 @@ func (p *OllamaProviderPlugin) Generate(ctx context.Context, req plugins.Generat
 	if len(req.Messages) > 0 {
 		ollamaReq.Messages = make([]OllamaMessage, len(req.Messages))
 		for i, msg := range req.Messages {
-			ollamaReq.Messages[i] = OllamaMessage{
+			ollamaMsg := OllamaMessage{
 				Role:    msg.Role,
 				Content: msg.Content,
 			}
+
+			// Handle assistant messages with tool calls
+			if len(msg.ToolCalls) > 0 {
+				ollamaMsg.ToolCalls = make([]OllamaToolCall, len(msg.ToolCalls))
+				for j, tc := range msg.ToolCalls {
+					ollamaMsg.ToolCalls[j] = OllamaToolCall{
+						Function: OllamaToolCallFunction{
+							Name:      tc.Name,
+							Arguments: tc.Arguments,
+						},
+					}
+				}
+			}
+
+			// Handle tool result messages
+			if msg.ToolCallID != "" {
+				ollamaMsg.ToolCallID = msg.ToolCallID
+			}
+
+			ollamaReq.Messages[i] = ollamaMsg
 		}
 	}
 
@@ -64,16 +85,23 @@ func (p *OllamaProviderPlugin) Generate(ctx context.Context, req plugins.Generat
 	if len(req.Tools) > 0 {
 		ollamaReq.Tools = make([]OllamaTool, len(req.Tools))
 		for i, t := range req.Tools {
-			ollamaReq.Tools[i] = OllamaTool{
+			ollamaTool := OllamaTool{
 				Type: "function",
 				Function: OllamaFunction{
 					Name:        t.Name,
 					Description: t.Description,
-					Parameters:  t.Parameters,
 				},
 			}
+			// Only include parameters if not nil/empty
+			if t.Parameters != nil {
+				ollamaTool.Function.Parameters = t.Parameters
+			}
+			ollamaReq.Tools[i] = ollamaTool
 		}
 	}
+
+	// Debug: log that we're sending tools
+	p.driver.log.Debug("Sending to Ollama", "model", model, "tools_count", len(ollamaReq.Tools), "messages_count", len(ollamaReq.Messages))
 
 	// Set max tokens if specified
 	if req.MaxTokens > 0 {
@@ -98,12 +126,20 @@ func (p *OllamaProviderPlugin) Generate(ctx context.Context, req plugins.Generat
 		return nil, fmt.Errorf("failed to decode ollama response: %w", err)
 	}
 
+	fmt.Println(ollamaResp)
+
 	// Convert tool calls from Ollama format
 	var toolCalls []plugins.ToolCall
 	if len(ollamaResp.Message.ToolCalls) > 0 {
 		toolCalls = make([]plugins.ToolCall, len(ollamaResp.Message.ToolCalls))
 		for i, tc := range ollamaResp.Message.ToolCalls {
+			// Generate ID if not provided
+			id := tc.Function.Name // Use function name as ID for Ollama
+			if id == "" {
+				id = uuid.New().String()[:8]
+			}
 			toolCalls[i] = plugins.ToolCall{
+				ID:        id,
 				Name:      tc.Function.Name,
 				Arguments: tc.Function.Arguments,
 			}
@@ -125,6 +161,9 @@ func (p *OllamaProviderPlugin) doRequest(ctx context.Context, endpoint string, r
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
+
+	// Debug: log the request body
+	p.driver.log.Debug("Ollama request body", "body", string(body))
 
 	url := p.driver.config.Address + endpoint
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))

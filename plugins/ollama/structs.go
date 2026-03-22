@@ -28,9 +28,10 @@ type OllamaRequest struct {
 
 // OllamaMessage represents a message in the chat API.
 type OllamaMessage struct {
-	Role      string            `json:"role"`
-	Content   string            `json:"content"`
-	ToolCalls []OllamaToolCall  `json:"tool_calls,omitempty"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content"`
+	ToolCalls  []OllamaToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"` // For tool result messages
 }
 
 // OllamaOptions represents additional options for generation.
@@ -84,7 +85,7 @@ type OllamaTool struct {
 type OllamaFunction struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description,omitempty"`
-	Parameters  map[string]any `json:"parameters,omitempty"`
+	Parameters  map[string]any `json:"parameters,omitempty"` // Can be nil/empty for tools with no parameters
 }
 
 // OllamaToolCall represents a tool call in a response.
@@ -95,5 +96,5 @@ type OllamaToolCall struct {
 // OllamaToolCallFunction contains name and arguments.
 type OllamaToolCallFunction struct {
 	Name      string         `json:"name"`
-	Arguments map[string]any `json:"arguments"`
+	Arguments map[string]any `json:"arguments,omitempty"`
 }

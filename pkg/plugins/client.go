@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/mwantia/forge/pkg/log"
 )
 
 // ClientConfig configures how to connect to a plugin.
@@ -19,7 +18,7 @@ type ClientConfig struct {
 	Args []string
 
 	// Logger for plugin communication.
-	Logger log.Logger
+	Logger hclog.Logger
 
 	// Additional handshake configuration (optional).
 	Handshake *goplugin.HandshakeConfig
@@ -38,14 +37,6 @@ func NewClient(cfg ClientConfig) *Client {
 		handshake = *cfg.Handshake
 	}
 
-	logger := cfg.Logger
-	if logger == nil {
-		logger = log.New(
-			log.WithName("plugin-client"),
-			log.WithLogLevel("INFO"),
-		)
-	}
-
 	cmd := exec.Command(cfg.PluginPath, cfg.Args...)
 
 	client := goplugin.NewClient(&goplugin.ClientConfig{
@@ -53,48 +44,20 @@ func NewClient(cfg ClientConfig) *Client {
 		Plugins:          map[string]goplugin.Plugin{"driver": &DriverPlugin{}},
 		Cmd:              cmd,
 		AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
-		Logger:           log.NewHclogAdapter(logger),
+		Logger:           hclog.Default().Named("plugin"),
 	})
 
 	return &Client{client: client}
 }
 
 // NewClientFromCmd creates a new plugin client from an existing command.
-func NewClientFromCmd(cmd *exec.Cmd, logger log.Logger) *Client {
-	if logger == nil {
-		logger = log.New(
-			log.WithName("plugin-client"),
-			log.WithLogLevel("INFO"),
-		)
-	}
-
+func NewClientFromCmd(cmd *exec.Cmd) *Client {
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig:  Handshake,
 		Plugins:          map[string]goplugin.Plugin{"driver": &DriverPlugin{}},
 		Cmd:              cmd,
 		AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
-		Logger:           log.NewHclogAdapter(logger),
-	})
-
-	return &Client{client: client}
-}
-
-// NewClientWithHclog creates a client with an existing hclog.Logger (for compatibility).
-// Deprecated: Use NewClient with log.Logger instead.
-func NewClientWithHclog(cfg ClientConfig, hclogger hclog.Logger) *Client {
-	handshake := Handshake
-	if cfg.Handshake != nil {
-		handshake = *cfg.Handshake
-	}
-
-	cmd := exec.Command(cfg.PluginPath, cfg.Args...)
-
-	client := goplugin.NewClient(&goplugin.ClientConfig{
-		HandshakeConfig:  handshake,
-		Plugins:          map[string]goplugin.Plugin{"driver": &DriverPlugin{}},
-		Cmd:              cmd,
-		AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC},
-		Logger:           hclogger,
+		Logger:           hclog.Default().Named("plugin"),
 	})
 
 	return &Client{client: client}

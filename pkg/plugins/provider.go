@@ -34,8 +34,11 @@ type ToolCall struct {
 }
 
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`  // For assistant messages with tool calls
+	ToolCallID string    `json:"tool_call_id,omitempty"` // For tool result messages
+	Name       string    `json:"name,omitempty"`         // Tool name for tool result messages
 }
 
 type Usage struct {

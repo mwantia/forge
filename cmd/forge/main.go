@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/agent"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/plugin"
@@ -40,12 +41,14 @@ func main() {
 				return fmt.Errorf("unable to parse config: %w", err)
 			}
 
-			logger := log.New(
-				log.WithLogLevel(cfg.LogLevel),
-				log.WithName("forge"),
-				log.WithColor(!NoColorFlag),
-			)
-			log.SetDefault(logger)
+			logger := hclog.New(&hclog.LoggerOptions{
+				Name:        "forge",
+				DisableTime: true,
+				Level:       hclog.LevelFromString(cfg.LogLevel),
+				Output:      log.LogWrapper(os.Stdout, !NoColorFlag),
+				JSONFormat:  false,
+			})
+			hclog.SetDefault(logger)
 
 			ConfigFlag = cfg
 			return nil

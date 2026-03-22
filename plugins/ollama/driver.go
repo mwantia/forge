@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
-	"github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -19,13 +19,13 @@ func init() {
 
 // OllamaDriver implements plugins.Driver for the Ollama LLM provider.
 type OllamaDriver struct {
-	log    log.Logger
+	log    hclog.Logger
 	config *OllamaConfig
 	client *http.Client
 }
 
 // NewOllamaDriver creates a new Ollama driver that supports provider plugin type.
-func NewOllamaDriver(log log.Logger) plugins.Driver {
+func NewOllamaDriver(log hclog.Logger) plugins.Driver {
 	cfg := DefaultConfig()
 	return &OllamaDriver{
 		log:    log.Named(PluginName),

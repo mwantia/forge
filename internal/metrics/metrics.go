@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -14,7 +14,7 @@ import (
 )
 
 type Metrics struct {
-	log log.Logger
+	log hclog.Logger
 	cfg config.MetricsConfig
 
 	reg  *prometheus.Registry
@@ -23,7 +23,7 @@ type Metrics struct {
 	srv  *http.Server
 }
 
-func NewMetrics(cfg config.AgentConfig) (*Metrics, error) {
+func NewMetrics(cfg config.AgentConfig, log hclog.Logger) (*Metrics, error) {
 	mux := http.NewServeMux()
 	reg := prometheus.NewRegistry()
 	prom := prometheus.WrapRegistererWith(prometheus.Labels{}, reg)

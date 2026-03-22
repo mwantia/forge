@@ -195,23 +195,49 @@ func (p *SkillsToolsDriver) List(ctx context.Context) (*plugins.ListToolsRespons
 
 	tools := make([]plugins.ToolDefinition, 0, len(p.skills))
 	for name, skill := range p.skills {
-		params := make(map[string]any)
+		// Build JSON Schema format for parameters
+		properties := make(map[string]any)
+		var required []string
+
 		for paramName, param := range skill.Parameters {
-			params[paramName] = map[string]any{
-				"type":        param.Type,
-				"description": param.Description,
-				"required":    param.Required,
+			propDef := map[string]any{
+				"type": param.Type,
+			}
+			if param.Description != "" {
+				propDef["description"] = param.Description
 			}
 			if param.Default != nil {
-				params[paramName].(map[string]any)["default"] = param.Default
+				propDef["default"] = param.Default
+			}
+			properties[paramName] = propDef
+
+			if param.Required {
+				required = append(required, paramName)
 			}
 		}
 
-		tools = append(tools, plugins.ToolDefinition{
+		var params map[string]any
+		// Only include parameters if there are actual properties
+		if len(properties) > 0 {
+			params = map[string]any{
+				"type":       "object",
+				"properties": properties,
+			}
+			if len(required) > 0 {
+				params["required"] = required
+			}
+		}
+
+		toolDef := plugins.ToolDefinition{
 			Name:        name,
 			Description: skill.Description,
 			Parameters:  params,
-		})
+		}
+
+		// Debug log the tool definition
+		p.log.Debug("Tool definition", "name", name, "description", skill.Description, "params", params)
+
+		tools = append(tools, toolDef)
 	}
 
 	return &plugins.ListToolsResponse{Tools: tools}, nil
