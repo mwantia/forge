@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package plugins;
+
+option go_package = "github.com/mwantia/forge/pkg/plugins";
+
+// DriverService is the main gRPC service for plugin communication.
+// A single driver can support multiple plugin types (provider, memory, channel, tools).
+service DriverService {
+    // Lifecycle
+    rpc Name(NameRequest) returns (NameResponse);
+    rpc ProbePlugin(ProbeRequest) returns (ProbeResponse);
+    rpc GetCapabilities(CapabilitiesRequest) returns (CapabilitiesResponse);
+
+    // Lifecycle management
+    rpc OpenDriver(OpenRequest) returns (OpenResponse);
+    rpc CloseDriver(CloseRequest) returns (CloseResponse);
+
+    // Configuration
+    rpc ConfigDriver(ConfigRequest) returns (ConfigResponse);
+
+    // Plugin type accessors
+    rpc GetProviderPlugin(GetPluginRequest) returns (GetPluginResponse);
+    rpc GetMemoryPlugin(GetPluginRequest) returns (GetPluginResponse);
+    rpc GetChannelPlugin(GetPluginRequest) returns (GetPluginResponse);
+    rpc GetToolsPlugin(GetPluginRequest) returns (GetPluginResponse);
+}
+
+// ProviderService provides LLM generation capabilities
+service ProviderService {
+    rpc Generate(GenerateReq) returns (GenerateResp);
+}
+
+// MemoryService provides memory storage/retrieval capabilities
+service MemoryService {
+    rpc Store(StoreReq) returns (StoreResp);
+    rpc Retrieve(RetrieveReq) returns (RetrieveResp);
+}
+
+// ChannelService provides messaging capabilities
+service ChannelService {
+    rpc Send(SendReq) returns (SendResp);
+    rpc Receive(ReceiveReq) returns (stream MessageEvt);
+}
+
+// ToolsService provides tool listing and execution
+service ToolsService {
+    rpc List(ListToolsReq) returns (ListToolsResp);
+    rpc Execute(ExecuteReq) returns (ExecuteResp);
+}
+
+// Base lifecycle requests/responses
+message NameRequest {}
+message NameResponse {
+    string name = 1;
+}
+
+message ProbeRequest {}
+message ProbeResponse {
+    bool ok = 1;
+}
+
+message CapabilitiesRequest {}
+message CapabilitiesResponse {
+    DriverCapabilities capabilities = 1;
+}
+
+message OpenRequest {}
+message OpenResponse {}
+
+message CloseRequest {}
+message CloseResponse {}
+
+message ConfigRequest {
+    map<string, string> config = 1;
+}
+
+message ConfigResponse {}
+
+message GetPluginRequest {}
+message GetPluginResponse {
+    PluginInfo info = 1;
+}
+
+// DriverCapabilities describes what a driver supports
+message DriverCapabilities {
+    repeated string types = 1;
+    ProviderCaps provider = 2;
+    MemoryCaps memory = 3;
+    ChannelCaps channel = 4;
+    ToolsCaps tools = 5;
+}
+
+message ProviderCaps {
+    bool supports_streaming = 1;
+    bool supports_vision = 2;
+}
+
+message MemoryCaps {
+    bool supports_vector_search = 1;
+    int32 max_context_size = 2;
+}
+
+message ChannelCaps {
+    bool supports_direct_messages = 1;
+    bool supports_threads = 2;
+}
+
+message ToolsCaps {
+    bool supports_async_execution = 1;
+}
+
+// PluginInfo describes plugin metadata
+message PluginInfo {
+    string type = 1;
+    string name = 2;
+    string author = 3;
+    string version = 4;
+}
+
+// GenerateReq/Resp for ProviderService
+message GenerateReq {
+    string model = 1;
+    repeated MessageProto messages = 2;
+    double temperature = 3;
+    int32 max_tokens = 4;
+    repeated ToolProto tools = 5;
+    map<string, string> metadata = 6;
+}
+
+message GenerateResp {
+    string id = 1;
+    string content = 2;
+    string role = 3;
+    UsageProto usage = 4;
+    string model = 5;
+}
+
+message MessageProto {
+    string role = 1;
+    string content = 2;
+}
+
+message UsageProto {
+    int32 input_tokens = 1;
+    int32 output_tokens = 2;
+}
+
+message ToolProto {
+    string name = 1;
+    string description = 2;
+    map<string, string> parameters = 3;
+}
+
+// StoreReq/Resp for MemoryService
+message StoreReq {
+    string content = 1;
+    map<string, string> metadata = 2;
+    string namespace = 3;
+}
+
+message StoreResp {
+    string id = 1;
+}
+
+message RetrieveReq {
+    string query = 1;
+    int32 limit = 2;
+    string namespace = 3;
+    map<string, string> filter = 4;
+}
+
+message RetrieveResp {
+    repeated MemoryResultProto results = 1;
+}
+
+message MemoryResultProto {
+    string id = 1;
+    string content = 2;
+    double score = 3;
+    map<string, string> metadata = 4;
+}
+
+// SendReq/Resp for ChannelService
+message SendReq {
+    string channel_id = 1;
+    string content = 2;
+    map<string, string> metadata = 3;
+}
+
+message SendResp {
+    string message_id = 1;
+}
+
+message ReceiveReq {
+    string channel_id = 1;
+}
+
+message MessageEvt {
+    string id = 1;
+    string channel_id = 2;
+    string author_id = 3;
+    string content = 4;
+    map<string, string> metadata = 5;
+}
+
+// ListToolsReq/Resp and ExecuteReq/Resp for ToolsService
+message ListToolsReq {}
+
+message ListToolsResp {
+    repeated ToolDefProto tools = 1;
+}
+
+message ToolDefProto {
+    string name = 1;
+    string description = 2;
+    map<string, string> parameters = 3;
+}
+
+message ExecuteReq {
+    string tool = 1;
+    map<string, string> arguments = 2;
+}
+
+message ExecuteResp {
+    map<string, string> result = 1;
+    bool is_error = 2;
+}

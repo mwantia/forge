@@ -1,0 +1,52 @@
+version: '3'
+
+env:
+    CGO_ENABLED: '0'
+    GOOS: linux
+    MAIN_PATH: ./cmd/forge/main.go
+    BUILD_PATH: ./build/forge
+    TEST_CONFIG_PATH: ./examples/config.hcl
+
+dotenv: ['.env']
+
+tasks:
+    default:
+        desc: List all available tasks
+        cmds:
+        - task --list
+        silent: true
+
+    setup:
+        desc: Download and tidy Go module dependencies
+        cmds:
+        - go mod download
+        - go mod tidy
+
+    proto:
+        desc: Generate gRPC code from proto definitions
+        cmds:
+        - |
+            protoc --go_out=. --go-grpc_out=. \
+                --go_opt=paths=source_relative \
+                --go-grpc_opt=paths=source_relative \
+                pkg/plugins/driver.proto
+
+    build:
+        desc: Compile the project into a static binary
+        cmds:
+        - task: setup
+        - go build -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
+
+    run:
+        desc: Run the agent with the test configuration
+        cmds:
+        - task: setup
+        - go run ${MAIN_PATH} agent --path ${TEST_CONFIG_PATH}
+        ignore_error: true
+
+    release:
+        desc: Build and push multi-arch Docker image to registry
+        cmds:
+        - task: setup
+        - docker buildx create --use --name multi-arch-builder || true
+        - docker login ${DOCKER_REGISTRY} && docker buildx build --push --platform ${DOCKER_PLATFORMS} -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_VERSION} -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${DOCKER_LATEST} .
