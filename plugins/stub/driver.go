@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 const PluginName = "stub"
@@ -16,37 +17,13 @@ func init() {
 // StubDriver is a reference implementation of the Driver interface.
 // It demonstrates how to implement a multi-type plugin.
 type StubDriver struct {
-	log  hclog.Logger
-	caps *plugins.DriverCapabilities
+	log hclog.Logger
 }
 
 // NewStubDriver creates a new stub driver that supports all plugin types.
 func NewStubDriver(log hclog.Logger) plugins.Driver {
 	return &StubDriver{
 		log: log.Named(PluginName),
-		caps: &plugins.DriverCapabilities{
-			Types: []string{
-				plugins.PluginTypeProvider,
-				plugins.PluginTypeMemory,
-				plugins.PluginTypeChannel,
-				plugins.PluginTypeTools,
-			},
-			Provider: &plugins.ProviderCapabilities{
-				SupportsStreaming: true,
-				SupportsVision:    false,
-			},
-			Memory: &plugins.MemoryCapabilities{
-				SupportsVectorSearch: false,
-				MaxContextSize:       4096,
-			},
-			Channel: &plugins.ChannelCapabilities{
-				SupportsDirectMessages: true,
-				SupportsThreads:        true,
-			},
-			Tools: &plugins.ToolsCapabilities{
-				SupportsAsyncExecution: false,
-			},
-		},
 	}
 }
 
@@ -59,8 +36,30 @@ func (d *StubDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (d *StubDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
-	return d.caps, nil
+func (d *StubDriver) GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error) {
+	return &proto.DriverCapabilities{
+		Types: []string{
+			plugins.PluginTypeProvider,
+			plugins.PluginTypeMemory,
+			plugins.PluginTypeChannel,
+			plugins.PluginTypeTools,
+		},
+		Provider: &proto.ProviderCaps{
+			SupportsStreaming: true,
+			SupportsVision:    false,
+		},
+		Memory: &proto.MemoryCaps{
+			SupportsVectorSearch: false,
+			MaxContextSize:       4096,
+		},
+		Channel: &proto.ChannelCaps{
+			SupportsDirectMessages: true,
+			SupportsThreads:        true,
+		},
+		Tools: &proto.ToolsCaps{
+			SupportsAsyncExecution: false,
+		},
+	}, nil
 }
 
 // Lifecycle management

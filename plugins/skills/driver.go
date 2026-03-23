@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 const PluginName = "skills"
@@ -43,12 +44,12 @@ func (d *SkillsToolsDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (d *SkillsToolsDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
-	return &plugins.DriverCapabilities{
+func (d *SkillsToolsDriver) GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error) {
+	return &proto.DriverCapabilities{
 		Types: []string{
 			plugins.PluginTypeTools,
 		},
-		Tools: &plugins.ToolsCapabilities{
+		Tools: &proto.ToolsCaps{
 			SupportsAsyncExecution: false,
 		},
 	}, nil

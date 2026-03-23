@@ -8,8 +8,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/metrics"
-	pluginloader "github.com/mwantia/forge/internal/plugin"
+	"github.com/mwantia/forge/internal/plugins"
 	"github.com/mwantia/forge/internal/server"
+	"github.com/mwantia/forge/pkg/errors"
 )
 
 type Agent struct {
@@ -17,9 +18,9 @@ type Agent struct {
 	wait     sync.WaitGroup
 	cleanups []func() error
 
-	log    hclog.Logger
-	cfg    config.AgentConfig
-	loader *pluginloader.Loader
+	log      hclog.Logger
+	cfg      config.AgentConfig
+	registry *plugins.PluginRegistry
 }
 
 func NewAgent(cfg config.AgentConfig) *Agent {
@@ -28,32 +29,15 @@ func NewAgent(cfg config.AgentConfig) *Agent {
 		cleanups: make([]func() error, 0),
 		log:      log,
 		cfg:      cfg,
-		loader:   pluginloader.NewLoader(log),
+		registry: plugins.NewRegistry(log),
 	}
 }
 
 func (a *Agent) Serve(once bool, ctx context.Context) error {
 	// Load configured plugins
 	a.log.Debug("Loading configured plugins...")
-	pluginConfigs := make(map[string]map[string]any)
-	for _, pc := range a.cfg.Plugins {
-		if pc.Config != nil && pc.Config.Body != nil {
-			cfgMap, err := pluginloader.ParseHclBody(pc.Config.Body)
-			if err != nil {
-				a.log.Warn("Failed to parse config", "name", pc.Name, "error", err)
-				continue
-			}
-			pluginConfigs[pc.Name] = cfgMap
-		}
-	}
-
-	results := a.loader.LoadAll(ctx, a.cfg.PluginDir, pluginConfigs)
-	for _, result := range results {
-		if result.Error != nil {
-			a.log.Error("Plugin failed to load", "name", result.Name, "error", result.Error)
-		} else {
-			a.log.Debug("Plugin loaded successfully", "name", result.Name)
-		}
+	if err := a.registry.ServePlugins(ctx, a.cfg.PluginDir, a.cfg.Plugins); err != nil {
+		a.log.Error("Plugins failed to load", "errors", err.Error())
 	}
 
 	a.mutex.Lock()
@@ -100,9 +84,9 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 }
 
 func (a *Agent) Cleanup() error {
-	a.loader.Close()
+	a.registry.CleanupDrivers()
 
-	errs := &Errors{}
+	errs := &errors.Errors{}
 	for _, cleanup := range a.cleanups {
 		if err := cleanup(); err != nil {
 			errs.Add(fmt.Errorf("error during cleanup: %w", err))

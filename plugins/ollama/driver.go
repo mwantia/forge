@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 const PluginName = "ollama"
@@ -62,12 +63,12 @@ func (d *OllamaDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
-func (d *OllamaDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
-	return &plugins.DriverCapabilities{
+func (d *OllamaDriver) GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error) {
+	return &proto.DriverCapabilities{
 		Types: []string{
 			plugins.PluginTypeProvider,
 		},
-		Provider: &plugins.ProviderCapabilities{
+		Provider: &proto.ProviderCaps{
 			SupportsStreaming: true,
 			SupportsVision:    false,
 		},

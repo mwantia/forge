@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubToolsPlugin implements ToolsPlugin.
@@ -15,8 +16,8 @@ func (p *StubToolsPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubToolsPlugin) GetPluginInfo() *plugins.PluginInfo {
-	return &plugins.PluginInfo{
+func (p *StubToolsPlugin) GetPluginInfo() *proto.PluginInfo {
+	return &proto.PluginInfo{
 		Type:    plugins.PluginTypeTools,
 		Name:    "stub-tools",
 		Author:  "forge",

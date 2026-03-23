@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package plugins;
+package proto;
 
-option go_package = "github.com/mwantia/forge/pkg/plugins";
+option go_package = "./proto";
 
 // DriverService is the main gRPC service for plugin communication.
 // A single driver can support multiple plugin types (provider, memory, channel, tools).

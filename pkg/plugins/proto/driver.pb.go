@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.21.12
-// source: pkg/plugins/driver.proto
+// source: pkg/plugins/proto/driver.proto
 
-package plugins
+package proto
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -30,7 +30,7 @@ type NameRequest struct {
 
 func (x *NameRequest) Reset() {
 	*x = NameRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[0]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +42,7 @@ func (x *NameRequest) String() string {
 func (*NameRequest) ProtoMessage() {}
 
 func (x *NameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[0]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +55,7 @@ func (x *NameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameRequest.ProtoReflect.Descriptor instead.
 func (*NameRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{0}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{0}
 }
 
 type NameResponse struct {
@@ -67,7 +67,7 @@ type NameResponse struct {
 
 func (x *NameResponse) Reset() {
 	*x = NameResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[1]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -79,7 +79,7 @@ func (x *NameResponse) String() string {
 func (*NameResponse) ProtoMessage() {}
 
 func (x *NameResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[1]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -92,7 +92,7 @@ func (x *NameResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameResponse.ProtoReflect.Descriptor instead.
 func (*NameResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{1}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *NameResponse) GetName() string {
@@ -110,7 +110,7 @@ type ProbeRequest struct {
 
 func (x *ProbeRequest) Reset() {
 	*x = ProbeRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[2]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +122,7 @@ func (x *ProbeRequest) String() string {
 func (*ProbeRequest) ProtoMessage() {}
 
 func (x *ProbeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[2]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -135,7 +135,7 @@ func (x *ProbeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProbeRequest.ProtoReflect.Descriptor instead.
 func (*ProbeRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{2}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{2}
 }
 
 type ProbeResponse struct {
@@ -147,7 +147,7 @@ type ProbeResponse struct {
 
 func (x *ProbeResponse) Reset() {
 	*x = ProbeResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[3]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -159,7 +159,7 @@ func (x *ProbeResponse) String() string {
 func (*ProbeResponse) ProtoMessage() {}
 
 func (x *ProbeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[3]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +172,7 @@ func (x *ProbeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProbeResponse.ProtoReflect.Descriptor instead.
 func (*ProbeResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{3}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ProbeResponse) GetOk() bool {
@@ -190,7 +190,7 @@ type CapabilitiesRequest struct {
 
 func (x *CapabilitiesRequest) Reset() {
 	*x = CapabilitiesRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[4]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -202,7 +202,7 @@ func (x *CapabilitiesRequest) String() string {
 func (*CapabilitiesRequest) ProtoMessage() {}
 
 func (x *CapabilitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[4]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -215,7 +215,7 @@ func (x *CapabilitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CapabilitiesRequest.ProtoReflect.Descriptor instead.
 func (*CapabilitiesRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{4}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{4}
 }
 
 type CapabilitiesResponse struct {
@@ -227,7 +227,7 @@ type CapabilitiesResponse struct {
 
 func (x *CapabilitiesResponse) Reset() {
 	*x = CapabilitiesResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[5]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -239,7 +239,7 @@ func (x *CapabilitiesResponse) String() string {
 func (*CapabilitiesResponse) ProtoMessage() {}
 
 func (x *CapabilitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[5]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -252,7 +252,7 @@ func (x *CapabilitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CapabilitiesResponse.ProtoReflect.Descriptor instead.
 func (*CapabilitiesResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{5}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CapabilitiesResponse) GetCapabilities() *DriverCapabilities {
@@ -270,7 +270,7 @@ type OpenRequest struct {
 
 func (x *OpenRequest) Reset() {
 	*x = OpenRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[6]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -282,7 +282,7 @@ func (x *OpenRequest) String() string {
 func (*OpenRequest) ProtoMessage() {}
 
 func (x *OpenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[6]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -295,7 +295,7 @@ func (x *OpenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenRequest.ProtoReflect.Descriptor instead.
 func (*OpenRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{6}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{6}
 }
 
 type OpenResponse struct {
@@ -306,7 +306,7 @@ type OpenResponse struct {
 
 func (x *OpenResponse) Reset() {
 	*x = OpenResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[7]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -318,7 +318,7 @@ func (x *OpenResponse) String() string {
 func (*OpenResponse) ProtoMessage() {}
 
 func (x *OpenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[7]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -331,7 +331,7 @@ func (x *OpenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpenResponse.ProtoReflect.Descriptor instead.
 func (*OpenResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{7}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{7}
 }
 
 type CloseRequest struct {
@@ -342,7 +342,7 @@ type CloseRequest struct {
 
 func (x *CloseRequest) Reset() {
 	*x = CloseRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[8]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -354,7 +354,7 @@ func (x *CloseRequest) String() string {
 func (*CloseRequest) ProtoMessage() {}
 
 func (x *CloseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[8]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -367,7 +367,7 @@ func (x *CloseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseRequest.ProtoReflect.Descriptor instead.
 func (*CloseRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{8}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{8}
 }
 
 type CloseResponse struct {
@@ -378,7 +378,7 @@ type CloseResponse struct {
 
 func (x *CloseResponse) Reset() {
 	*x = CloseResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[9]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +390,7 @@ func (x *CloseResponse) String() string {
 func (*CloseResponse) ProtoMessage() {}
 
 func (x *CloseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[9]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +403,7 @@ func (x *CloseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseResponse.ProtoReflect.Descriptor instead.
 func (*CloseResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{9}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{9}
 }
 
 type ConfigRequest struct {
@@ -415,7 +415,7 @@ type ConfigRequest struct {
 
 func (x *ConfigRequest) Reset() {
 	*x = ConfigRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[10]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +427,7 @@ func (x *ConfigRequest) String() string {
 func (*ConfigRequest) ProtoMessage() {}
 
 func (x *ConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[10]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +440,7 @@ func (x *ConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigRequest.ProtoReflect.Descriptor instead.
 func (*ConfigRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{10}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ConfigRequest) GetConfig() map[string]string {
@@ -458,7 +458,7 @@ type ConfigResponse struct {
 
 func (x *ConfigResponse) Reset() {
 	*x = ConfigResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[11]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +470,7 @@ func (x *ConfigResponse) String() string {
 func (*ConfigResponse) ProtoMessage() {}
 
 func (x *ConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[11]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,7 +483,7 @@ func (x *ConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigResponse.ProtoReflect.Descriptor instead.
 func (*ConfigResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{11}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{11}
 }
 
 type GetPluginRequest struct {
@@ -494,7 +494,7 @@ type GetPluginRequest struct {
 
 func (x *GetPluginRequest) Reset() {
 	*x = GetPluginRequest{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[12]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -506,7 +506,7 @@ func (x *GetPluginRequest) String() string {
 func (*GetPluginRequest) ProtoMessage() {}
 
 func (x *GetPluginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[12]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +519,7 @@ func (x *GetPluginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPluginRequest.ProtoReflect.Descriptor instead.
 func (*GetPluginRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{12}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{12}
 }
 
 type GetPluginResponse struct {
@@ -531,7 +531,7 @@ type GetPluginResponse struct {
 
 func (x *GetPluginResponse) Reset() {
 	*x = GetPluginResponse{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[13]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -543,7 +543,7 @@ func (x *GetPluginResponse) String() string {
 func (*GetPluginResponse) ProtoMessage() {}
 
 func (x *GetPluginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[13]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -556,7 +556,7 @@ func (x *GetPluginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPluginResponse.ProtoReflect.Descriptor instead.
 func (*GetPluginResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{13}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetPluginResponse) GetInfo() *PluginInfo {
@@ -580,7 +580,7 @@ type DriverCapabilities struct {
 
 func (x *DriverCapabilities) Reset() {
 	*x = DriverCapabilities{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[14]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +592,7 @@ func (x *DriverCapabilities) String() string {
 func (*DriverCapabilities) ProtoMessage() {}
 
 func (x *DriverCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[14]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +605,7 @@ func (x *DriverCapabilities) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DriverCapabilities.ProtoReflect.Descriptor instead.
 func (*DriverCapabilities) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{14}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DriverCapabilities) GetTypes() []string {
@@ -653,7 +653,7 @@ type ProviderCaps struct {
 
 func (x *ProviderCaps) Reset() {
 	*x = ProviderCaps{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[15]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -665,7 +665,7 @@ func (x *ProviderCaps) String() string {
 func (*ProviderCaps) ProtoMessage() {}
 
 func (x *ProviderCaps) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[15]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -678,7 +678,7 @@ func (x *ProviderCaps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProviderCaps.ProtoReflect.Descriptor instead.
 func (*ProviderCaps) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{15}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ProviderCaps) GetSupportsStreaming() bool {
@@ -705,7 +705,7 @@ type MemoryCaps struct {
 
 func (x *MemoryCaps) Reset() {
 	*x = MemoryCaps{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[16]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +717,7 @@ func (x *MemoryCaps) String() string {
 func (*MemoryCaps) ProtoMessage() {}
 
 func (x *MemoryCaps) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[16]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +730,7 @@ func (x *MemoryCaps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryCaps.ProtoReflect.Descriptor instead.
 func (*MemoryCaps) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{16}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *MemoryCaps) GetSupportsVectorSearch() bool {
@@ -757,7 +757,7 @@ type ChannelCaps struct {
 
 func (x *ChannelCaps) Reset() {
 	*x = ChannelCaps{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[17]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +769,7 @@ func (x *ChannelCaps) String() string {
 func (*ChannelCaps) ProtoMessage() {}
 
 func (x *ChannelCaps) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[17]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +782,7 @@ func (x *ChannelCaps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelCaps.ProtoReflect.Descriptor instead.
 func (*ChannelCaps) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{17}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ChannelCaps) GetSupportsDirectMessages() bool {
@@ -808,7 +808,7 @@ type ToolsCaps struct {
 
 func (x *ToolsCaps) Reset() {
 	*x = ToolsCaps{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[18]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -820,7 +820,7 @@ func (x *ToolsCaps) String() string {
 func (*ToolsCaps) ProtoMessage() {}
 
 func (x *ToolsCaps) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[18]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -833,7 +833,7 @@ func (x *ToolsCaps) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolsCaps.ProtoReflect.Descriptor instead.
 func (*ToolsCaps) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{18}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ToolsCaps) GetSupportsAsyncExecution() bool {
@@ -856,7 +856,7 @@ type PluginInfo struct {
 
 func (x *PluginInfo) Reset() {
 	*x = PluginInfo{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[19]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -868,7 +868,7 @@ func (x *PluginInfo) String() string {
 func (*PluginInfo) ProtoMessage() {}
 
 func (x *PluginInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[19]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -881,7 +881,7 @@ func (x *PluginInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PluginInfo.ProtoReflect.Descriptor instead.
 func (*PluginInfo) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{19}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PluginInfo) GetType() string {
@@ -927,7 +927,7 @@ type GenerateReq struct {
 
 func (x *GenerateReq) Reset() {
 	*x = GenerateReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[20]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -939,7 +939,7 @@ func (x *GenerateReq) String() string {
 func (*GenerateReq) ProtoMessage() {}
 
 func (x *GenerateReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[20]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -952,7 +952,7 @@ func (x *GenerateReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateReq.ProtoReflect.Descriptor instead.
 func (*GenerateReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{20}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GenerateReq) GetModel() string {
@@ -1010,7 +1010,7 @@ type GenerateResp struct {
 
 func (x *GenerateResp) Reset() {
 	*x = GenerateResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[21]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1022,7 +1022,7 @@ func (x *GenerateResp) String() string {
 func (*GenerateResp) ProtoMessage() {}
 
 func (x *GenerateResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[21]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1035,7 +1035,7 @@ func (x *GenerateResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenerateResp.ProtoReflect.Descriptor instead.
 func (*GenerateResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{21}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GenerateResp) GetId() string {
@@ -1083,7 +1083,7 @@ type MessageProto struct {
 
 func (x *MessageProto) Reset() {
 	*x = MessageProto{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[22]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1095,7 @@ func (x *MessageProto) String() string {
 func (*MessageProto) ProtoMessage() {}
 
 func (x *MessageProto) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[22]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1108,7 @@ func (x *MessageProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageProto.ProtoReflect.Descriptor instead.
 func (*MessageProto) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{22}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *MessageProto) GetRole() string {
@@ -1135,7 +1135,7 @@ type UsageProto struct {
 
 func (x *UsageProto) Reset() {
 	*x = UsageProto{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[23]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1147,7 +1147,7 @@ func (x *UsageProto) String() string {
 func (*UsageProto) ProtoMessage() {}
 
 func (x *UsageProto) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[23]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1160,7 +1160,7 @@ func (x *UsageProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UsageProto.ProtoReflect.Descriptor instead.
 func (*UsageProto) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{23}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *UsageProto) GetInputTokens() int32 {
@@ -1188,7 +1188,7 @@ type ToolProto struct {
 
 func (x *ToolProto) Reset() {
 	*x = ToolProto{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[24]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1200,7 +1200,7 @@ func (x *ToolProto) String() string {
 func (*ToolProto) ProtoMessage() {}
 
 func (x *ToolProto) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[24]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1213,7 +1213,7 @@ func (x *ToolProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolProto.ProtoReflect.Descriptor instead.
 func (*ToolProto) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{24}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ToolProto) GetName() string {
@@ -1249,7 +1249,7 @@ type StoreReq struct {
 
 func (x *StoreReq) Reset() {
 	*x = StoreReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[25]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1261,7 +1261,7 @@ func (x *StoreReq) String() string {
 func (*StoreReq) ProtoMessage() {}
 
 func (x *StoreReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[25]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1274,7 +1274,7 @@ func (x *StoreReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoreReq.ProtoReflect.Descriptor instead.
 func (*StoreReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{25}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *StoreReq) GetContent() string {
@@ -1307,7 +1307,7 @@ type StoreResp struct {
 
 func (x *StoreResp) Reset() {
 	*x = StoreResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[26]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1319,7 +1319,7 @@ func (x *StoreResp) String() string {
 func (*StoreResp) ProtoMessage() {}
 
 func (x *StoreResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[26]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1332,7 +1332,7 @@ func (x *StoreResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoreResp.ProtoReflect.Descriptor instead.
 func (*StoreResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{26}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *StoreResp) GetId() string {
@@ -1354,7 +1354,7 @@ type RetrieveReq struct {
 
 func (x *RetrieveReq) Reset() {
 	*x = RetrieveReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[27]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1366,7 +1366,7 @@ func (x *RetrieveReq) String() string {
 func (*RetrieveReq) ProtoMessage() {}
 
 func (x *RetrieveReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[27]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1379,7 +1379,7 @@ func (x *RetrieveReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetrieveReq.ProtoReflect.Descriptor instead.
 func (*RetrieveReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{27}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RetrieveReq) GetQuery() string {
@@ -1419,7 +1419,7 @@ type RetrieveResp struct {
 
 func (x *RetrieveResp) Reset() {
 	*x = RetrieveResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[28]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1431,7 +1431,7 @@ func (x *RetrieveResp) String() string {
 func (*RetrieveResp) ProtoMessage() {}
 
 func (x *RetrieveResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[28]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1444,7 +1444,7 @@ func (x *RetrieveResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetrieveResp.ProtoReflect.Descriptor instead.
 func (*RetrieveResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{28}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *RetrieveResp) GetResults() []*MemoryResultProto {
@@ -1466,7 +1466,7 @@ type MemoryResultProto struct {
 
 func (x *MemoryResultProto) Reset() {
 	*x = MemoryResultProto{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[29]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1478,7 +1478,7 @@ func (x *MemoryResultProto) String() string {
 func (*MemoryResultProto) ProtoMessage() {}
 
 func (x *MemoryResultProto) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[29]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1491,7 +1491,7 @@ func (x *MemoryResultProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryResultProto.ProtoReflect.Descriptor instead.
 func (*MemoryResultProto) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{29}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *MemoryResultProto) GetId() string {
@@ -1534,7 +1534,7 @@ type SendReq struct {
 
 func (x *SendReq) Reset() {
 	*x = SendReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[30]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1546,7 +1546,7 @@ func (x *SendReq) String() string {
 func (*SendReq) ProtoMessage() {}
 
 func (x *SendReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[30]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1559,7 +1559,7 @@ func (x *SendReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendReq.ProtoReflect.Descriptor instead.
 func (*SendReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{30}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SendReq) GetChannelId() string {
@@ -1592,7 +1592,7 @@ type SendResp struct {
 
 func (x *SendResp) Reset() {
 	*x = SendResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[31]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1604,7 +1604,7 @@ func (x *SendResp) String() string {
 func (*SendResp) ProtoMessage() {}
 
 func (x *SendResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[31]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1617,7 +1617,7 @@ func (x *SendResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendResp.ProtoReflect.Descriptor instead.
 func (*SendResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{31}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SendResp) GetMessageId() string {
@@ -1636,7 +1636,7 @@ type ReceiveReq struct {
 
 func (x *ReceiveReq) Reset() {
 	*x = ReceiveReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[32]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1648,7 +1648,7 @@ func (x *ReceiveReq) String() string {
 func (*ReceiveReq) ProtoMessage() {}
 
 func (x *ReceiveReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[32]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1661,7 +1661,7 @@ func (x *ReceiveReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveReq.ProtoReflect.Descriptor instead.
 func (*ReceiveReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{32}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ReceiveReq) GetChannelId() string {
@@ -1684,7 +1684,7 @@ type MessageEvt struct {
 
 func (x *MessageEvt) Reset() {
 	*x = MessageEvt{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[33]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1696,7 +1696,7 @@ func (x *MessageEvt) String() string {
 func (*MessageEvt) ProtoMessage() {}
 
 func (x *MessageEvt) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[33]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1709,7 +1709,7 @@ func (x *MessageEvt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageEvt.ProtoReflect.Descriptor instead.
 func (*MessageEvt) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{33}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *MessageEvt) GetId() string {
@@ -1756,7 +1756,7 @@ type ListToolsReq struct {
 
 func (x *ListToolsReq) Reset() {
 	*x = ListToolsReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[34]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1768,7 +1768,7 @@ func (x *ListToolsReq) String() string {
 func (*ListToolsReq) ProtoMessage() {}
 
 func (x *ListToolsReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[34]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1781,7 +1781,7 @@ func (x *ListToolsReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListToolsReq.ProtoReflect.Descriptor instead.
 func (*ListToolsReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{34}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{34}
 }
 
 type ListToolsResp struct {
@@ -1793,7 +1793,7 @@ type ListToolsResp struct {
 
 func (x *ListToolsResp) Reset() {
 	*x = ListToolsResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[35]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +1805,7 @@ func (x *ListToolsResp) String() string {
 func (*ListToolsResp) ProtoMessage() {}
 
 func (x *ListToolsResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[35]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1818,7 +1818,7 @@ func (x *ListToolsResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListToolsResp.ProtoReflect.Descriptor instead.
 func (*ListToolsResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{35}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListToolsResp) GetTools() []*ToolDefProto {
@@ -1839,7 +1839,7 @@ type ToolDefProto struct {
 
 func (x *ToolDefProto) Reset() {
 	*x = ToolDefProto{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[36]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1851,7 +1851,7 @@ func (x *ToolDefProto) String() string {
 func (*ToolDefProto) ProtoMessage() {}
 
 func (x *ToolDefProto) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[36]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1864,7 +1864,7 @@ func (x *ToolDefProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolDefProto.ProtoReflect.Descriptor instead.
 func (*ToolDefProto) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{36}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ToolDefProto) GetName() string {
@@ -1898,7 +1898,7 @@ type ExecuteReq struct {
 
 func (x *ExecuteReq) Reset() {
 	*x = ExecuteReq{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[37]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +1910,7 @@ func (x *ExecuteReq) String() string {
 func (*ExecuteReq) ProtoMessage() {}
 
 func (x *ExecuteReq) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[37]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +1923,7 @@ func (x *ExecuteReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteReq.ProtoReflect.Descriptor instead.
 func (*ExecuteReq) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{37}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ExecuteReq) GetTool() string {
@@ -1950,7 +1950,7 @@ type ExecuteResp struct {
 
 func (x *ExecuteResp) Reset() {
 	*x = ExecuteResp{}
-	mi := &file_pkg_plugins_driver_proto_msgTypes[38]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1962,7 +1962,7 @@ func (x *ExecuteResp) String() string {
 func (*ExecuteResp) ProtoMessage() {}
 
 func (x *ExecuteResp) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_plugins_driver_proto_msgTypes[38]
+	mi := &file_pkg_plugins_proto_driver_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1975,7 +1975,7 @@ func (x *ExecuteResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExecuteResp.ProtoReflect.Descriptor instead.
 func (*ExecuteResp) Descriptor() ([]byte, []int) {
-	return file_pkg_plugins_driver_proto_rawDescGZIP(), []int{38}
+	return file_pkg_plugins_proto_driver_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ExecuteResp) GetResult() map[string]string {
@@ -1992,39 +1992,39 @@ func (x *ExecuteResp) GetIsError() bool {
 	return false
 }
 
-var File_pkg_plugins_driver_proto protoreflect.FileDescriptor
+var File_pkg_plugins_proto_driver_proto protoreflect.FileDescriptor
 
-const file_pkg_plugins_driver_proto_rawDesc = "" +
+const file_pkg_plugins_proto_driver_proto_rawDesc = "" +
 	"\n" +
-	"\x18pkg/plugins/driver.proto\x12\aplugins\"\r\n" +
+	"\x1epkg/plugins/proto/driver.proto\x12\x05proto\"\r\n" +
 	"\vNameRequest\"\"\n" +
 	"\fNameResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x0e\n" +
 	"\fProbeRequest\"\x1f\n" +
 	"\rProbeResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\"\x15\n" +
-	"\x13CapabilitiesRequest\"W\n" +
-	"\x14CapabilitiesResponse\x12?\n" +
-	"\fcapabilities\x18\x01 \x01(\v2\x1b.plugins.DriverCapabilitiesR\fcapabilities\"\r\n" +
+	"\x13CapabilitiesRequest\"U\n" +
+	"\x14CapabilitiesResponse\x12=\n" +
+	"\fcapabilities\x18\x01 \x01(\v2\x19.proto.DriverCapabilitiesR\fcapabilities\"\r\n" +
 	"\vOpenRequest\"\x0e\n" +
 	"\fOpenResponse\"\x0e\n" +
 	"\fCloseRequest\"\x0f\n" +
-	"\rCloseResponse\"\x86\x01\n" +
-	"\rConfigRequest\x12:\n" +
-	"\x06config\x18\x01 \x03(\v2\".plugins.ConfigRequest.ConfigEntryR\x06config\x1a9\n" +
+	"\rCloseResponse\"\x84\x01\n" +
+	"\rConfigRequest\x128\n" +
+	"\x06config\x18\x01 \x03(\v2 .proto.ConfigRequest.ConfigEntryR\x06config\x1a9\n" +
 	"\vConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x10\n" +
 	"\x0eConfigResponse\"\x12\n" +
-	"\x10GetPluginRequest\"<\n" +
-	"\x11GetPluginResponse\x12'\n" +
-	"\x04info\x18\x01 \x01(\v2\x13.plugins.PluginInfoR\x04info\"\xe4\x01\n" +
+	"\x10GetPluginRequest\":\n" +
+	"\x11GetPluginResponse\x12%\n" +
+	"\x04info\x18\x01 \x01(\v2\x11.proto.PluginInfoR\x04info\"\xdc\x01\n" +
 	"\x12DriverCapabilities\x12\x14\n" +
-	"\x05types\x18\x01 \x03(\tR\x05types\x121\n" +
-	"\bprovider\x18\x02 \x01(\v2\x15.plugins.ProviderCapsR\bprovider\x12+\n" +
-	"\x06memory\x18\x03 \x01(\v2\x13.plugins.MemoryCapsR\x06memory\x12.\n" +
-	"\achannel\x18\x04 \x01(\v2\x14.plugins.ChannelCapsR\achannel\x12(\n" +
-	"\x05tools\x18\x05 \x01(\v2\x12.plugins.ToolsCapsR\x05tools\"f\n" +
+	"\x05types\x18\x01 \x03(\tR\x05types\x12/\n" +
+	"\bprovider\x18\x02 \x01(\v2\x13.proto.ProviderCapsR\bprovider\x12)\n" +
+	"\x06memory\x18\x03 \x01(\v2\x11.proto.MemoryCapsR\x06memory\x12,\n" +
+	"\achannel\x18\x04 \x01(\v2\x12.proto.ChannelCapsR\achannel\x12&\n" +
+	"\x05tools\x18\x05 \x01(\v2\x10.proto.ToolsCapsR\x05tools\"f\n" +
 	"\fProviderCaps\x12-\n" +
 	"\x12supports_streaming\x18\x01 \x01(\bR\x11supportsStreaming\x12'\n" +
 	"\x0fsupports_vision\x18\x02 \x01(\bR\x0esupportsVision\"l\n" +
@@ -2042,23 +2042,23 @@ const file_pkg_plugins_driver_proto_rawDesc = "" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
 	"\x06author\x18\x03 \x01(\tR\x06author\x12\x18\n" +
-	"\aversion\x18\x04 \x01(\tR\aversion\"\xbe\x02\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\"\xb8\x02\n" +
 	"\vGenerateReq\x12\x14\n" +
-	"\x05model\x18\x01 \x01(\tR\x05model\x121\n" +
-	"\bmessages\x18\x02 \x03(\v2\x15.plugins.MessageProtoR\bmessages\x12 \n" +
+	"\x05model\x18\x01 \x01(\tR\x05model\x12/\n" +
+	"\bmessages\x18\x02 \x03(\v2\x13.proto.MessageProtoR\bmessages\x12 \n" +
 	"\vtemperature\x18\x03 \x01(\x01R\vtemperature\x12\x1d\n" +
 	"\n" +
-	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\x12(\n" +
-	"\x05tools\x18\x05 \x03(\v2\x12.plugins.ToolProtoR\x05tools\x12>\n" +
-	"\bmetadata\x18\x06 \x03(\v2\".plugins.GenerateReq.MetadataEntryR\bmetadata\x1a;\n" +
+	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\x12&\n" +
+	"\x05tools\x18\x05 \x03(\v2\x10.proto.ToolProtoR\x05tools\x12<\n" +
+	"\bmetadata\x18\x06 \x03(\v2 .proto.GenerateReq.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8d\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x01\n" +
 	"\fGenerateResp\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role\x12)\n" +
-	"\x05usage\x18\x04 \x01(\v2\x13.plugins.UsageProtoR\x05usage\x12\x14\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12'\n" +
+	"\x05usage\x18\x04 \x01(\v2\x11.proto.UsageProtoR\x05usage\x12\x14\n" +
 	"\x05model\x18\x05 \x01(\tR\x05model\"<\n" +
 	"\fMessageProto\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
@@ -2066,48 +2066,48 @@ const file_pkg_plugins_driver_proto_rawDesc = "" +
 	"\n" +
 	"UsageProto\x12!\n" +
 	"\finput_tokens\x18\x01 \x01(\x05R\vinputTokens\x12#\n" +
-	"\routput_tokens\x18\x02 \x01(\x05R\foutputTokens\"\xc4\x01\n" +
+	"\routput_tokens\x18\x02 \x01(\x05R\foutputTokens\"\xc2\x01\n" +
 	"\tToolProto\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12B\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12@\n" +
 	"\n" +
-	"parameters\x18\x03 \x03(\v2\".plugins.ToolProto.ParametersEntryR\n" +
+	"parameters\x18\x03 \x03(\v2 .proto.ToolProto.ParametersEntryR\n" +
 	"parameters\x1a=\n" +
 	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xbc\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xba\x01\n" +
 	"\bStoreReq\x12\x18\n" +
-	"\acontent\x18\x01 \x01(\tR\acontent\x12;\n" +
-	"\bmetadata\x18\x02 \x03(\v2\x1f.plugins.StoreReq.MetadataEntryR\bmetadata\x12\x1c\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\x129\n" +
+	"\bmetadata\x18\x02 \x03(\v2\x1d.proto.StoreReq.MetadataEntryR\bmetadata\x12\x1c\n" +
 	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x1b\n" +
 	"\tStoreResp\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xcc\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xca\x01\n" +
 	"\vRetrieveReq\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1c\n" +
-	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x128\n" +
-	"\x06filter\x18\x04 \x03(\v2 .plugins.RetrieveReq.FilterEntryR\x06filter\x1a9\n" +
+	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x126\n" +
+	"\x06filter\x18\x04 \x03(\v2\x1e.proto.RetrieveReq.FilterEntryR\x06filter\x1a9\n" +
 	"\vFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"D\n" +
-	"\fRetrieveResp\x124\n" +
-	"\aresults\x18\x01 \x03(\v2\x1a.plugins.MemoryResultProtoR\aresults\"\xd6\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"B\n" +
+	"\fRetrieveResp\x122\n" +
+	"\aresults\x18\x01 \x03(\v2\x18.proto.MemoryResultProtoR\aresults\"\xd4\x01\n" +
 	"\x11MemoryResultProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x14\n" +
-	"\x05score\x18\x03 \x01(\x01R\x05score\x12D\n" +
-	"\bmetadata\x18\x04 \x03(\v2(.plugins.MemoryResultProto.MetadataEntryR\bmetadata\x1a;\n" +
+	"\x05score\x18\x03 \x01(\x01R\x05score\x12B\n" +
+	"\bmetadata\x18\x04 \x03(\v2&.proto.MemoryResultProto.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xbb\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb9\x01\n" +
 	"\aSendReq\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12:\n" +
-	"\bmetadata\x18\x03 \x03(\v2\x1e.plugins.SendReq.MetadataEntryR\bmetadata\x1a;\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x128\n" +
+	"\bmetadata\x18\x03 \x03(\v2\x1c.proto.SendReq.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\")\n" +
@@ -2117,189 +2117,189 @@ const file_pkg_plugins_driver_proto_rawDesc = "" +
 	"\n" +
 	"ReceiveReq\x12\x1d\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"\xee\x01\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\"\xec\x01\n" +
 	"\n" +
 	"MessageEvt\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tauthor_id\x18\x03 \x01(\tR\bauthorId\x12\x18\n" +
-	"\acontent\x18\x04 \x01(\tR\acontent\x12=\n" +
-	"\bmetadata\x18\x05 \x03(\v2!.plugins.MessageEvt.MetadataEntryR\bmetadata\x1a;\n" +
+	"\acontent\x18\x04 \x01(\tR\acontent\x12;\n" +
+	"\bmetadata\x18\x05 \x03(\v2\x1f.proto.MessageEvt.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x0e\n" +
-	"\fListToolsReq\"<\n" +
-	"\rListToolsResp\x12+\n" +
-	"\x05tools\x18\x01 \x03(\v2\x15.plugins.ToolDefProtoR\x05tools\"\xca\x01\n" +
+	"\fListToolsReq\":\n" +
+	"\rListToolsResp\x12)\n" +
+	"\x05tools\x18\x01 \x03(\v2\x13.proto.ToolDefProtoR\x05tools\"\xc8\x01\n" +
 	"\fToolDefProto\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12E\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12C\n" +
 	"\n" +
-	"parameters\x18\x03 \x03(\v2%.plugins.ToolDefProto.ParametersEntryR\n" +
+	"parameters\x18\x03 \x03(\v2#.proto.ToolDefProto.ParametersEntryR\n" +
 	"parameters\x1a=\n" +
 	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa0\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9e\x01\n" +
 	"\n" +
 	"ExecuteReq\x12\x12\n" +
-	"\x04tool\x18\x01 \x01(\tR\x04tool\x12@\n" +
-	"\targuments\x18\x02 \x03(\v2\".plugins.ExecuteReq.ArgumentsEntryR\targuments\x1a<\n" +
+	"\x04tool\x18\x01 \x01(\tR\x04tool\x12>\n" +
+	"\targuments\x18\x02 \x03(\v2 .proto.ExecuteReq.ArgumentsEntryR\targuments\x1a<\n" +
 	"\x0eArgumentsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9d\x01\n" +
-	"\vExecuteResp\x128\n" +
-	"\x06result\x18\x01 \x03(\v2 .plugins.ExecuteResp.ResultEntryR\x06result\x12\x19\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9b\x01\n" +
+	"\vExecuteResp\x126\n" +
+	"\x06result\x18\x01 \x03(\v2\x1e.proto.ExecuteResp.ResultEntryR\x06result\x12\x19\n" +
 	"\bis_error\x18\x02 \x01(\bR\aisError\x1a9\n" +
 	"\vResultEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xb6\x05\n" +
-	"\rDriverService\x123\n" +
-	"\x04Name\x12\x14.plugins.NameRequest\x1a\x15.plugins.NameResponse\x12<\n" +
-	"\vProbePlugin\x12\x15.plugins.ProbeRequest\x1a\x16.plugins.ProbeResponse\x12N\n" +
-	"\x0fGetCapabilities\x12\x1c.plugins.CapabilitiesRequest\x1a\x1d.plugins.CapabilitiesResponse\x129\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x8e\x05\n" +
+	"\rDriverService\x12/\n" +
+	"\x04Name\x12\x12.proto.NameRequest\x1a\x13.proto.NameResponse\x128\n" +
+	"\vProbePlugin\x12\x13.proto.ProbeRequest\x1a\x14.proto.ProbeResponse\x12J\n" +
+	"\x0fGetCapabilities\x12\x1a.proto.CapabilitiesRequest\x1a\x1b.proto.CapabilitiesResponse\x125\n" +
 	"\n" +
-	"OpenDriver\x12\x14.plugins.OpenRequest\x1a\x15.plugins.OpenResponse\x12<\n" +
-	"\vCloseDriver\x12\x15.plugins.CloseRequest\x1a\x16.plugins.CloseResponse\x12?\n" +
-	"\fConfigDriver\x12\x16.plugins.ConfigRequest\x1a\x17.plugins.ConfigResponse\x12J\n" +
-	"\x11GetProviderPlugin\x12\x19.plugins.GetPluginRequest\x1a\x1a.plugins.GetPluginResponse\x12H\n" +
-	"\x0fGetMemoryPlugin\x12\x19.plugins.GetPluginRequest\x1a\x1a.plugins.GetPluginResponse\x12I\n" +
-	"\x10GetChannelPlugin\x12\x19.plugins.GetPluginRequest\x1a\x1a.plugins.GetPluginResponse\x12G\n" +
-	"\x0eGetToolsPlugin\x12\x19.plugins.GetPluginRequest\x1a\x1a.plugins.GetPluginResponse2J\n" +
-	"\x0fProviderService\x127\n" +
-	"\bGenerate\x12\x14.plugins.GenerateReq\x1a\x15.plugins.GenerateResp2x\n" +
-	"\rMemoryService\x12.\n" +
-	"\x05Store\x12\x11.plugins.StoreReq\x1a\x12.plugins.StoreResp\x127\n" +
-	"\bRetrieve\x12\x14.plugins.RetrieveReq\x1a\x15.plugins.RetrieveResp2t\n" +
-	"\x0eChannelService\x12+\n" +
-	"\x04Send\x12\x10.plugins.SendReq\x1a\x11.plugins.SendResp\x125\n" +
-	"\aReceive\x12\x13.plugins.ReceiveReq\x1a\x13.plugins.MessageEvt0\x012{\n" +
-	"\fToolsService\x125\n" +
-	"\x04List\x12\x15.plugins.ListToolsReq\x1a\x16.plugins.ListToolsResp\x124\n" +
-	"\aExecute\x12\x13.plugins.ExecuteReq\x1a\x14.plugins.ExecuteRespB&Z$github.com/mwantia/forge/pkg/pluginsb\x06proto3"
+	"OpenDriver\x12\x12.proto.OpenRequest\x1a\x13.proto.OpenResponse\x128\n" +
+	"\vCloseDriver\x12\x13.proto.CloseRequest\x1a\x14.proto.CloseResponse\x12;\n" +
+	"\fConfigDriver\x12\x14.proto.ConfigRequest\x1a\x15.proto.ConfigResponse\x12F\n" +
+	"\x11GetProviderPlugin\x12\x17.proto.GetPluginRequest\x1a\x18.proto.GetPluginResponse\x12D\n" +
+	"\x0fGetMemoryPlugin\x12\x17.proto.GetPluginRequest\x1a\x18.proto.GetPluginResponse\x12E\n" +
+	"\x10GetChannelPlugin\x12\x17.proto.GetPluginRequest\x1a\x18.proto.GetPluginResponse\x12C\n" +
+	"\x0eGetToolsPlugin\x12\x17.proto.GetPluginRequest\x1a\x18.proto.GetPluginResponse2F\n" +
+	"\x0fProviderService\x123\n" +
+	"\bGenerate\x12\x12.proto.GenerateReq\x1a\x13.proto.GenerateResp2p\n" +
+	"\rMemoryService\x12*\n" +
+	"\x05Store\x12\x0f.proto.StoreReq\x1a\x10.proto.StoreResp\x123\n" +
+	"\bRetrieve\x12\x12.proto.RetrieveReq\x1a\x13.proto.RetrieveResp2l\n" +
+	"\x0eChannelService\x12'\n" +
+	"\x04Send\x12\x0e.proto.SendReq\x1a\x0f.proto.SendResp\x121\n" +
+	"\aReceive\x12\x11.proto.ReceiveReq\x1a\x11.proto.MessageEvt0\x012s\n" +
+	"\fToolsService\x121\n" +
+	"\x04List\x12\x13.proto.ListToolsReq\x1a\x14.proto.ListToolsResp\x120\n" +
+	"\aExecute\x12\x11.proto.ExecuteReq\x1a\x12.proto.ExecuteRespB\tZ\a./protob\x06proto3"
 
 var (
-	file_pkg_plugins_driver_proto_rawDescOnce sync.Once
-	file_pkg_plugins_driver_proto_rawDescData []byte
+	file_pkg_plugins_proto_driver_proto_rawDescOnce sync.Once
+	file_pkg_plugins_proto_driver_proto_rawDescData []byte
 )
 
-func file_pkg_plugins_driver_proto_rawDescGZIP() []byte {
-	file_pkg_plugins_driver_proto_rawDescOnce.Do(func() {
-		file_pkg_plugins_driver_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pkg_plugins_driver_proto_rawDesc), len(file_pkg_plugins_driver_proto_rawDesc)))
+func file_pkg_plugins_proto_driver_proto_rawDescGZIP() []byte {
+	file_pkg_plugins_proto_driver_proto_rawDescOnce.Do(func() {
+		file_pkg_plugins_proto_driver_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_pkg_plugins_proto_driver_proto_rawDesc), len(file_pkg_plugins_proto_driver_proto_rawDesc)))
 	})
-	return file_pkg_plugins_driver_proto_rawDescData
+	return file_pkg_plugins_proto_driver_proto_rawDescData
 }
 
-var file_pkg_plugins_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
-var file_pkg_plugins_driver_proto_goTypes = []any{
-	(*NameRequest)(nil),          // 0: plugins.NameRequest
-	(*NameResponse)(nil),         // 1: plugins.NameResponse
-	(*ProbeRequest)(nil),         // 2: plugins.ProbeRequest
-	(*ProbeResponse)(nil),        // 3: plugins.ProbeResponse
-	(*CapabilitiesRequest)(nil),  // 4: plugins.CapabilitiesRequest
-	(*CapabilitiesResponse)(nil), // 5: plugins.CapabilitiesResponse
-	(*OpenRequest)(nil),          // 6: plugins.OpenRequest
-	(*OpenResponse)(nil),         // 7: plugins.OpenResponse
-	(*CloseRequest)(nil),         // 8: plugins.CloseRequest
-	(*CloseResponse)(nil),        // 9: plugins.CloseResponse
-	(*ConfigRequest)(nil),        // 10: plugins.ConfigRequest
-	(*ConfigResponse)(nil),       // 11: plugins.ConfigResponse
-	(*GetPluginRequest)(nil),     // 12: plugins.GetPluginRequest
-	(*GetPluginResponse)(nil),    // 13: plugins.GetPluginResponse
-	(*DriverCapabilities)(nil),   // 14: plugins.DriverCapabilities
-	(*ProviderCaps)(nil),         // 15: plugins.ProviderCaps
-	(*MemoryCaps)(nil),           // 16: plugins.MemoryCaps
-	(*ChannelCaps)(nil),          // 17: plugins.ChannelCaps
-	(*ToolsCaps)(nil),            // 18: plugins.ToolsCaps
-	(*PluginInfo)(nil),           // 19: plugins.PluginInfo
-	(*GenerateReq)(nil),          // 20: plugins.GenerateReq
-	(*GenerateResp)(nil),         // 21: plugins.GenerateResp
-	(*MessageProto)(nil),         // 22: plugins.MessageProto
-	(*UsageProto)(nil),           // 23: plugins.UsageProto
-	(*ToolProto)(nil),            // 24: plugins.ToolProto
-	(*StoreReq)(nil),             // 25: plugins.StoreReq
-	(*StoreResp)(nil),            // 26: plugins.StoreResp
-	(*RetrieveReq)(nil),          // 27: plugins.RetrieveReq
-	(*RetrieveResp)(nil),         // 28: plugins.RetrieveResp
-	(*MemoryResultProto)(nil),    // 29: plugins.MemoryResultProto
-	(*SendReq)(nil),              // 30: plugins.SendReq
-	(*SendResp)(nil),             // 31: plugins.SendResp
-	(*ReceiveReq)(nil),           // 32: plugins.ReceiveReq
-	(*MessageEvt)(nil),           // 33: plugins.MessageEvt
-	(*ListToolsReq)(nil),         // 34: plugins.ListToolsReq
-	(*ListToolsResp)(nil),        // 35: plugins.ListToolsResp
-	(*ToolDefProto)(nil),         // 36: plugins.ToolDefProto
-	(*ExecuteReq)(nil),           // 37: plugins.ExecuteReq
-	(*ExecuteResp)(nil),          // 38: plugins.ExecuteResp
-	nil,                          // 39: plugins.ConfigRequest.ConfigEntry
-	nil,                          // 40: plugins.GenerateReq.MetadataEntry
-	nil,                          // 41: plugins.ToolProto.ParametersEntry
-	nil,                          // 42: plugins.StoreReq.MetadataEntry
-	nil,                          // 43: plugins.RetrieveReq.FilterEntry
-	nil,                          // 44: plugins.MemoryResultProto.MetadataEntry
-	nil,                          // 45: plugins.SendReq.MetadataEntry
-	nil,                          // 46: plugins.MessageEvt.MetadataEntry
-	nil,                          // 47: plugins.ToolDefProto.ParametersEntry
-	nil,                          // 48: plugins.ExecuteReq.ArgumentsEntry
-	nil,                          // 49: plugins.ExecuteResp.ResultEntry
+var file_pkg_plugins_proto_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_pkg_plugins_proto_driver_proto_goTypes = []any{
+	(*NameRequest)(nil),          // 0: proto.NameRequest
+	(*NameResponse)(nil),         // 1: proto.NameResponse
+	(*ProbeRequest)(nil),         // 2: proto.ProbeRequest
+	(*ProbeResponse)(nil),        // 3: proto.ProbeResponse
+	(*CapabilitiesRequest)(nil),  // 4: proto.CapabilitiesRequest
+	(*CapabilitiesResponse)(nil), // 5: proto.CapabilitiesResponse
+	(*OpenRequest)(nil),          // 6: proto.OpenRequest
+	(*OpenResponse)(nil),         // 7: proto.OpenResponse
+	(*CloseRequest)(nil),         // 8: proto.CloseRequest
+	(*CloseResponse)(nil),        // 9: proto.CloseResponse
+	(*ConfigRequest)(nil),        // 10: proto.ConfigRequest
+	(*ConfigResponse)(nil),       // 11: proto.ConfigResponse
+	(*GetPluginRequest)(nil),     // 12: proto.GetPluginRequest
+	(*GetPluginResponse)(nil),    // 13: proto.GetPluginResponse
+	(*DriverCapabilities)(nil),   // 14: proto.DriverCapabilities
+	(*ProviderCaps)(nil),         // 15: proto.ProviderCaps
+	(*MemoryCaps)(nil),           // 16: proto.MemoryCaps
+	(*ChannelCaps)(nil),          // 17: proto.ChannelCaps
+	(*ToolsCaps)(nil),            // 18: proto.ToolsCaps
+	(*PluginInfo)(nil),           // 19: proto.PluginInfo
+	(*GenerateReq)(nil),          // 20: proto.GenerateReq
+	(*GenerateResp)(nil),         // 21: proto.GenerateResp
+	(*MessageProto)(nil),         // 22: proto.MessageProto
+	(*UsageProto)(nil),           // 23: proto.UsageProto
+	(*ToolProto)(nil),            // 24: proto.ToolProto
+	(*StoreReq)(nil),             // 25: proto.StoreReq
+	(*StoreResp)(nil),            // 26: proto.StoreResp
+	(*RetrieveReq)(nil),          // 27: proto.RetrieveReq
+	(*RetrieveResp)(nil),         // 28: proto.RetrieveResp
+	(*MemoryResultProto)(nil),    // 29: proto.MemoryResultProto
+	(*SendReq)(nil),              // 30: proto.SendReq
+	(*SendResp)(nil),             // 31: proto.SendResp
+	(*ReceiveReq)(nil),           // 32: proto.ReceiveReq
+	(*MessageEvt)(nil),           // 33: proto.MessageEvt
+	(*ListToolsReq)(nil),         // 34: proto.ListToolsReq
+	(*ListToolsResp)(nil),        // 35: proto.ListToolsResp
+	(*ToolDefProto)(nil),         // 36: proto.ToolDefProto
+	(*ExecuteReq)(nil),           // 37: proto.ExecuteReq
+	(*ExecuteResp)(nil),          // 38: proto.ExecuteResp
+	nil,                          // 39: proto.ConfigRequest.ConfigEntry
+	nil,                          // 40: proto.GenerateReq.MetadataEntry
+	nil,                          // 41: proto.ToolProto.ParametersEntry
+	nil,                          // 42: proto.StoreReq.MetadataEntry
+	nil,                          // 43: proto.RetrieveReq.FilterEntry
+	nil,                          // 44: proto.MemoryResultProto.MetadataEntry
+	nil,                          // 45: proto.SendReq.MetadataEntry
+	nil,                          // 46: proto.MessageEvt.MetadataEntry
+	nil,                          // 47: proto.ToolDefProto.ParametersEntry
+	nil,                          // 48: proto.ExecuteReq.ArgumentsEntry
+	nil,                          // 49: proto.ExecuteResp.ResultEntry
 }
-var file_pkg_plugins_driver_proto_depIdxs = []int32{
-	14, // 0: plugins.CapabilitiesResponse.capabilities:type_name -> plugins.DriverCapabilities
-	39, // 1: plugins.ConfigRequest.config:type_name -> plugins.ConfigRequest.ConfigEntry
-	19, // 2: plugins.GetPluginResponse.info:type_name -> plugins.PluginInfo
-	15, // 3: plugins.DriverCapabilities.provider:type_name -> plugins.ProviderCaps
-	16, // 4: plugins.DriverCapabilities.memory:type_name -> plugins.MemoryCaps
-	17, // 5: plugins.DriverCapabilities.channel:type_name -> plugins.ChannelCaps
-	18, // 6: plugins.DriverCapabilities.tools:type_name -> plugins.ToolsCaps
-	22, // 7: plugins.GenerateReq.messages:type_name -> plugins.MessageProto
-	24, // 8: plugins.GenerateReq.tools:type_name -> plugins.ToolProto
-	40, // 9: plugins.GenerateReq.metadata:type_name -> plugins.GenerateReq.MetadataEntry
-	23, // 10: plugins.GenerateResp.usage:type_name -> plugins.UsageProto
-	41, // 11: plugins.ToolProto.parameters:type_name -> plugins.ToolProto.ParametersEntry
-	42, // 12: plugins.StoreReq.metadata:type_name -> plugins.StoreReq.MetadataEntry
-	43, // 13: plugins.RetrieveReq.filter:type_name -> plugins.RetrieveReq.FilterEntry
-	29, // 14: plugins.RetrieveResp.results:type_name -> plugins.MemoryResultProto
-	44, // 15: plugins.MemoryResultProto.metadata:type_name -> plugins.MemoryResultProto.MetadataEntry
-	45, // 16: plugins.SendReq.metadata:type_name -> plugins.SendReq.MetadataEntry
-	46, // 17: plugins.MessageEvt.metadata:type_name -> plugins.MessageEvt.MetadataEntry
-	36, // 18: plugins.ListToolsResp.tools:type_name -> plugins.ToolDefProto
-	47, // 19: plugins.ToolDefProto.parameters:type_name -> plugins.ToolDefProto.ParametersEntry
-	48, // 20: plugins.ExecuteReq.arguments:type_name -> plugins.ExecuteReq.ArgumentsEntry
-	49, // 21: plugins.ExecuteResp.result:type_name -> plugins.ExecuteResp.ResultEntry
-	0,  // 22: plugins.DriverService.Name:input_type -> plugins.NameRequest
-	2,  // 23: plugins.DriverService.ProbePlugin:input_type -> plugins.ProbeRequest
-	4,  // 24: plugins.DriverService.GetCapabilities:input_type -> plugins.CapabilitiesRequest
-	6,  // 25: plugins.DriverService.OpenDriver:input_type -> plugins.OpenRequest
-	8,  // 26: plugins.DriverService.CloseDriver:input_type -> plugins.CloseRequest
-	10, // 27: plugins.DriverService.ConfigDriver:input_type -> plugins.ConfigRequest
-	12, // 28: plugins.DriverService.GetProviderPlugin:input_type -> plugins.GetPluginRequest
-	12, // 29: plugins.DriverService.GetMemoryPlugin:input_type -> plugins.GetPluginRequest
-	12, // 30: plugins.DriverService.GetChannelPlugin:input_type -> plugins.GetPluginRequest
-	12, // 31: plugins.DriverService.GetToolsPlugin:input_type -> plugins.GetPluginRequest
-	20, // 32: plugins.ProviderService.Generate:input_type -> plugins.GenerateReq
-	25, // 33: plugins.MemoryService.Store:input_type -> plugins.StoreReq
-	27, // 34: plugins.MemoryService.Retrieve:input_type -> plugins.RetrieveReq
-	30, // 35: plugins.ChannelService.Send:input_type -> plugins.SendReq
-	32, // 36: plugins.ChannelService.Receive:input_type -> plugins.ReceiveReq
-	34, // 37: plugins.ToolsService.List:input_type -> plugins.ListToolsReq
-	37, // 38: plugins.ToolsService.Execute:input_type -> plugins.ExecuteReq
-	1,  // 39: plugins.DriverService.Name:output_type -> plugins.NameResponse
-	3,  // 40: plugins.DriverService.ProbePlugin:output_type -> plugins.ProbeResponse
-	5,  // 41: plugins.DriverService.GetCapabilities:output_type -> plugins.CapabilitiesResponse
-	7,  // 42: plugins.DriverService.OpenDriver:output_type -> plugins.OpenResponse
-	9,  // 43: plugins.DriverService.CloseDriver:output_type -> plugins.CloseResponse
-	11, // 44: plugins.DriverService.ConfigDriver:output_type -> plugins.ConfigResponse
-	13, // 45: plugins.DriverService.GetProviderPlugin:output_type -> plugins.GetPluginResponse
-	13, // 46: plugins.DriverService.GetMemoryPlugin:output_type -> plugins.GetPluginResponse
-	13, // 47: plugins.DriverService.GetChannelPlugin:output_type -> plugins.GetPluginResponse
-	13, // 48: plugins.DriverService.GetToolsPlugin:output_type -> plugins.GetPluginResponse
-	21, // 49: plugins.ProviderService.Generate:output_type -> plugins.GenerateResp
-	26, // 50: plugins.MemoryService.Store:output_type -> plugins.StoreResp
-	28, // 51: plugins.MemoryService.Retrieve:output_type -> plugins.RetrieveResp
-	31, // 52: plugins.ChannelService.Send:output_type -> plugins.SendResp
-	33, // 53: plugins.ChannelService.Receive:output_type -> plugins.MessageEvt
-	35, // 54: plugins.ToolsService.List:output_type -> plugins.ListToolsResp
-	38, // 55: plugins.ToolsService.Execute:output_type -> plugins.ExecuteResp
+var file_pkg_plugins_proto_driver_proto_depIdxs = []int32{
+	14, // 0: proto.CapabilitiesResponse.capabilities:type_name -> proto.DriverCapabilities
+	39, // 1: proto.ConfigRequest.config:type_name -> proto.ConfigRequest.ConfigEntry
+	19, // 2: proto.GetPluginResponse.info:type_name -> proto.PluginInfo
+	15, // 3: proto.DriverCapabilities.provider:type_name -> proto.ProviderCaps
+	16, // 4: proto.DriverCapabilities.memory:type_name -> proto.MemoryCaps
+	17, // 5: proto.DriverCapabilities.channel:type_name -> proto.ChannelCaps
+	18, // 6: proto.DriverCapabilities.tools:type_name -> proto.ToolsCaps
+	22, // 7: proto.GenerateReq.messages:type_name -> proto.MessageProto
+	24, // 8: proto.GenerateReq.tools:type_name -> proto.ToolProto
+	40, // 9: proto.GenerateReq.metadata:type_name -> proto.GenerateReq.MetadataEntry
+	23, // 10: proto.GenerateResp.usage:type_name -> proto.UsageProto
+	41, // 11: proto.ToolProto.parameters:type_name -> proto.ToolProto.ParametersEntry
+	42, // 12: proto.StoreReq.metadata:type_name -> proto.StoreReq.MetadataEntry
+	43, // 13: proto.RetrieveReq.filter:type_name -> proto.RetrieveReq.FilterEntry
+	29, // 14: proto.RetrieveResp.results:type_name -> proto.MemoryResultProto
+	44, // 15: proto.MemoryResultProto.metadata:type_name -> proto.MemoryResultProto.MetadataEntry
+	45, // 16: proto.SendReq.metadata:type_name -> proto.SendReq.MetadataEntry
+	46, // 17: proto.MessageEvt.metadata:type_name -> proto.MessageEvt.MetadataEntry
+	36, // 18: proto.ListToolsResp.tools:type_name -> proto.ToolDefProto
+	47, // 19: proto.ToolDefProto.parameters:type_name -> proto.ToolDefProto.ParametersEntry
+	48, // 20: proto.ExecuteReq.arguments:type_name -> proto.ExecuteReq.ArgumentsEntry
+	49, // 21: proto.ExecuteResp.result:type_name -> proto.ExecuteResp.ResultEntry
+	0,  // 22: proto.DriverService.Name:input_type -> proto.NameRequest
+	2,  // 23: proto.DriverService.ProbePlugin:input_type -> proto.ProbeRequest
+	4,  // 24: proto.DriverService.GetCapabilities:input_type -> proto.CapabilitiesRequest
+	6,  // 25: proto.DriverService.OpenDriver:input_type -> proto.OpenRequest
+	8,  // 26: proto.DriverService.CloseDriver:input_type -> proto.CloseRequest
+	10, // 27: proto.DriverService.ConfigDriver:input_type -> proto.ConfigRequest
+	12, // 28: proto.DriverService.GetProviderPlugin:input_type -> proto.GetPluginRequest
+	12, // 29: proto.DriverService.GetMemoryPlugin:input_type -> proto.GetPluginRequest
+	12, // 30: proto.DriverService.GetChannelPlugin:input_type -> proto.GetPluginRequest
+	12, // 31: proto.DriverService.GetToolsPlugin:input_type -> proto.GetPluginRequest
+	20, // 32: proto.ProviderService.Generate:input_type -> proto.GenerateReq
+	25, // 33: proto.MemoryService.Store:input_type -> proto.StoreReq
+	27, // 34: proto.MemoryService.Retrieve:input_type -> proto.RetrieveReq
+	30, // 35: proto.ChannelService.Send:input_type -> proto.SendReq
+	32, // 36: proto.ChannelService.Receive:input_type -> proto.ReceiveReq
+	34, // 37: proto.ToolsService.List:input_type -> proto.ListToolsReq
+	37, // 38: proto.ToolsService.Execute:input_type -> proto.ExecuteReq
+	1,  // 39: proto.DriverService.Name:output_type -> proto.NameResponse
+	3,  // 40: proto.DriverService.ProbePlugin:output_type -> proto.ProbeResponse
+	5,  // 41: proto.DriverService.GetCapabilities:output_type -> proto.CapabilitiesResponse
+	7,  // 42: proto.DriverService.OpenDriver:output_type -> proto.OpenResponse
+	9,  // 43: proto.DriverService.CloseDriver:output_type -> proto.CloseResponse
+	11, // 44: proto.DriverService.ConfigDriver:output_type -> proto.ConfigResponse
+	13, // 45: proto.DriverService.GetProviderPlugin:output_type -> proto.GetPluginResponse
+	13, // 46: proto.DriverService.GetMemoryPlugin:output_type -> proto.GetPluginResponse
+	13, // 47: proto.DriverService.GetChannelPlugin:output_type -> proto.GetPluginResponse
+	13, // 48: proto.DriverService.GetToolsPlugin:output_type -> proto.GetPluginResponse
+	21, // 49: proto.ProviderService.Generate:output_type -> proto.GenerateResp
+	26, // 50: proto.MemoryService.Store:output_type -> proto.StoreResp
+	28, // 51: proto.MemoryService.Retrieve:output_type -> proto.RetrieveResp
+	31, // 52: proto.ChannelService.Send:output_type -> proto.SendResp
+	33, // 53: proto.ChannelService.Receive:output_type -> proto.MessageEvt
+	35, // 54: proto.ToolsService.List:output_type -> proto.ListToolsResp
+	38, // 55: proto.ToolsService.Execute:output_type -> proto.ExecuteResp
 	39, // [39:56] is the sub-list for method output_type
 	22, // [22:39] is the sub-list for method input_type
 	22, // [22:22] is the sub-list for extension type_name
@@ -2307,26 +2307,26 @@ var file_pkg_plugins_driver_proto_depIdxs = []int32{
 	0,  // [0:22] is the sub-list for field type_name
 }
 
-func init() { file_pkg_plugins_driver_proto_init() }
-func file_pkg_plugins_driver_proto_init() {
-	if File_pkg_plugins_driver_proto != nil {
+func init() { file_pkg_plugins_proto_driver_proto_init() }
+func file_pkg_plugins_proto_driver_proto_init() {
+	if File_pkg_plugins_proto_driver_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_driver_proto_rawDesc), len(file_pkg_plugins_driver_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_proto_driver_proto_rawDesc), len(file_pkg_plugins_proto_driver_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   5,
 		},
-		GoTypes:           file_pkg_plugins_driver_proto_goTypes,
-		DependencyIndexes: file_pkg_plugins_driver_proto_depIdxs,
-		MessageInfos:      file_pkg_plugins_driver_proto_msgTypes,
+		GoTypes:           file_pkg_plugins_proto_driver_proto_goTypes,
+		DependencyIndexes: file_pkg_plugins_proto_driver_proto_depIdxs,
+		MessageInfos:      file_pkg_plugins_proto_driver_proto_msgTypes,
 	}.Build()
-	File_pkg_plugins_driver_proto = out.File
-	file_pkg_plugins_driver_proto_goTypes = nil
-	file_pkg_plugins_driver_proto_depIdxs = nil
+	File_pkg_plugins_proto_driver_proto = out.File
+	file_pkg_plugins_proto_driver_proto_goTypes = nil
+	file_pkg_plugins_proto_driver_proto_depIdxs = nil
 }

@@ -1,13 +1,17 @@
 package plugins
 
-import "context"
+import (
+	"context"
+
+	"github.com/mwantia/forge/pkg/plugins/proto"
+)
 
 // Lifecycle provides access to driver-level lifecycle checks.
 // Plugins use this to reference back to their parent driver.
 type Lifecycle interface {
 	Name() string
 	ProbePlugin(ctx context.Context) (bool, error)
-	GetCapabilities(ctx context.Context) (*DriverCapabilities, error)
+	GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error)
 }
 
 // Driver is the main interface that plugins implement.

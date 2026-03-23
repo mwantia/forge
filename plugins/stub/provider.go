@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubProviderPlugin implements ProviderPlugin.
@@ -15,8 +16,8 @@ func (p *StubProviderPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubProviderPlugin) GetPluginInfo() *plugins.PluginInfo {
-	return &plugins.PluginInfo{
+func (p *StubProviderPlugin) GetPluginInfo() *proto.PluginInfo {
+	return &proto.PluginInfo{
 		Type:    plugins.PluginTypeProvider,
 		Name:    "stub-provider",
 		Author:  "forge",

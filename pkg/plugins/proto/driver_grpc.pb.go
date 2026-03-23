@@ -2,13 +2,12 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v3.21.12
-// source: pkg/plugins/driver.proto
+// source: pkg/plugins/proto/driver.proto
 
-package plugins
+package proto
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,16 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DriverService_Name_FullMethodName              = "/plugins.DriverService/Name"
-	DriverService_ProbePlugin_FullMethodName       = "/plugins.DriverService/ProbePlugin"
-	DriverService_GetCapabilities_FullMethodName   = "/plugins.DriverService/GetCapabilities"
-	DriverService_OpenDriver_FullMethodName        = "/plugins.DriverService/OpenDriver"
-	DriverService_CloseDriver_FullMethodName       = "/plugins.DriverService/CloseDriver"
-	DriverService_ConfigDriver_FullMethodName      = "/plugins.DriverService/ConfigDriver"
-	DriverService_GetProviderPlugin_FullMethodName = "/plugins.DriverService/GetProviderPlugin"
-	DriverService_GetMemoryPlugin_FullMethodName   = "/plugins.DriverService/GetMemoryPlugin"
-	DriverService_GetChannelPlugin_FullMethodName  = "/plugins.DriverService/GetChannelPlugin"
-	DriverService_GetToolsPlugin_FullMethodName    = "/plugins.DriverService/GetToolsPlugin"
+	DriverService_Name_FullMethodName              = "/proto.DriverService/Name"
+	DriverService_ProbePlugin_FullMethodName       = "/proto.DriverService/ProbePlugin"
+	DriverService_GetCapabilities_FullMethodName   = "/proto.DriverService/GetCapabilities"
+	DriverService_OpenDriver_FullMethodName        = "/proto.DriverService/OpenDriver"
+	DriverService_CloseDriver_FullMethodName       = "/proto.DriverService/CloseDriver"
+	DriverService_ConfigDriver_FullMethodName      = "/proto.DriverService/ConfigDriver"
+	DriverService_GetProviderPlugin_FullMethodName = "/proto.DriverService/GetProviderPlugin"
+	DriverService_GetMemoryPlugin_FullMethodName   = "/proto.DriverService/GetMemoryPlugin"
+	DriverService_GetChannelPlugin_FullMethodName  = "/proto.DriverService/GetChannelPlugin"
+	DriverService_GetToolsPlugin_FullMethodName    = "/proto.DriverService/GetToolsPlugin"
 )
 
 // DriverServiceClient is the client API for DriverService service.
@@ -429,7 +428,7 @@ func _DriverService_GetToolsPlugin_Handler(srv interface{}, ctx context.Context,
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DriverService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugins.DriverService",
+	ServiceName: "proto.DriverService",
 	HandlerType: (*DriverServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -474,11 +473,11 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/plugins/driver.proto",
+	Metadata: "pkg/plugins/proto/driver.proto",
 }
 
 const (
-	ProviderService_Generate_FullMethodName = "/plugins.ProviderService/Generate"
+	ProviderService_Generate_FullMethodName = "/proto.ProviderService/Generate"
 )
 
 // ProviderServiceClient is the client API for ProviderService service.
@@ -571,7 +570,7 @@ func _ProviderService_Generate_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ProviderService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugins.ProviderService",
+	ServiceName: "proto.ProviderService",
 	HandlerType: (*ProviderServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -580,12 +579,12 @@ var ProviderService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/plugins/driver.proto",
+	Metadata: "pkg/plugins/proto/driver.proto",
 }
 
 const (
-	MemoryService_Store_FullMethodName    = "/plugins.MemoryService/Store"
-	MemoryService_Retrieve_FullMethodName = "/plugins.MemoryService/Retrieve"
+	MemoryService_Store_FullMethodName    = "/proto.MemoryService/Store"
+	MemoryService_Retrieve_FullMethodName = "/proto.MemoryService/Retrieve"
 )
 
 // MemoryServiceClient is the client API for MemoryService service.
@@ -711,7 +710,7 @@ func _MemoryService_Retrieve_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MemoryService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugins.MemoryService",
+	ServiceName: "proto.MemoryService",
 	HandlerType: (*MemoryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -724,12 +723,12 @@ var MemoryService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/plugins/driver.proto",
+	Metadata: "pkg/plugins/proto/driver.proto",
 }
 
 const (
-	ChannelService_Send_FullMethodName    = "/plugins.ChannelService/Send"
-	ChannelService_Receive_FullMethodName = "/plugins.ChannelService/Receive"
+	ChannelService_Send_FullMethodName    = "/proto.ChannelService/Send"
+	ChannelService_Receive_FullMethodName = "/proto.ChannelService/Receive"
 )
 
 // ChannelServiceClient is the client API for ChannelService service.
@@ -857,7 +856,7 @@ type ChannelService_ReceiveServer = grpc.ServerStreamingServer[MessageEvt]
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChannelService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugins.ChannelService",
+	ServiceName: "proto.ChannelService",
 	HandlerType: (*ChannelServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -872,12 +871,12 @@ var ChannelService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "pkg/plugins/driver.proto",
+	Metadata: "pkg/plugins/proto/driver.proto",
 }
 
 const (
-	ToolsService_List_FullMethodName    = "/plugins.ToolsService/List"
-	ToolsService_Execute_FullMethodName = "/plugins.ToolsService/Execute"
+	ToolsService_List_FullMethodName    = "/proto.ToolsService/List"
+	ToolsService_Execute_FullMethodName = "/proto.ToolsService/Execute"
 )
 
 // ToolsServiceClient is the client API for ToolsService service.
@@ -1003,7 +1002,7 @@ func _ToolsService_Execute_Handler(srv interface{}, ctx context.Context, dec fun
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ToolsService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "plugins.ToolsService",
+	ServiceName: "proto.ToolsService",
 	HandlerType: (*ToolsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1016,5 +1015,5 @@ var ToolsService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/plugins/driver.proto",
+	Metadata: "pkg/plugins/proto/driver.proto",
 }

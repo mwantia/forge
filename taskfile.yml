@@ -5,7 +5,7 @@ env:
     GOOS: linux
     MAIN_PATH: ./cmd/forge/main.go
     BUILD_PATH: ./build/forge
-    TEST_CONFIG_PATH: ./examples/config.hcl
+    TEST_CONFIG_PATH: ./tests/config.hcl
 
 dotenv: ['.env']
 
@@ -29,7 +29,7 @@ tasks:
             protoc --go_out=. --go-grpc_out=. \
                 --go_opt=paths=source_relative \
                 --go-grpc_opt=paths=source_relative \
-                pkg/plugins/driver.proto
+                pkg/plugins/proto/driver.proto
 
     build:
         desc: Compile the project into a static binary

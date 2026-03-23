@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubChannelPlugin implements ChannelPlugin.
@@ -15,8 +16,8 @@ func (p *StubChannelPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubChannelPlugin) GetPluginInfo() *plugins.PluginInfo {
-	return &plugins.PluginInfo{
+func (p *StubChannelPlugin) GetPluginInfo() *proto.PluginInfo {
+	return &proto.PluginInfo{
 		Type:    plugins.PluginTypeChannel,
 		Name:    "stub-channel",
 		Author:  "forge",

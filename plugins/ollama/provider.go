@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // OllamaProviderPlugin implements ProviderPlugin for Ollama.
@@ -21,8 +22,8 @@ func (p *OllamaProviderPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *OllamaProviderPlugin) GetPluginInfo() *plugins.PluginInfo {
-	return &plugins.PluginInfo{
+func (p *OllamaProviderPlugin) GetPluginInfo() *proto.PluginInfo {
+	return &proto.PluginInfo{
 		Type:    plugins.PluginTypeProvider,
 		Name:    "ollama-provider",
 		Author:  "forge",

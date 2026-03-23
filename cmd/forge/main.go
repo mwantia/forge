@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/signal"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/agent"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/internal/plugin"
 	"github.com/mwantia/forge/internal/sandbox"
-	"github.com/mwantia/forge/pkg/log"
+	wlog "github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 	_ "github.com/mwantia/forge/plugins/ollama" // Import to register ollama plugin
 	_ "github.com/mwantia/forge/plugins/skills" // Import to register skills plugin
@@ -45,11 +46,12 @@ func main() {
 				Name:        "forge",
 				DisableTime: true,
 				Level:       hclog.LevelFromString(cfg.LogLevel),
-				Output:      log.LogWrapper(os.Stdout, !NoColorFlag),
+				Output:      wlog.LogWrapper(os.Stdout, !NoColorFlag),
 				JSONFormat:  false,
 			})
 			hclog.SetDefault(logger)
 
+			log.SetOutput(io.Discard)
 			ConfigFlag = cfg
 			return nil
 		},
@@ -120,39 +122,19 @@ Model format: <provider>/<model> (e.g., ollama/llama2, stub/test)`,
 			ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 			defer cancel()
 
-			sb := sandbox.New()
-			defer sb.Close()
+			return sandbox.NewSandbox(*ConfigFlag).Run(ctx, sandbox.SandboxFlags{
+				Model:  SandboxModelFlag,
+				Prompt: args[0],
+			})
 
-			// Build plugin configs from the loaded agent config
-			pluginConfigs := make(map[string]map[string]any)
-			for _, pc := range ConfigFlag.Plugins {
-				if pc.Config != nil && pc.Config.Body != nil {
-					cfgMap, err := plugin.ParseHclBody(pc.Config.Body)
-					if err != nil {
-						continue
-					}
-					pluginConfigs[pc.Name] = cfgMap
-				}
-			}
+			/*pluginConfigs := make(map[string]map[string]any)
 
-			if err := sb.LoadPlugins(ctx, ConfigFlag.PluginDir, pluginConfigs); err != nil {
-				return fmt.Errorf("failed to load plugins: %w", err)
-			}
-
-			opts := sandbox.Options{
-				Model:       SandboxModelFlag,
-				Prompt:      args[0],
-				Temperature: SandboxTemperatureFlag,
-				MaxTokens:   SandboxMaxTokenFlag,
-				Config:      pluginConfigs,
-			}
 
 			result, err := sb.Execute(ctx, opts)
 			if err != nil {
 				return fmt.Errorf("execution failed: %w", err)
 			}
 
-			// Output result
 			fmt.Printf("\n--- Result ---\n")
 			fmt.Printf("Provider: %s\n", result.Provider)
 			fmt.Printf("Model:    %s\n", result.Model)
@@ -162,14 +144,11 @@ Model format: <provider>/<model> (e.g., ollama/llama2, stub/test)`,
 			}
 			fmt.Printf("\n%s\n", result.Content)
 
-			return nil
+			return nil*/
 		},
 	}
 
 	cmd.Flags().StringVar(&SandboxModelFlag, "model", "", "Model to use (format: provider/model, required)")
-	cmd.Flags().Float64Var(&SandboxTemperatureFlag, "temperature", 0.7, "Temperature for generation")
-	cmd.Flags().IntVar(&SandboxMaxTokenFlag, "max-tokens", 0, "Maximum tokens to generate (0 = unlimited)")
-
 	cmd.MarkFlagRequired("model")
 
 	return cmd
