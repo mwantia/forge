@@ -86,7 +86,7 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 	}
 
 	maxIterations := 10
-	for i := 0; i < maxIterations; i++ {
+	for range maxIterations {
 		req := plugins.GenerateRequest{
 			Model:       modelName,
 			Messages:    messages,
