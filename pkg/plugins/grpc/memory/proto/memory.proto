@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package memory;
+
+option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/memory/proto";
+
+service MemoryService {
+    rpc Store(StoreReq)       returns (StoreResp);
+    rpc Retrieve(RetrieveReq) returns (RetrieveResp);
+}
+
+message StoreReq {
+    string              content   = 1;
+    map<string, string> metadata  = 2;
+    string              namespace = 3;
+}
+
+message StoreResp {
+    string id = 1;
+}
+
+message RetrieveReq {
+    string              query     = 1;
+    int32               limit     = 2;
+    string              namespace = 3;
+    map<string, string> filter    = 4;
+}
+
+message RetrieveResp {
+    repeated MemoryResultProto results = 1;
+}
+
+message MemoryResultProto {
+    string              id       = 1;
+    string              content  = 2;
+    double              score    = 3;
+    map<string, string> metadata = 4;
+}

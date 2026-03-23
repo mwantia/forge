@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubChannelPlugin implements ChannelPlugin.
@@ -16,19 +15,8 @@ func (p *StubChannelPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubChannelPlugin) GetPluginInfo() *proto.PluginInfo {
-	return &proto.PluginInfo{
-		Type:    plugins.PluginTypeChannel,
-		Name:    "stub-channel",
-		Author:  "forge",
-		Version: "0.1.0",
-	}
-}
-
 func (p *StubChannelPlugin) Send(ctx context.Context, req plugins.SendRequest) (*plugins.SendResponse, error) {
-	return &plugins.SendResponse{
-		MessageID: "stub-message-id",
-	}, nil
+	return &plugins.SendResponse{MessageID: "stub-message-id"}, nil
 }
 
 func (p *StubChannelPlugin) Receive(ctx context.Context) (<-chan plugins.MessageEvent, error) {

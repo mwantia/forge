@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package channel;
+
+option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/channel/proto";
+
+service ChannelService {
+    rpc Send(SendReq)                    returns (SendResp);
+    rpc Receive(ReceiveReq)              returns (stream MessageEvt);
+}
+
+message SendReq {
+    string              channel_id = 1;
+    string              content    = 2;
+    map<string, string> metadata   = 3;
+}
+
+message SendResp {
+    string message_id = 1;
+}
+
+message ReceiveReq {
+    string channel_id = 1;
+}
+
+message MessageEvt {
+    string              id         = 1;
+    string              channel_id = 2;
+    string              author_id  = 3;
+    string              content    = 4;
+    map<string, string> metadata   = 5;
+}

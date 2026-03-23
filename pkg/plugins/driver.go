@@ -1,17 +1,41 @@
 package plugins
 
-import (
-	"context"
+import "context"
 
-	"github.com/mwantia/forge/pkg/plugins/proto"
-)
+// DriverCapabilities describes what a driver supports.
+type DriverCapabilities struct {
+	Types    []string
+	Provider *ProviderCaps
+	Memory   *MemoryCaps
+	Channel  *ChannelCaps
+	Tools    *ToolsCaps
+}
+
+type ProviderCaps struct {
+	SupportsStreaming bool
+	SupportsVision   bool
+}
+
+type MemoryCaps struct {
+	SupportsVectorSearch bool
+	MaxContextSize       int
+}
+
+type ChannelCaps struct {
+	SupportsDirectMessages bool
+	SupportsThreads        bool
+}
+
+type ToolsCaps struct {
+	SupportsAsyncExecution bool
+}
 
 // Lifecycle provides access to driver-level lifecycle checks.
 // Plugins use this to reference back to their parent driver.
 type Lifecycle interface {
-	Name() string
+	GetPluginInfo() PluginInfo
 	ProbePlugin(ctx context.Context) (bool, error)
-	GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error)
+	GetCapabilities(ctx context.Context) (*DriverCapabilities, error)
 }
 
 // Driver is the main interface that plugins implement.

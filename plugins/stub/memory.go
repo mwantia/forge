@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubMemoryPlugin implements MemoryPlugin.
@@ -16,19 +15,8 @@ func (p *StubMemoryPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubMemoryPlugin) GetPluginInfo() *proto.PluginInfo {
-	return &proto.PluginInfo{
-		Type:    plugins.PluginTypeMemory,
-		Name:    "stub-memory",
-		Author:  "forge",
-		Version: "0.1.0",
-	}
-}
-
 func (p *StubMemoryPlugin) Store(ctx context.Context, req plugins.StoreRequest) (*plugins.StoreResponse, error) {
-	return &plugins.StoreResponse{
-		ID: "stub-memory-id",
-	}, nil
+	return &plugins.StoreResponse{ID: "stub-memory-id"}, nil
 }
 
 func (p *StubMemoryPlugin) Retrieve(ctx context.Context, req plugins.RetrieveRequest) (*plugins.RetrieveResponse, error) {

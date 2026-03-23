@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package provider;
+
+option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto";
+
+service ProviderService {
+    rpc Generate(GenerateReq) returns (GenerateResp);
+}
+
+message GenerateReq {
+    string              model       = 1;
+    repeated MessageProto messages  = 2;
+    double              temperature = 3;
+    int32               max_tokens  = 4;
+    repeated ToolProto  tools       = 5;
+    map<string, string> metadata    = 6;
+}
+
+message GenerateResp {
+    string     id      = 1;
+    string     content = 2;
+    string     role    = 3;
+    UsageProto usage   = 4;
+    string     model   = 5;
+}
+
+message MessageProto {
+    string role    = 1;
+    string content = 2;
+}
+
+message UsageProto {
+    int32 input_tokens  = 1;
+    int32 output_tokens = 2;
+}
+
+message ToolProto {
+    string              name        = 1;
+    string              description = 2;
+    map<string, string> parameters  = 3;
+}

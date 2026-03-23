@@ -15,9 +15,9 @@ type ListToolsResponse struct {
 }
 
 type ToolDefinition struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Parameters  map[string]interface{} `json:"parameters"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Parameters  map[string]any `json:"parameters"`
 }
 
 type ExecuteRequest struct {
@@ -27,7 +27,7 @@ type ExecuteRequest struct {
 }
 
 type ExecuteResponse struct {
-	Result     any            `json:"result"`
-	IsError    bool           `json:"is_error,omitempty"`
-	Metadata   map[string]any `json:"metadata,omitempty"`
+	Result   any            `json:"result"`
+	IsError  bool           `json:"is_error,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }

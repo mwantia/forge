@@ -23,13 +23,34 @@ tasks:
         - go mod tidy
 
     proto:
-        desc: Generate gRPC code from proto definitions
+        desc: Generate gRPC code from all proto definitions
         cmds:
         - |
             protoc --go_out=. --go-grpc_out=. \
                 --go_opt=paths=source_relative \
                 --go-grpc_opt=paths=source_relative \
-                pkg/plugins/proto/driver.proto
+                pkg/plugins/grpc/driver/proto/common.proto \
+                pkg/plugins/grpc/driver/proto/driver.proto
+        - |
+            protoc --go_out=. --go-grpc_out=. \
+                --go_opt=paths=source_relative \
+                --go-grpc_opt=paths=source_relative \
+                pkg/plugins/grpc/provider/proto/provider.proto
+        - |
+            protoc --go_out=. --go-grpc_out=. \
+                --go_opt=paths=source_relative \
+                --go-grpc_opt=paths=source_relative \
+                pkg/plugins/grpc/memory/proto/memory.proto
+        - |
+            protoc --go_out=. --go-grpc_out=. \
+                --go_opt=paths=source_relative \
+                --go-grpc_opt=paths=source_relative \
+                pkg/plugins/grpc/channel/proto/channel.proto
+        - |
+            protoc --go_out=. --go-grpc_out=. \
+                --go_opt=paths=source_relative \
+                --go-grpc_opt=paths=source_relative \
+                pkg/plugins/grpc/tools/proto/tools.proto
 
     build:
         desc: Compile the project into a static binary

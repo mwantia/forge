@@ -13,6 +13,7 @@ import (
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/pkg/errors"
 	"github.com/mwantia/forge/pkg/plugins"
+	pluginsgrpc "github.com/mwantia/forge/pkg/plugins/grpc"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -76,8 +77,8 @@ func (r *PluginRegistry) servePlugin(ctx context.Context, name, dir string, cm m
 
 func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, cm map[string]any, path string, args ...string) (plugins.Driver, *goplugin.Client, error) {
 	client := goplugin.NewClient(&goplugin.ClientConfig{
-		HandshakeConfig: plugins.Handshake,
-		Plugins:         plugins.Plugins,
+		HandshakeConfig: pluginsgrpc.Handshake,
+		Plugins:         pluginsgrpc.Plugins,
 		AllowedProtocols: []goplugin.Protocol{
 			goplugin.ProtocolGRPC,
 		},

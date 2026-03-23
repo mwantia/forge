@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 const PluginName = "ollama"
@@ -37,13 +36,15 @@ func NewOllamaDriver(log hclog.Logger) plugins.Driver {
 	}
 }
 
-// Lifecycle methods
-func (d *OllamaDriver) Name() string {
-	return PluginName
+func (d *OllamaDriver) GetPluginInfo() plugins.PluginInfo {
+	return plugins.PluginInfo{
+		Name:    PluginName,
+		Author:  "forge",
+		Version: "0.1.0",
+	}
 }
 
 func (d *OllamaDriver) ProbePlugin(ctx context.Context) (bool, error) {
-	// Check if Ollama is reachable
 	if d.config == nil || d.config.Address == "" {
 		return false, nil
 	}
@@ -63,14 +64,12 @@ func (d *OllamaDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
-func (d *OllamaDriver) GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error) {
-	return &proto.DriverCapabilities{
-		Types: []string{
-			plugins.PluginTypeProvider,
-		},
-		Provider: &proto.ProviderCaps{
+func (d *OllamaDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
+	return &plugins.DriverCapabilities{
+		Types: []string{plugins.PluginTypeProvider},
+		Provider: &plugins.ProviderCaps{
 			SupportsStreaming: true,
-			SupportsVision:    false,
+			SupportsVision:   false,
 		},
 	}, nil
 }
@@ -84,7 +83,6 @@ func (d *OllamaDriver) CloseDriver(ctx context.Context) error {
 }
 
 func (d *OllamaDriver) ConfigDriver(ctx context.Context, config plugins.PluginConfig) error {
-	// Start with default config
 	cfg := DefaultConfig()
 
 	if err := mapstructure.Decode(config.ConfigMap, cfg); err != nil {
@@ -93,14 +91,11 @@ func (d *OllamaDriver) ConfigDriver(ctx context.Context, config plugins.PluginCo
 
 	d.config = cfg
 
-	// Setup HTTP client with timeout
 	timeout := time.Duration(cfg.Timeout) * time.Second
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	d.client = &http.Client{
-		Timeout: timeout,
-	}
+	d.client = &http.Client{Timeout: timeout}
 
 	d.log.Info("Configured Ollama driver",
 		"address", cfg.Address,
@@ -111,7 +106,6 @@ func (d *OllamaDriver) ConfigDriver(ctx context.Context, config plugins.PluginCo
 	return nil
 }
 
-// Plugin type accessors
 func (d *OllamaDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderPlugin, error) {
 	return &OllamaProviderPlugin{driver: d}, nil
 }

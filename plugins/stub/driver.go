@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 const PluginName = "stub"
@@ -20,49 +19,48 @@ type StubDriver struct {
 	log hclog.Logger
 }
 
-// NewStubDriver creates a new stub driver that supports all plugin types.
 func NewStubDriver(log hclog.Logger) plugins.Driver {
-	return &StubDriver{
-		log: log.Named(PluginName),
-	}
+	return &StubDriver{log: log.Named(PluginName)}
 }
 
-// Lifecycle methods
-func (d *StubDriver) Name() string {
-	return PluginName
+func (d *StubDriver) GetPluginInfo() plugins.PluginInfo {
+	return plugins.PluginInfo{
+		Name:    PluginName,
+		Author:  "forge",
+		Version: "0.1.0",
+	}
 }
 
 func (d *StubDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (d *StubDriver) GetCapabilities(ctx context.Context) (*proto.DriverCapabilities, error) {
-	return &proto.DriverCapabilities{
+func (d *StubDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
+	return &plugins.DriverCapabilities{
 		Types: []string{
 			plugins.PluginTypeProvider,
 			plugins.PluginTypeMemory,
 			plugins.PluginTypeChannel,
 			plugins.PluginTypeTools,
 		},
-		Provider: &proto.ProviderCaps{
+		Provider: &plugins.ProviderCaps{
 			SupportsStreaming: true,
-			SupportsVision:    false,
+			SupportsVision:   false,
 		},
-		Memory: &proto.MemoryCaps{
+		Memory: &plugins.MemoryCaps{
 			SupportsVectorSearch: false,
 			MaxContextSize:       4096,
 		},
-		Channel: &proto.ChannelCaps{
+		Channel: &plugins.ChannelCaps{
 			SupportsDirectMessages: true,
 			SupportsThreads:        true,
 		},
-		Tools: &proto.ToolsCaps{
+		Tools: &plugins.ToolsCaps{
 			SupportsAsyncExecution: false,
 		},
 	}, nil
 }
 
-// Lifecycle management
 func (d *StubDriver) OpenDriver(ctx context.Context) error {
 	d.log.Debug("Opening stub driver...")
 	return nil
@@ -78,7 +76,6 @@ func (d *StubDriver) ConfigDriver(ctx context.Context, config plugins.PluginConf
 	return nil
 }
 
-// Plugin type accessors
 func (d *StubDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderPlugin, error) {
 	return &StubProviderPlugin{driver: d}, nil
 }

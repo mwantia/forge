@@ -13,6 +13,7 @@ import (
 	"github.com/mwantia/forge/internal/sandbox"
 	wlog "github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge/pkg/plugins/grpc"
 	_ "github.com/mwantia/forge/plugins/ollama" // Import to register ollama plugin
 	_ "github.com/mwantia/forge/plugins/skills" // Import to register skills plugin
 	_ "github.com/mwantia/forge/plugins/stub"   // Import to register stub plugin
@@ -98,7 +99,7 @@ func newPluginCommand() *cobra.Command {
 				return fmt.Errorf("unknown plugin: %s (available: %v)", name, plugins.Names())
 			}
 
-			plugins.Serve(factory)
+			grpc.Serve(factory)
 			return nil
 		},
 	}

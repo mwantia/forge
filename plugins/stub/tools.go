@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 // StubToolsPlugin implements ToolsPlugin.
@@ -14,15 +13,6 @@ type StubToolsPlugin struct {
 
 func (p *StubToolsPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
-}
-
-func (p *StubToolsPlugin) GetPluginInfo() *proto.PluginInfo {
-	return &proto.PluginInfo{
-		Type:    plugins.PluginTypeTools,
-		Name:    "stub-tools",
-		Author:  "forge",
-		Version: "0.1.0",
-	}
 }
 
 func (p *StubToolsPlugin) List(ctx context.Context) (*plugins.ListToolsResponse, error) {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 type PluginRegistry struct {
@@ -20,7 +19,7 @@ type PluginRegistry struct {
 
 type PluginDriver struct {
 	Name         string
-	Capabilities *proto.DriverCapabilities
+	Capabilities *plugins.DriverCapabilities
 	Driver       plugins.Driver
 	Cleanup      PluginDriverCleanup
 }

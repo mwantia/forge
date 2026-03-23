@@ -8,20 +8,10 @@ import (
 	"strings"
 
 	"github.com/mwantia/forge/pkg/plugins"
-	"github.com/mwantia/forge/pkg/plugins/proto"
 )
 
 func (p *SkillsToolsDriver) GetLifecycle() plugins.Lifecycle {
 	return p
-}
-
-func (p *SkillsToolsDriver) GetPluginInfo() *proto.PluginInfo {
-	return &proto.PluginInfo{
-		Type:    plugins.PluginTypeTools,
-		Name:    "skills-tools",
-		Author:  "forge",
-		Version: "0.1.0",
-	}
 }
 
 // scanSkills scans the directory for SKILL.md files and parses them.
