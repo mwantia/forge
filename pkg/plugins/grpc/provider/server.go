@@ -2,12 +2,12 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/mwantia/forge/pkg/plugins"
 	proto "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Server implements ProviderServiceServer, bridging gRPC to the ProviderPlugin interface.
@@ -33,27 +33,29 @@ func (s *Server) Chat(req *proto.ChatReq, stream proto.ProviderService_ChatServe
 
 	var messages []plugins.ChatMessage
 	for _, m := range req.Messages {
-		messages = append(messages, plugins.ChatMessage{
+		msg := plugins.ChatMessage{
 			Role:    m.Role,
 			Content: m.Content,
-		})
+		}
+		if len(m.ToolCalls) > 0 {
+			msg.ToolCalls = &plugins.ChatMessageToolCalls{}
+			for _, tc := range m.ToolCalls {
+				msg.ToolCalls.ToolCalls = append(msg.ToolCalls.ToolCalls, plugins.ChatToolCall{
+					ID:        tc.Id,
+					Name:      tc.Name,
+					Arguments: tc.Arguments.AsMap(),
+				})
+			}
+		}
+		messages = append(messages, msg)
 	}
 
 	var tools []plugins.ToolCall
 	for _, t := range req.Tools {
-		params := make(map[string]any)
-		for k, v := range t.Parameters {
-			var decoded any
-			if err := json.Unmarshal([]byte(v), &decoded); err != nil {
-				params[k] = v
-			} else {
-				params[k] = decoded
-			}
-		}
 		tools = append(tools, plugins.ToolCall{
 			Name:        t.Name,
 			Description: t.Description,
-			Parameters:  params,
+			Parameters:  t.Parameters.AsMap(),
 		})
 	}
 
@@ -84,19 +86,14 @@ func (s *Server) Chat(req *proto.ChatReq, stream proto.ProviderService_ChatServe
 			Done:  chunk.Done,
 		}
 		for _, tc := range chunk.ToolCalls {
-			args := make(map[string]string)
-			for k, v := range tc.Arguments {
-				b, marshalErr := json.Marshal(v)
-				if marshalErr != nil {
-					args[k] = fmt.Sprintf("%v", v)
-				} else {
-					args[k] = string(b)
-				}
+			arguments, err := structpb.NewStruct(tc.Arguments)
+			if err != nil {
+				return err
 			}
 			protoChunk.ToolCalls = append(protoChunk.ToolCalls, &proto.ToolCallProto{
 				Id:        tc.ID,
 				Name:      tc.Name,
-				Arguments: args,
+				Arguments: arguments,
 			})
 		}
 

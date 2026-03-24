@@ -2,13 +2,13 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/mwantia/forge/pkg/plugins"
 	proto "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Client implements plugins.ProviderPlugin over gRPC.
@@ -39,19 +39,10 @@ func (s *grpcChatStream) Recv() (*plugins.ChatChunk, error) {
 		Done:  chunk.Done,
 	}
 	for _, tc := range chunk.ToolCalls {
-		args := make(map[string]any)
-		for k, v := range tc.Arguments {
-			var decoded any
-			if err := json.Unmarshal([]byte(v), &decoded); err != nil {
-				args[k] = v
-			} else {
-				args[k] = decoded
-			}
-		}
 		result.ToolCalls = append(result.ToolCalls, plugins.ChatToolCall{
 			ID:        tc.Id,
 			Name:      tc.Name,
-			Arguments: args,
+			Arguments: tc.Arguments.AsMap(),
 		})
 	}
 	return result, nil
@@ -68,20 +59,29 @@ func (c *Client) Chat(ctx context.Context, messages []plugins.ChatMessage, tools
 		req.Temperature = model.Temperature
 	}
 	for _, m := range messages {
-		req.Messages = append(req.Messages, &proto.MessageProto{
+		pm := &proto.MessageProto{
 			Role:    m.Role,
 			Content: m.Content,
-		})
+		}
+		if m.ToolCalls != nil {
+			for _, tc := range m.ToolCalls.ToolCalls {
+				arguments, err := structpb.NewStruct(tc.Arguments)
+				if err != nil {
+					return nil, err
+				}
+				pm.ToolCalls = append(pm.ToolCalls, &proto.ToolCallProto{
+					Id:        tc.ID,
+					Name:      tc.Name,
+					Arguments: arguments,
+				})
+			}
+		}
+		req.Messages = append(req.Messages, pm)
 	}
 	for _, t := range tools {
-		params := make(map[string]string)
-		for k, v := range t.Parameters {
-			b, err := json.Marshal(v)
-			if err != nil {
-				params[k] = fmt.Sprintf("%v", v)
-			} else {
-				params[k] = string(b)
-			}
+		params, err := structpb.NewStruct(t.Parameters)
+		if err != nil {
+			return nil, err
 		}
 		req.Tools = append(req.Tools, &proto.ToolDefProto{
 			Name:        t.Name,

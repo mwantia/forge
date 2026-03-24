@@ -28,9 +28,9 @@ func (c *Client) List(ctx context.Context) (*plugins.ListToolsResponse, error) {
 
 	result := &plugins.ListToolsResponse{}
 	for _, t := range resp.Tools {
-		params := make(map[string]any)
-		for k, v := range t.Parameters {
-			params[k] = v
+		var params map[string]any
+		if t.Parameters != nil {
+			params = t.Parameters.AsMap()
 		}
 		result.Tools = append(result.Tools, plugins.ToolDefinition{
 			Name:        t.Name,
@@ -42,12 +42,15 @@ func (c *Client) List(ctx context.Context) (*plugins.ListToolsResponse, error) {
 }
 
 func (c *Client) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+	argsStruct, err := toStruct(req.Arguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode arguments: %w", err)
+	}
+
 	protoReq := &proto.ExecuteReq{
 		Tool:      req.Tool,
-		Arguments: make(map[string]string),
-	}
-	for k, v := range req.Arguments {
-		protoReq.Arguments[k] = fmt.Sprintf("%v", v)
+		Arguments: argsStruct,
+		CallId:    req.CallID,
 	}
 
 	resp, err := c.client.Execute(ctx, protoReq)
@@ -55,13 +58,13 @@ func (c *Client) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plug
 		return nil, err
 	}
 
-	resultMap := make(map[string]any)
-	for k, v := range resp.Result {
-		resultMap[k] = v
+	var result any
+	if resp.Result != nil {
+		result = resp.Result.AsInterface()
 	}
 
 	return &plugins.ExecuteResponse{
-		Result:  resultMap,
+		Result:  result,
 		IsError: resp.IsError,
 	}, nil
 }

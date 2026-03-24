@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -79,6 +80,25 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 
 	s.log.Trace("Model", "name", modelName)
 
+	// Collect tools from all loaded tools plugins.
+	// toolsMap maps tool name → the plugin that owns it for dispatch during execution.
+	toolsMap := make(map[string]plugins.ToolsPlugin)
+	var availableTools []plugins.ToolCall
+
+	for driverName, tp := range s.registry.GetAllToolsPlugins(ctx) {
+		resp, err := tp.List(ctx)
+		if err != nil {
+			s.log.Warn("Failed to list tools from plugin", "driver", driverName, "error", err)
+			continue
+		}
+		for _, def := range resp.Tools {
+			availableTools = append(availableTools, plugins.ToolCall(def))
+			toolsMap[def.Name] = tp
+		}
+	}
+
+	s.log.Debug("Available tools", "count", len(availableTools))
+
 	messages := []plugins.ChatMessage{
 		{
 			Role:    "user",
@@ -91,18 +111,19 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 		Temperature: 0.7,
 	}
 
-	maxIterations := 10
+	defer s.Cleanup()
+	maxIterations := 20
 	for range maxIterations {
 		s.log.Debug("Chat request", "model", modelName, "messages", len(messages))
 
-		stream, err := provider.Chat(ctx, messages, nil, model)
+		stream, err := provider.Chat(ctx, messages, availableTools, model)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
 
 		// Drain the stream, printing deltas as they arrive.
 		var role, content string
-		var toolCalls []plugins.ChatToolCall
+		toolCalls := make([]plugins.ChatToolCall, 0)
 		for {
 			chunk, err := stream.Recv()
 			if err != nil {
@@ -116,27 +137,68 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 				role = chunk.Role
 			}
 			fmt.Printf("%s", chunk.Delta)
+
 			content += chunk.Delta
+			toolCalls = append(toolCalls, chunk.ToolCalls...)
+
 			if chunk.Done {
-				toolCalls = chunk.ToolCalls
 				stream.Close()
 				break
 			}
 		}
 		fmt.Println() // newline after streamed output
 
-		messages = append(messages, plugins.ChatMessage{
+		// Append the assistant turn, preserving any tool calls on the message.
+		assistantMsg := plugins.ChatMessage{
 			Role:    role,
 			Content: content,
-		})
+		}
+		if len(toolCalls) > 0 {
+			assistantMsg.ToolCalls = &plugins.ChatMessageToolCalls{
+				ToolCalls: toolCalls,
+			}
+		}
+		messages = append(messages, assistantMsg)
 
 		if len(toolCalls) == 0 {
-			s.Cleanup()
+
 			return nil
+		}
+
+		// Execute each tool call and feed the results back as "tool" messages.
+		for _, tc := range toolCalls {
+			s.log.Debug("Executing tool call", "tool", tc.Name, "id", tc.ID)
+
+			var resultContent string
+			tp, ok := toolsMap[tc.Name]
+			if !ok {
+				resultContent = fmt.Sprintf("error: tool '%s' not found", tc.Name)
+				s.log.Warn("Tool not found", "tool", tc.Name)
+			} else {
+				execResp, err := tp.Execute(ctx, plugins.ExecuteRequest{
+					Tool:      tc.Name,
+					Arguments: tc.Arguments,
+					CallID:    tc.ID,
+				})
+				if err != nil {
+					resultContent = fmt.Sprintf("error: %v", err)
+					s.log.Warn("Tool execution error", "tool", tc.Name, "error", err)
+				} else {
+					b, _ := json.Marshal(execResp.Result)
+					resultContent = string(b)
+					if execResp.IsError {
+						s.log.Warn("Tool returned error result", "tool", tc.Name, "result", resultContent)
+					}
+				}
+			}
+
+			messages = append(messages, plugins.ChatMessage{
+				Role:    "tool",
+				Content: resultContent,
+			})
 		}
 	}
 
-	s.Cleanup()
 	return fmt.Errorf("max tool iterations reached")
 }
 

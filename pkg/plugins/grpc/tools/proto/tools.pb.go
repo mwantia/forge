@@ -9,6 +9,7 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -105,7 +106,7 @@ type ToolDefProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Parameters    map[string]string      `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Parameters    *structpb.Struct       `protobuf:"bytes,3,opt,name=parameters,proto3" json:"parameters,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,7 +155,7 @@ func (x *ToolDefProto) GetDescription() string {
 	return ""
 }
 
-func (x *ToolDefProto) GetParameters() map[string]string {
+func (x *ToolDefProto) GetParameters() *structpb.Struct {
 	if x != nil {
 		return x.Parameters
 	}
@@ -164,7 +165,8 @@ func (x *ToolDefProto) GetParameters() map[string]string {
 type ExecuteReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tool          string                 `protobuf:"bytes,1,opt,name=tool,proto3" json:"tool,omitempty"`
-	Arguments     map[string]string      `protobuf:"bytes,2,rep,name=arguments,proto3" json:"arguments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Arguments     *structpb.Struct       `protobuf:"bytes,2,opt,name=arguments,proto3" json:"arguments,omitempty"`
+	CallId        string                 `protobuf:"bytes,3,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -206,16 +208,23 @@ func (x *ExecuteReq) GetTool() string {
 	return ""
 }
 
-func (x *ExecuteReq) GetArguments() map[string]string {
+func (x *ExecuteReq) GetArguments() *structpb.Struct {
 	if x != nil {
 		return x.Arguments
 	}
 	return nil
 }
 
+func (x *ExecuteReq) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
 type ExecuteResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Result        map[string]string      `protobuf:"bytes,1,rep,name=result,proto3" json:"result,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Result        *structpb.Value        `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
 	IsError       bool                   `protobuf:"varint,2,opt,name=is_error,json=isError,proto3" json:"is_error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -251,7 +260,7 @@ func (*ExecuteResp) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_tools_proto_tools_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ExecuteResp) GetResult() map[string]string {
+func (x *ExecuteResp) GetResult() *structpb.Value {
 	if x != nil {
 		return x.Result
 	}
@@ -269,32 +278,24 @@ var File_pkg_plugins_grpc_tools_proto_tools_proto protoreflect.FileDescriptor
 
 const file_pkg_plugins_grpc_tools_proto_tools_proto_rawDesc = "" +
 	"\n" +
-	"(pkg/plugins/grpc/tools/proto/tools.proto\x12\x05tools\"\x0e\n" +
+	"(pkg/plugins/grpc/tools/proto/tools.proto\x12\x05tools\x1a\x1cgoogle/protobuf/struct.proto\"\x0e\n" +
 	"\fListToolsReq\":\n" +
 	"\rListToolsResp\x12)\n" +
-	"\x05tools\x18\x01 \x03(\v2\x13.tools.ToolDefProtoR\x05tools\"\xc8\x01\n" +
+	"\x05tools\x18\x01 \x03(\v2\x13.tools.ToolDefProtoR\x05tools\"}\n" +
 	"\fToolDefProto\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12C\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x127\n" +
 	"\n" +
-	"parameters\x18\x03 \x03(\v2#.tools.ToolDefProto.ParametersEntryR\n" +
-	"parameters\x1a=\n" +
-	"\x0fParametersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9e\x01\n" +
+	"parameters\x18\x03 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"parameters\"p\n" +
 	"\n" +
 	"ExecuteReq\x12\x12\n" +
-	"\x04tool\x18\x01 \x01(\tR\x04tool\x12>\n" +
-	"\targuments\x18\x02 \x03(\v2 .tools.ExecuteReq.ArgumentsEntryR\targuments\x1a<\n" +
-	"\x0eArgumentsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9b\x01\n" +
-	"\vExecuteResp\x126\n" +
-	"\x06result\x18\x01 \x03(\v2\x1e.tools.ExecuteResp.ResultEntryR\x06result\x12\x19\n" +
-	"\bis_error\x18\x02 \x01(\bR\aisError\x1a9\n" +
-	"\vResultEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012s\n" +
+	"\x04tool\x18\x01 \x01(\tR\x04tool\x125\n" +
+	"\targuments\x18\x02 \x01(\v2\x17.google.protobuf.StructR\targuments\x12\x17\n" +
+	"\acall_id\x18\x03 \x01(\tR\x06callId\"X\n" +
+	"\vExecuteResp\x12.\n" +
+	"\x06result\x18\x01 \x01(\v2\x16.google.protobuf.ValueR\x06result\x12\x19\n" +
+	"\bis_error\x18\x02 \x01(\bR\aisError2s\n" +
 	"\fToolsService\x121\n" +
 	"\x04List\x12\x13.tools.ListToolsReq\x1a\x14.tools.ListToolsResp\x120\n" +
 	"\aExecute\x12\x11.tools.ExecuteReq\x1a\x12.tools.ExecuteRespB7Z5github.com/mwantia/forge/pkg/plugins/grpc/tools/protob\x06proto3"
@@ -311,22 +312,21 @@ func file_pkg_plugins_grpc_tools_proto_tools_proto_rawDescGZIP() []byte {
 	return file_pkg_plugins_grpc_tools_proto_tools_proto_rawDescData
 }
 
-var file_pkg_plugins_grpc_tools_proto_tools_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_pkg_plugins_grpc_tools_proto_tools_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_pkg_plugins_grpc_tools_proto_tools_proto_goTypes = []any{
-	(*ListToolsReq)(nil),  // 0: tools.ListToolsReq
-	(*ListToolsResp)(nil), // 1: tools.ListToolsResp
-	(*ToolDefProto)(nil),  // 2: tools.ToolDefProto
-	(*ExecuteReq)(nil),    // 3: tools.ExecuteReq
-	(*ExecuteResp)(nil),   // 4: tools.ExecuteResp
-	nil,                   // 5: tools.ToolDefProto.ParametersEntry
-	nil,                   // 6: tools.ExecuteReq.ArgumentsEntry
-	nil,                   // 7: tools.ExecuteResp.ResultEntry
+	(*ListToolsReq)(nil),    // 0: tools.ListToolsReq
+	(*ListToolsResp)(nil),   // 1: tools.ListToolsResp
+	(*ToolDefProto)(nil),    // 2: tools.ToolDefProto
+	(*ExecuteReq)(nil),      // 3: tools.ExecuteReq
+	(*ExecuteResp)(nil),     // 4: tools.ExecuteResp
+	(*structpb.Struct)(nil), // 5: google.protobuf.Struct
+	(*structpb.Value)(nil),  // 6: google.protobuf.Value
 }
 var file_pkg_plugins_grpc_tools_proto_tools_proto_depIdxs = []int32{
 	2, // 0: tools.ListToolsResp.tools:type_name -> tools.ToolDefProto
-	5, // 1: tools.ToolDefProto.parameters:type_name -> tools.ToolDefProto.ParametersEntry
-	6, // 2: tools.ExecuteReq.arguments:type_name -> tools.ExecuteReq.ArgumentsEntry
-	7, // 3: tools.ExecuteResp.result:type_name -> tools.ExecuteResp.ResultEntry
+	5, // 1: tools.ToolDefProto.parameters:type_name -> google.protobuf.Struct
+	5, // 2: tools.ExecuteReq.arguments:type_name -> google.protobuf.Struct
+	6, // 3: tools.ExecuteResp.result:type_name -> google.protobuf.Value
 	0, // 4: tools.ToolsService.List:input_type -> tools.ListToolsReq
 	3, // 5: tools.ToolsService.Execute:input_type -> tools.ExecuteReq
 	1, // 6: tools.ToolsService.List:output_type -> tools.ListToolsResp
@@ -349,7 +349,7 @@ func file_pkg_plugins_grpc_tools_proto_tools_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_grpc_tools_proto_tools_proto_rawDesc), len(file_pkg_plugins_grpc_tools_proto_tools_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

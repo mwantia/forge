@@ -9,6 +9,7 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -193,6 +194,7 @@ type MessageProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	ToolCalls     []*ToolCallProto       `protobuf:"bytes,3,rep,name=tool_calls,json=toolCalls,proto3" json:"tool_calls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -241,11 +243,18 @@ func (x *MessageProto) GetContent() string {
 	return ""
 }
 
+func (x *MessageProto) GetToolCalls() []*ToolCallProto {
+	if x != nil {
+		return x.ToolCalls
+	}
+	return nil
+}
+
 type ToolDefProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Parameters    map[string]string      `protobuf:"bytes,3,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Parameters    *structpb.Struct       `protobuf:"bytes,3,opt,name=parameters,proto3" json:"parameters,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -294,7 +303,7 @@ func (x *ToolDefProto) GetDescription() string {
 	return ""
 }
 
-func (x *ToolDefProto) GetParameters() map[string]string {
+func (x *ToolDefProto) GetParameters() *structpb.Struct {
 	if x != nil {
 		return x.Parameters
 	}
@@ -305,7 +314,7 @@ type ToolCallProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Arguments     map[string]string      `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Arguments     *structpb.Struct       `protobuf:"bytes,3,opt,name=arguments,proto3" json:"arguments,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -354,7 +363,7 @@ func (x *ToolCallProto) GetName() string {
 	return ""
 }
 
-func (x *ToolCallProto) GetArguments() map[string]string {
+func (x *ToolCallProto) GetArguments() *structpb.Struct {
 	if x != nil {
 		return x.Arguments
 	}
@@ -941,7 +950,7 @@ var File_pkg_plugins_grpc_provider_proto_provider_proto protoreflect.FileDescrip
 
 const file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc = "" +
 	"\n" +
-	".pkg/plugins/grpc/provider/proto/provider.proto\x12\bprovider\"\xbc\x02\n" +
+	".pkg/plugins/grpc/provider/proto/provider.proto\x12\bprovider\x1a\x1cgoogle/protobuf/struct.proto\"\xbc\x02\n" +
 	"\aChatReq\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x122\n" +
 	"\bmessages\x18\x02 \x03(\v2\x16.provider.MessageProtoR\bmessages\x12 \n" +
@@ -960,26 +969,22 @@ const file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc = "" +
 	"\x04done\x18\x04 \x01(\bR\x04done\x126\n" +
 	"\n" +
 	"tool_calls\x18\x05 \x03(\v2\x17.provider.ToolCallProtoR\ttoolCalls\x12\x14\n" +
-	"\x05model\x18\x06 \x01(\tR\x05model\"<\n" +
+	"\x05model\x18\x06 \x01(\tR\x05model\"t\n" +
 	"\fMessageProto\x12\x12\n" +
 	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\"\xcb\x01\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x126\n" +
+	"\n" +
+	"tool_calls\x18\x03 \x03(\v2\x17.provider.ToolCallProtoR\ttoolCalls\"}\n" +
 	"\fToolDefProto\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12F\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x127\n" +
 	"\n" +
-	"parameters\x18\x03 \x03(\v2&.provider.ToolDefProto.ParametersEntryR\n" +
-	"parameters\x1a=\n" +
-	"\x0fParametersEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb7\x01\n" +
+	"parameters\x18\x03 \x01(\v2\x17.google.protobuf.StructR\n" +
+	"parameters\"j\n" +
 	"\rToolCallProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12D\n" +
-	"\targuments\x18\x03 \x03(\v2&.provider.ToolCallProto.ArgumentsEntryR\targuments\x1a<\n" +
-	"\x0eArgumentsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\":\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x125\n" +
+	"\targuments\x18\x03 \x01(\v2\x17.google.protobuf.StructR\targuments\":\n" +
 	"\bEmbedReq\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\"E\n" +
@@ -1043,7 +1048,7 @@ func file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP() []byte {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescData
 }
 
-var file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_pkg_plugins_grpc_provider_proto_provider_proto_goTypes = []any{
 	(*ChatReq)(nil),         // 0: provider.ChatReq
 	(*ChatChunk)(nil),       // 1: provider.ChatChunk
@@ -1063,41 +1068,41 @@ var file_pkg_plugins_grpc_provider_proto_provider_proto_goTypes = []any{
 	(*DeleteModelResp)(nil), // 15: provider.DeleteModelResp
 	(*ModelProto)(nil),      // 16: provider.ModelProto
 	nil,                     // 17: provider.ChatReq.MetadataEntry
-	nil,                     // 18: provider.ToolDefProto.ParametersEntry
-	nil,                     // 19: provider.ToolCallProto.ArgumentsEntry
-	nil,                     // 20: provider.CreateModelReq.ParametersEntry
-	nil,                     // 21: provider.ModelProto.MetadataEntry
+	nil,                     // 18: provider.CreateModelReq.ParametersEntry
+	nil,                     // 19: provider.ModelProto.MetadataEntry
+	(*structpb.Struct)(nil), // 20: google.protobuf.Struct
 }
 var file_pkg_plugins_grpc_provider_proto_provider_proto_depIdxs = []int32{
 	2,  // 0: provider.ChatReq.messages:type_name -> provider.MessageProto
 	3,  // 1: provider.ChatReq.tools:type_name -> provider.ToolDefProto
 	17, // 2: provider.ChatReq.metadata:type_name -> provider.ChatReq.MetadataEntry
 	4,  // 3: provider.ChatChunk.tool_calls:type_name -> provider.ToolCallProto
-	18, // 4: provider.ToolDefProto.parameters:type_name -> provider.ToolDefProto.ParametersEntry
-	19, // 5: provider.ToolCallProto.arguments:type_name -> provider.ToolCallProto.ArgumentsEntry
-	7,  // 6: provider.EmbedResp.embeddings:type_name -> provider.EmbeddingProto
-	16, // 7: provider.ListModelsResp.models:type_name -> provider.ModelProto
-	20, // 8: provider.CreateModelReq.parameters:type_name -> provider.CreateModelReq.ParametersEntry
-	16, // 9: provider.CreateModelResp.model:type_name -> provider.ModelProto
-	16, // 10: provider.GetModelResp.model:type_name -> provider.ModelProto
-	21, // 11: provider.ModelProto.metadata:type_name -> provider.ModelProto.MetadataEntry
-	0,  // 12: provider.ProviderService.Chat:input_type -> provider.ChatReq
-	5,  // 13: provider.ProviderService.Embed:input_type -> provider.EmbedReq
-	8,  // 14: provider.ProviderService.ListModels:input_type -> provider.ListModelsReq
-	10, // 15: provider.ProviderService.CreateModel:input_type -> provider.CreateModelReq
-	12, // 16: provider.ProviderService.GetModel:input_type -> provider.GetModelReq
-	14, // 17: provider.ProviderService.DeleteModel:input_type -> provider.DeleteModelReq
-	1,  // 18: provider.ProviderService.Chat:output_type -> provider.ChatChunk
-	6,  // 19: provider.ProviderService.Embed:output_type -> provider.EmbedResp
-	9,  // 20: provider.ProviderService.ListModels:output_type -> provider.ListModelsResp
-	11, // 21: provider.ProviderService.CreateModel:output_type -> provider.CreateModelResp
-	13, // 22: provider.ProviderService.GetModel:output_type -> provider.GetModelResp
-	15, // 23: provider.ProviderService.DeleteModel:output_type -> provider.DeleteModelResp
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	4,  // 4: provider.MessageProto.tool_calls:type_name -> provider.ToolCallProto
+	20, // 5: provider.ToolDefProto.parameters:type_name -> google.protobuf.Struct
+	20, // 6: provider.ToolCallProto.arguments:type_name -> google.protobuf.Struct
+	7,  // 7: provider.EmbedResp.embeddings:type_name -> provider.EmbeddingProto
+	16, // 8: provider.ListModelsResp.models:type_name -> provider.ModelProto
+	18, // 9: provider.CreateModelReq.parameters:type_name -> provider.CreateModelReq.ParametersEntry
+	16, // 10: provider.CreateModelResp.model:type_name -> provider.ModelProto
+	16, // 11: provider.GetModelResp.model:type_name -> provider.ModelProto
+	19, // 12: provider.ModelProto.metadata:type_name -> provider.ModelProto.MetadataEntry
+	0,  // 13: provider.ProviderService.Chat:input_type -> provider.ChatReq
+	5,  // 14: provider.ProviderService.Embed:input_type -> provider.EmbedReq
+	8,  // 15: provider.ProviderService.ListModels:input_type -> provider.ListModelsReq
+	10, // 16: provider.ProviderService.CreateModel:input_type -> provider.CreateModelReq
+	12, // 17: provider.ProviderService.GetModel:input_type -> provider.GetModelReq
+	14, // 18: provider.ProviderService.DeleteModel:input_type -> provider.DeleteModelReq
+	1,  // 19: provider.ProviderService.Chat:output_type -> provider.ChatChunk
+	6,  // 20: provider.ProviderService.Embed:output_type -> provider.EmbedResp
+	9,  // 21: provider.ProviderService.ListModels:output_type -> provider.ListModelsResp
+	11, // 22: provider.ProviderService.CreateModel:output_type -> provider.CreateModelResp
+	13, // 23: provider.ProviderService.GetModel:output_type -> provider.GetModelResp
+	15, // 24: provider.ProviderService.DeleteModel:output_type -> provider.DeleteModelResp
+	19, // [19:25] is the sub-list for method output_type
+	13, // [13:19] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_pkg_plugins_grpc_provider_proto_provider_proto_init() }
@@ -1111,7 +1116,7 @@ func file_pkg_plugins_grpc_provider_proto_provider_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc), len(file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -146,18 +146,39 @@ func (r *PluginRegistry) GetPluginConfigMap(cfg *config.PluginConfigBody) (map[s
 			return cm, fmt.Errorf("invalid plugin config: %v", diags.Error())
 		}
 
-		switch {
-		case value.Type() == cty.String:
-			cm[name] = value.AsString()
-		case value.Type() == cty.Number:
-			f, _ := value.AsBigFloat().Float64()
-			cm[name] = f
-		case value.Type() == cty.Bool:
-			cm[name] = value.True()
-		default:
-			cm[name] = value.GoString()
-		}
+		cm[name] = ctyValueToGo(value)
 	}
 
 	return cm, nil
+}
+
+// ctyValueToGo converts a cty.Value to a plain Go value suitable for mapstructure decoding.
+func ctyValueToGo(value cty.Value) any {
+	ty := value.Type()
+
+	switch {
+	case ty == cty.String:
+		return value.AsString()
+	case ty == cty.Number:
+		f, _ := value.AsBigFloat().Float64()
+		return f
+	case ty == cty.Bool:
+		return value.True()
+	case ty.IsListType() || ty.IsTupleType() || ty.IsSetType():
+		var result []any
+		for it := value.ElementIterator(); it.Next(); {
+			_, v := it.Element()
+			result = append(result, ctyValueToGo(v))
+		}
+		return result
+	case ty.IsObjectType() || ty.IsMapType():
+		result := make(map[string]any)
+		for it := value.ElementIterator(); it.Next(); {
+			k, v := it.Element()
+			result[k.AsString()] = ctyValueToGo(v)
+		}
+		return result
+	default:
+		return value.GoString()
+	}
 }

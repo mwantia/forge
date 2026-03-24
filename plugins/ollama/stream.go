@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -15,14 +16,16 @@ import (
 // Tool calls are buffered and returned on the final Done chunk.
 type OllamaChatStream struct {
 	id      string
+	logger  hclog.Logger
 	scanner *bufio.Scanner
 	body    io.ReadCloser
 	done    bool
 }
 
-func NewChatStream(body io.ReadCloser) *OllamaChatStream {
+func NewChatStream(logger hclog.Logger, body io.ReadCloser) *OllamaChatStream {
 	return &OllamaChatStream{
 		id:      uuid.New().String(),
+		logger:  logger.Named("stream"),
 		scanner: bufio.NewScanner(body),
 		body:    body,
 	}
@@ -39,13 +42,15 @@ func (s *OllamaChatStream) Recv() (*plugins.ChatChunk, error) {
 			continue
 		}
 
+		// s.logger.Trace("Recv", "line", line)
+
 		var resp OllamaChatResponse
 		if err := json.Unmarshal([]byte(line), &resp); err != nil {
 			return nil, fmt.Errorf("failed to decode stream chunk: %w", err)
 		}
 
 		// Skip empty non-terminal chunks — they are structural artifacts, not keepalives.
-		if resp.Message.Content == "" && !resp.Done {
+		if resp.Message.Content == "" && len(resp.Message.ToolCalls) == 0 && !resp.Done {
 			continue
 		}
 
@@ -56,14 +61,15 @@ func (s *OllamaChatStream) Recv() (*plugins.ChatChunk, error) {
 			Done:  resp.Done,
 		}
 
+		for _, tc := range resp.Message.ToolCalls {
+			chunk.ToolCalls = append(chunk.ToolCalls, plugins.ChatToolCall{
+				Name:      tc.Function.Name,
+				Arguments: tc.Function.Arguments,
+			})
+		}
+
 		if resp.Done {
 			s.done = true
-			for _, tc := range resp.Message.ToolCalls {
-				chunk.ToolCalls = append(chunk.ToolCalls, plugins.ChatToolCall{
-					Name:      tc.Function.Name,
-					Arguments: tc.Function.Arguments,
-				})
-			}
 		}
 
 		return chunk, nil

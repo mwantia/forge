@@ -46,10 +46,21 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 	}
 
 	for _, msg := range messages {
-		req.Messages = append(req.Messages, OllamaMessage{
+		ollamaMsg := OllamaMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
-		})
+		}
+		if msg.ToolCalls != nil {
+			for _, tc := range msg.ToolCalls.ToolCalls {
+				ollamaMsg.ToolCalls = append(ollamaMsg.ToolCalls, OllamaToolCall{
+					Function: OllamaToolCallFunction{
+						Name:      tc.Name,
+						Arguments: tc.Arguments,
+					},
+				})
+			}
+		}
+		req.Messages = append(req.Messages, ollamaMsg)
 	}
 
 	for _, tool := range tools {
@@ -83,10 +94,12 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 	if httpResp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(httpResp.Body)
 		httpResp.Body.Close()
+
+		p.driver.log.Warn("Ollama request failed", "request", string(body), "response", string(bodyBytes))
 		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
 	}
 
-	return NewChatStream(httpResp.Body), nil
+	return NewChatStream(p.driver.log, httpResp.Body), nil
 }
 
 // --- Embed ---

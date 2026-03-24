@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package provider;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto";
 
 service ProviderService {
@@ -34,20 +36,21 @@ message ChatChunk {
 }
 
 message MessageProto {
-    string role    = 1;
-    string content = 2;
+    string                 role       = 1;
+    string                 content    = 2;
+    repeated ToolCallProto tool_calls = 3;
 }
 
 message ToolDefProto {
-    string              name        = 1;
-    string              description = 2;
-    map<string, string> parameters  = 3;
+    string                 name        = 1;
+    string                 description = 2;
+    google.protobuf.Struct parameters  = 3;
 }
 
 message ToolCallProto {
-    string              id        = 1;
-    string              name      = 2;
-    map<string, string> arguments = 3;
+    string                 id        = 1;
+    string                 name      = 2;
+    google.protobuf.Struct arguments = 3;
 }
 
 // --- Embed ---
