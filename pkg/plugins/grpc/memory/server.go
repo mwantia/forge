@@ -32,15 +32,11 @@ func (s *Server) Store(ctx context.Context, req *proto.StoreReq) (*proto.StoreRe
 		metadata[k] = v
 	}
 
-	resp, err := plugin.Store(ctx, plugins.StoreRequest{
-		Content:   req.Content,
-		Namespace: req.Namespace,
-		Metadata:  metadata,
-	})
+	resource, err := plugin.StoreResource(ctx, req.Namespace, req.Content, metadata)
 	if err != nil {
 		return nil, err
 	}
-	return &proto.StoreResp{Id: resp.ID}, nil
+	return &proto.StoreResp{Id: resource.ID}, nil
 }
 
 func (s *Server) Retrieve(ctx context.Context, req *proto.RetrieveReq) (*proto.RetrieveResp, error) {
@@ -57,18 +53,13 @@ func (s *Server) Retrieve(ctx context.Context, req *proto.RetrieveReq) (*proto.R
 		filter[k] = v
 	}
 
-	resp, err := plugin.Retrieve(ctx, plugins.RetrieveRequest{
-		Query:     req.Query,
-		Limit:     int(req.Limit),
-		Namespace: req.Namespace,
-		Filter:    filter,
-	})
+	resources, err := plugin.RetrieveResource(ctx, req.Namespace, req.Query, int(req.Limit), filter)
 	if err != nil {
 		return nil, err
 	}
 
 	protoResp := &proto.RetrieveResp{}
-	for _, r := range resp.Results {
+	for _, r := range resources {
 		metadata := make(map[string]string)
 		for k, v := range r.Metadata {
 			metadata[k] = fmt.Sprintf("%v", v)

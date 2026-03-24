@@ -30,3 +30,11 @@ func (e *Errors) Errors() error {
 
 	return errors.Join(e.errors...)
 }
+
+var (
+	ErrPluginNotYetImplemented       = errors.New("plugin feature not yet implemented")
+	ErrPluginNotSupported            = errors.New("plugin type not supported by this driver")
+	ErrPluginCapabilityNotSupported  = errors.New("plugin capability not supported")
+	ErrSkillNotFound                 = errors.New("skill not found")
+	ErrInvalidSkillPath              = errors.New("invalid skill path")
+)

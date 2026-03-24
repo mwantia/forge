@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mwantia/forge/pkg/errors"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -241,7 +242,7 @@ func (p *SkillsToolsDriver) Execute(ctx context.Context, req plugins.ExecuteRequ
 
 	skill, ok := p.skills[req.Tool]
 	if !ok {
-		return nil, plugins.ErrSkillNotFound
+		return nil, errors.ErrSkillNotFound
 	}
 
 	// Return the skill content for execution

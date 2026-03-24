@@ -32,15 +32,13 @@ func (s *Server) Send(ctx context.Context, req *proto.SendReq) (*proto.SendResp,
 		metadata[k] = v
 	}
 
-	resp, err := plugin.Send(ctx, plugins.SendRequest{
-		ChannelID: req.ChannelId,
-		Content:   req.Content,
-		Metadata:  metadata,
-	})
+	id, err := plugin.Send(ctx, req.ChannelId, req.Content, metadata)
 	if err != nil {
 		return nil, err
 	}
-	return &proto.SendResp{MessageId: resp.MessageID}, nil
+	return &proto.SendResp{
+		MessageId: id,
+	}, nil
 }
 
 func (s *Server) Receive(req *proto.ReceiveReq, srv proto.ChannelService_ReceiveServer) error {
@@ -64,8 +62,8 @@ func (s *Server) Receive(req *proto.ReceiveReq, srv proto.ChannelService_Receive
 		}
 		if err := srv.Send(&proto.MessageEvt{
 			Id:        evt.ID,
-			ChannelId: evt.ChannelID,
-			AuthorId:  evt.AuthorID,
+			ChannelId: evt.Channel,
+			AuthorId:  evt.Author,
 			Content:   evt.Content,
 			Metadata:  metadata,
 		}); err != nil {

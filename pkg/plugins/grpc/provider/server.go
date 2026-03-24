@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mwantia/forge/pkg/plugins"
@@ -27,45 +28,46 @@ func (s *Server) Generate(ctx context.Context, req *proto.GenerateReq) (*proto.G
 		return nil, fmt.Errorf("provider plugin not available")
 	}
 
-	goReq := plugins.GenerateRequest{
-		Model:       req.Model,
-		Temperature: req.Temperature,
-		MaxTokens:   int(req.MaxTokens),
-	}
+	var messages []plugins.ChatMessage
 	for _, m := range req.Messages {
-		goReq.Messages = append(goReq.Messages, plugins.Message{
+		messages = append(messages, plugins.ChatMessage{
 			Role:    m.Role,
 			Content: m.Content,
 		})
 	}
+
+	var tools []plugins.ToolCall
 	for _, t := range req.Tools {
-		params := make(map[string]interface{})
+		params := make(map[string]any)
 		for k, v := range t.Parameters {
-			params[k] = v
+			var decoded any
+			if err := json.Unmarshal([]byte(v), &decoded); err != nil {
+				params[k] = v
+			} else {
+				params[k] = decoded
+			}
 		}
-		goReq.Tools = append(goReq.Tools, plugins.Tool{
+		tools = append(tools, plugins.ToolCall{
 			Name:        t.Name,
 			Description: t.Description,
 			Parameters:  params,
 		})
 	}
 
-	resp, err := plugin.Generate(ctx, goReq)
+	model := &plugins.Model{
+		ModelName:   req.Model,
+		Temperature: req.Temperature,
+	}
+
+	result, err := plugin.Chat(ctx, messages, tools, model)
 	if err != nil {
 		return nil, err
 	}
 
-	protoResp := &proto.GenerateResp{
-		Id:      resp.ID,
-		Content: resp.Content,
-		Role:    resp.Role,
-		Model:   resp.Model,
-	}
-	if resp.Usage != nil {
-		protoResp.Usage = &proto.UsageProto{
-			InputTokens:  int32(resp.Usage.InputTokens),
-			OutputTokens: int32(resp.Usage.OutputTokens),
-		}
-	}
-	return protoResp, nil
+	return &proto.GenerateResp{
+		Id:      result.ID,
+		Role:    result.Role,
+		Content: result.Content,
+		Model:   req.Model,
+	}, nil
 }

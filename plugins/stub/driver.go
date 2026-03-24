@@ -43,19 +43,19 @@ func (d *StubDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabi
 			plugins.PluginTypeChannel,
 			plugins.PluginTypeTools,
 		},
-		Provider: &plugins.ProviderCaps{
+		Provider: &plugins.ProviderCapabilities{
 			SupportsStreaming: true,
-			SupportsVision:   false,
+			SupportsVision:    false,
 		},
-		Memory: &plugins.MemoryCaps{
+		Memory: &plugins.MemoryCapabilities{
 			SupportsVectorSearch: false,
 			MaxContextSize:       4096,
 		},
-		Channel: &plugins.ChannelCaps{
+		Channel: &plugins.ChannelCapabilities{
 			SupportsDirectMessages: true,
 			SupportsThreads:        true,
 		},
-		Tools: &plugins.ToolsCaps{
+		Tools: &plugins.ToolsCapabilities{
 			SupportsAsyncExecution: false,
 		},
 	}, nil

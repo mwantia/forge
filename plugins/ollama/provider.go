@@ -13,7 +13,9 @@ import (
 )
 
 // OllamaProviderPlugin implements ProviderPlugin for Ollama.
+// Unimplemented capabilities fall back to UnimplementedProviderPlugin.
 type OllamaProviderPlugin struct {
+	plugins.UnimplementedProviderPlugin
 	driver *OllamaDriver
 }
 
@@ -21,32 +23,36 @@ func (p *OllamaProviderPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *OllamaProviderPlugin) Generate(ctx context.Context, req plugins.GenerateRequest) (*plugins.GenerateResponse, error) {
+func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.ChatMessage, tools []plugins.ToolCall, model *plugins.Model) (*plugins.ChatResult, error) {
 	if p.driver.config == nil {
 		return nil, fmt.Errorf("driver not configured")
 	}
 
-	model := req.Model
-	if model == "" {
-		model = p.driver.config.Model
+	modelName := p.driver.config.Model
+	temperature := 0.0
+	if model != nil {
+		if model.ModelName != "" {
+			modelName = model.ModelName
+		}
+		temperature = model.Temperature
 	}
 
 	ollamaReq := OllamaRequest{
-		Model:  model,
+		Model:  modelName,
 		Stream: false,
 		Options: OllamaOptions{
-			Temperature: req.Temperature,
+			Temperature: temperature,
 		},
 	}
 
-	for _, msg := range req.Messages {
+	for _, msg := range messages {
 		ollamaReq.Messages = append(ollamaReq.Messages, OllamaMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
 		})
 	}
 
-	for _, tool := range req.Tools {
+	for _, tool := range tools {
 		ollamaReq.Tools = append(ollamaReq.Tools, OllamaTool{
 			Type: "function",
 			Function: OllamaFunction{
@@ -85,19 +91,21 @@ func (p *OllamaProviderPlugin) Generate(ctx context.Context, req plugins.Generat
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	resp := &plugins.GenerateResponse{
+	result := &plugins.ChatResult{
 		ID:      uuid.New().String(),
 		Content: ollamaResp.Message.Content,
 		Role:    ollamaResp.Message.Role,
-		Model:   ollamaResp.Model,
+		Metadata: map[string]any{
+			"model": ollamaResp.Model,
+		},
 	}
 
 	for _, tc := range ollamaResp.Message.ToolCalls {
-		resp.ToolCalls = append(resp.ToolCalls, plugins.ToolCall{
+		result.ToolCalls = append(result.ToolCalls, plugins.ChatToolCall{
 			Name:      tc.Function.Name,
 			Arguments: tc.Function.Arguments,
 		})
 	}
 
-	return resp, nil
+	return result, nil
 }

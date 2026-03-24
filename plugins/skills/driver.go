@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
+	"github.com/mwantia/forge/pkg/errors"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -50,7 +51,7 @@ func (d *SkillsToolsDriver) ProbePlugin(ctx context.Context) (bool, error) {
 func (d *SkillsToolsDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
 	return &plugins.DriverCapabilities{
 		Types: []string{plugins.PluginTypeTools},
-		Tools: &plugins.ToolsCaps{
+		Tools: &plugins.ToolsCapabilities{
 			SupportsAsyncExecution: false,
 		},
 	}, nil
@@ -101,15 +102,15 @@ func (d *SkillsToolsDriver) ConfigDriver(ctx context.Context, config plugins.Plu
 
 // Plugin type accessors
 func (d *SkillsToolsDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }
 
 func (d *SkillsToolsDriver) GetMemoryPlugin(ctx context.Context) (plugins.MemoryPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }
 
 func (d *SkillsToolsDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }
 
 func (d *SkillsToolsDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {

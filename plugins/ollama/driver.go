@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mitchellh/mapstructure"
+	"github.com/mwantia/forge/pkg/errors"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -67,9 +68,9 @@ func (d *OllamaDriver) ProbePlugin(ctx context.Context) (bool, error) {
 func (d *OllamaDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
 	return &plugins.DriverCapabilities{
 		Types: []string{plugins.PluginTypeProvider},
-		Provider: &plugins.ProviderCaps{
+		Provider: &plugins.ProviderCapabilities{
 			SupportsStreaming: true,
-			SupportsVision:   false,
+			SupportsVision:    false,
 		},
 	}, nil
 }
@@ -111,13 +112,13 @@ func (d *OllamaDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderP
 }
 
 func (d *OllamaDriver) GetMemoryPlugin(ctx context.Context) (plugins.MemoryPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }
 
 func (d *OllamaDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }
 
 func (d *OllamaDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
-	return nil, plugins.ErrPluginNotSupported
+	return nil, errors.ErrPluginNotSupported
 }

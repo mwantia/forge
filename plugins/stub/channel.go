@@ -15,18 +15,18 @@ func (p *StubChannelPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *StubChannelPlugin) Send(ctx context.Context, req plugins.SendRequest) (*plugins.SendResponse, error) {
-	return &plugins.SendResponse{MessageID: "stub-message-id"}, nil
+func (p *StubChannelPlugin) Send(ctx context.Context, channel, content string, metadata map[string]any) (string, error) {
+	return "stub-message-id", nil
 }
 
-func (p *StubChannelPlugin) Receive(ctx context.Context) (<-chan plugins.MessageEvent, error) {
-	ch := make(chan plugins.MessageEvent, 1)
+func (p *StubChannelPlugin) Receive(ctx context.Context) (<-chan plugins.ChannelMessage, error) {
+	ch := make(chan plugins.ChannelMessage, 1)
 	go func() {
-		ch <- plugins.MessageEvent{
-			ID:        "stub-event-id",
-			ChannelID: "stub-channel-id",
-			AuthorID:  "stub-author-id",
-			Content:   "This is a stub message event.",
+		ch <- plugins.ChannelMessage{
+			ID:      "stub-event-id",
+			Channel: "stub-channel-id",
+			Author:  "stub-author-id",
+			Content: "This is a stub message event.",
 		}
 		close(ch)
 	}()

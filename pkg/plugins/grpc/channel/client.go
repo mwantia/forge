@@ -20,30 +20,29 @@ func NewClient(conn *grpc.ClientConn) *Client {
 
 func (c *Client) GetLifecycle() plugins.Lifecycle { return nil }
 
-func (c *Client) Send(ctx context.Context, req plugins.SendRequest) (*plugins.SendResponse, error) {
-	protoReq := &proto.SendReq{
-		ChannelId: req.ChannelID,
-		Content:   req.Content,
+func (c *Client) Send(ctx context.Context, channel, content string, metadata map[string]any) (string, error) {
+	req := &proto.SendReq{
+		ChannelId: channel,
+		Content:   content,
 		Metadata:  make(map[string]string),
 	}
 	for k, v := range req.Metadata {
-		protoReq.Metadata[k] = fmt.Sprintf("%v", v)
+		req.Metadata[k] = fmt.Sprintf("%v", v)
 	}
-
-	resp, err := c.client.Send(ctx, protoReq)
+	resp, err := c.client.Send(ctx, req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &plugins.SendResponse{MessageID: resp.MessageId}, nil
+	return resp.MessageId, nil
 }
 
-func (c *Client) Receive(ctx context.Context) (<-chan plugins.MessageEvent, error) {
+func (c *Client) Receive(ctx context.Context) (<-chan plugins.ChannelMessage, error) {
 	stream, err := c.client.Receive(ctx, &proto.ReceiveReq{})
 	if err != nil {
 		return nil, err
 	}
 
-	ch := make(chan plugins.MessageEvent, 1)
+	ch := make(chan plugins.ChannelMessage, 1)
 	go func() {
 		defer close(ch)
 		for {
@@ -55,12 +54,12 @@ func (c *Client) Receive(ctx context.Context) (<-chan plugins.MessageEvent, erro
 			for k, v := range evt.Metadata {
 				metadata[k] = v
 			}
-			ch <- plugins.MessageEvent{
-				ID:        evt.Id,
-				ChannelID: evt.ChannelId,
-				AuthorID:  evt.AuthorId,
-				Content:   evt.Content,
-				Metadata:  metadata,
+			ch <- plugins.ChannelMessage{
+				ID:       evt.Id,
+				Channel:  evt.ChannelId,
+				Author:   evt.AuthorId,
+				Content:  evt.Content,
+				Metadata: metadata,
 			}
 		}
 	}()

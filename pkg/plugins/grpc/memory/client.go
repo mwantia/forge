@@ -10,7 +10,9 @@ import (
 )
 
 // Client implements plugins.MemoryPlugin over gRPC.
+// Unimplemented capabilities (sessions, AddMessage) fall back to UnimplementedMemoryPlugin.
 type Client struct {
+	plugins.UnimplementedMemoryPlugin
 	client proto.MemoryServiceClient
 }
 
@@ -18,15 +20,13 @@ func NewClient(conn *grpc.ClientConn) *Client {
 	return &Client{client: proto.NewMemoryServiceClient(conn)}
 }
 
-func (c *Client) GetLifecycle() plugins.Lifecycle { return nil }
-
-func (c *Client) Store(ctx context.Context, req plugins.StoreRequest) (*plugins.StoreResponse, error) {
+func (c *Client) StoreResource(ctx context.Context, sessionID, content string, metadata map[string]any) (*plugins.MemoryResource, error) {
 	protoReq := &proto.StoreReq{
-		Content:   req.Content,
-		Namespace: req.Namespace,
+		Content:   content,
+		Namespace: sessionID,
 		Metadata:  make(map[string]string),
 	}
-	for k, v := range req.Metadata {
+	for k, v := range metadata {
 		protoReq.Metadata[k] = fmt.Sprintf("%v", v)
 	}
 
@@ -34,17 +34,17 @@ func (c *Client) Store(ctx context.Context, req plugins.StoreRequest) (*plugins.
 	if err != nil {
 		return nil, err
 	}
-	return &plugins.StoreResponse{ID: resp.Id}, nil
+	return &plugins.MemoryResource{ID: resp.Id, Content: content}, nil
 }
 
-func (c *Client) Retrieve(ctx context.Context, req plugins.RetrieveRequest) (*plugins.RetrieveResponse, error) {
+func (c *Client) RetrieveResource(ctx context.Context, sessionID, query string, limit int, filter map[string]any) ([]*plugins.MemoryResource, error) {
 	protoReq := &proto.RetrieveReq{
-		Query:     req.Query,
-		Limit:     int32(req.Limit),
-		Namespace: req.Namespace,
+		Query:     query,
+		Limit:     int32(limit),
+		Namespace: sessionID,
 		Filter:    make(map[string]string),
 	}
-	for k, v := range req.Filter {
+	for k, v := range filter {
 		protoReq.Filter[k] = fmt.Sprintf("%v", v)
 	}
 
@@ -53,18 +53,18 @@ func (c *Client) Retrieve(ctx context.Context, req plugins.RetrieveRequest) (*pl
 		return nil, err
 	}
 
-	result := &plugins.RetrieveResponse{}
+	var results []*plugins.MemoryResource
 	for _, r := range resp.Results {
 		metadata := make(map[string]any)
 		for k, v := range r.Metadata {
 			metadata[k] = v
 		}
-		result.Results = append(result.Results, plugins.MemoryResult{
+		results = append(results, &plugins.MemoryResource{
 			ID:       r.Id,
 			Content:  r.Content,
 			Score:    r.Score,
 			Metadata: metadata,
 		})
 	}
-	return result, nil
+	return results, nil
 }

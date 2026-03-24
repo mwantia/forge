@@ -5,29 +5,42 @@ import "context"
 // DriverCapabilities describes what a driver supports.
 type DriverCapabilities struct {
 	Types    []string
-	Provider *ProviderCaps
-	Memory   *MemoryCaps
-	Channel  *ChannelCaps
-	Tools    *ToolsCaps
+	Provider *ProviderCapabilities
+	Memory   *MemoryCapabilities
+	Channel  *ChannelCapabilities
+	Tools    *ToolsCapabilities
 }
 
-type ProviderCaps struct {
+type ProviderCapabilities struct {
 	SupportsStreaming bool
-	SupportsVision   bool
+	SupportsVision    bool
 }
 
-type MemoryCaps struct {
+type MemoryCapabilities struct {
 	SupportsVectorSearch bool
+	SupportSessions      bool
 	MaxContextSize       int
 }
 
-type ChannelCaps struct {
+type ChannelCapabilities struct {
 	SupportsDirectMessages bool
 	SupportsThreads        bool
 }
 
-type ToolsCaps struct {
+type ToolsCapabilities struct {
 	SupportsAsyncExecution bool
+}
+
+// PluginInfo describes plugin metadata at the driver level.
+type PluginInfo struct {
+	Name    string `json:"name"`
+	Author  string `json:"author"`
+	Version string `json:"version"`
+}
+
+// PluginConfig holds driver configuration as a generic map.
+type PluginConfig struct {
+	ConfigMap map[string]any `json:"-"`
 }
 
 // Lifecycle provides access to driver-level lifecycle checks.

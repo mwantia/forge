@@ -110,7 +110,7 @@ func capsToProto(caps *plugins.DriverCapabilities) *proto.DriverCapabilities {
 	if caps.Provider != nil {
 		p.Provider = &proto.ProviderCaps{
 			SupportsStreaming: caps.Provider.SupportsStreaming,
-			SupportsVision:   caps.Provider.SupportsVision,
+			SupportsVision:    caps.Provider.SupportsVision,
 		}
 	}
 	if caps.Memory != nil {
@@ -140,25 +140,25 @@ func capsFromProto(p *proto.DriverCapabilities) *plugins.DriverCapabilities {
 	}
 	caps := &plugins.DriverCapabilities{Types: p.Types}
 	if p.Provider != nil {
-		caps.Provider = &plugins.ProviderCaps{
+		caps.Provider = &plugins.ProviderCapabilities{
 			SupportsStreaming: p.Provider.SupportsStreaming,
-			SupportsVision:   p.Provider.SupportsVision,
+			SupportsVision:    p.Provider.SupportsVision,
 		}
 	}
 	if p.Memory != nil {
-		caps.Memory = &plugins.MemoryCaps{
+		caps.Memory = &plugins.MemoryCapabilities{
 			SupportsVectorSearch: p.Memory.SupportsVectorSearch,
 			MaxContextSize:       int(p.Memory.MaxContextSize),
 		}
 	}
 	if p.Channel != nil {
-		caps.Channel = &plugins.ChannelCaps{
+		caps.Channel = &plugins.ChannelCapabilities{
 			SupportsDirectMessages: p.Channel.SupportsDirectMessages,
 			SupportsThreads:        p.Channel.SupportsThreads,
 		}
 	}
 	if p.Tools != nil {
-		caps.Tools = &plugins.ToolsCaps{
+		caps.Tools = &plugins.ToolsCapabilities{
 			SupportsAsyncExecution: p.Tools.SupportsAsyncExecution,
 		}
 	}

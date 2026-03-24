@@ -78,38 +78,31 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 
 	s.log.Trace("Model", "name", modelName)
 
-	messages := []plugins.Message{
+	messages := []plugins.ChatMessage{
 		{
 			Role:    "user",
 			Content: flags.Prompt,
 		},
 	}
 
+	model := &plugins.Model{
+		ModelName:   modelName,
+		Temperature: 0.7,
+	}
+
 	maxIterations := 10
 	for range maxIterations {
-		req := plugins.GenerateRequest{
-			Model:       modelName,
-			Messages:    messages,
-			Temperature: 0.7,
-			MaxTokens:   0,
-			Tools:       make([]plugins.Tool, 0),
-		}
-		s.log.Debug("Generate request", "model", modelName, "messages", len(messages))
-		for j, msg := range messages {
-			s.log.Debug("Message", "index", j, "role", msg.Role, "content_len", len(msg.Content), "tool_calls", len(msg.ToolCalls))
-		}
+		s.log.Debug("Chat request", "model", modelName, "messages", len(messages))
 
-		resp, err := provider.Generate(ctx, req)
+		resp, err := provider.Chat(ctx, messages, nil, model)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
 
-		// Add assistant message to history (including tool calls if present)
-		assistantMsg := plugins.Message{
+		messages = append(messages, plugins.ChatMessage{
 			Role:    resp.Role,
 			Content: resp.Content,
-		}
-		messages = append(messages, assistantMsg)
+		})
 
 		if len(resp.ToolCalls) == 0 {
 			fmt.Println(resp.Content)

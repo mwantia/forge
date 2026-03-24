@@ -1,29 +1,37 @@
 package plugins
 
-import "context"
+import (
+	"context"
+
+	"github.com/mwantia/forge/pkg/errors"
+)
 
 // ChannelPlugin acts as communication gateway for endpoints like Discord.
 type ChannelPlugin interface {
 	BasePlugin
 	// Additional channel methods will be added here
-	Send(ctx context.Context, req SendRequest) (*SendResponse, error)
-	Receive(ctx context.Context) (<-chan MessageEvent, error)
+	Send(ctx context.Context, channel, content string, metadata map[string]any) (string, error)
+	Receive(ctx context.Context) (<-chan ChannelMessage, error)
 }
 
-type SendRequest struct {
-	ChannelID string         `json:"channel_id"`
-	Content   string         `json:"content"`
-	Metadata  map[string]any `json:"metadata,omitempty"`
+type ChannelMessage struct {
+	ID       string         `json:"id"`
+	Channel  string         `json:"channel"`
+	Author   string         `json:"author"`
+	Content  string         `json:"content"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
-type SendResponse struct {
-	MessageID string `json:"message_id"`
+// UnimplementedChannelPlugin can be embedded to satisfy ChannelPlugin with default
+// implementations that return errors.ErrPluginCapabilityNotSupported.
+type UnimplementedChannelPlugin struct{}
+
+func (UnimplementedChannelPlugin) GetLifecycle() Lifecycle { return nil }
+
+func (UnimplementedChannelPlugin) Send(_ context.Context, _, _ string, _ map[string]any) (string, error) {
+	return "", errors.ErrPluginCapabilityNotSupported
 }
 
-type MessageEvent struct {
-	ID        string         `json:"id"`
-	ChannelID string         `json:"channel_id"`
-	AuthorID  string         `json:"author_id"`
-	Content   string         `json:"content"`
-	Metadata  map[string]any `json:"metadata,omitempty"`
+func (UnimplementedChannelPlugin) Receive(_ context.Context) (<-chan ChannelMessage, error) {
+	return nil, errors.ErrPluginCapabilityNotSupported
 }
