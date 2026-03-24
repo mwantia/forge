@@ -59,10 +59,7 @@ func (s *Server) CloseDriver(ctx context.Context, req *proto.CloseRequest) (*pro
 }
 
 func (s *Server) ConfigDriver(ctx context.Context, req *proto.ConfigRequest) (*proto.ConfigResponse, error) {
-	config := plugins.PluginConfig{ConfigMap: make(map[string]any)}
-	for k, v := range req.Config {
-		config.ConfigMap[k] = v
-	}
+	config := plugins.PluginConfig{ConfigMap: req.Config.AsMap()}
 	if err := s.impl.ConfigDriver(ctx, config); err != nil {
 		return nil, err
 	}

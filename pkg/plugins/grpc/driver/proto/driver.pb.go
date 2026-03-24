@@ -9,6 +9,7 @@ package proto
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -407,7 +408,7 @@ func (*CloseResponse) Descriptor() ([]byte, []int) {
 
 type ConfigRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Config        map[string]string      `protobuf:"bytes,1,rep,name=config,proto3" json:"config,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Config        *structpb.Struct       `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -442,7 +443,7 @@ func (*ConfigRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_driver_proto_driver_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ConfigRequest) GetConfig() map[string]string {
+func (x *ConfigRequest) GetConfig() *structpb.Struct {
 	if x != nil {
 		return x.Config
 	}
@@ -569,7 +570,7 @@ var File_pkg_plugins_grpc_driver_proto_driver_proto protoreflect.FileDescriptor
 
 const file_pkg_plugins_grpc_driver_proto_driver_proto_rawDesc = "" +
 	"\n" +
-	"*pkg/plugins/grpc/driver/proto/driver.proto\x12\x06driver\x1a*pkg/plugins/grpc/driver/proto/common.proto\"\x16\n" +
+	"*pkg/plugins/grpc/driver/proto/driver.proto\x12\x06driver\x1a\x1cgoogle/protobuf/struct.proto\x1a*pkg/plugins/grpc/driver/proto/common.proto\"\x16\n" +
 	"\x14GetPluginInfoRequest\"?\n" +
 	"\x15GetPluginInfoResponse\x12&\n" +
 	"\x04info\x18\x01 \x01(\v2\x12.driver.PluginInfoR\x04info\"\x0e\n" +
@@ -582,12 +583,9 @@ const file_pkg_plugins_grpc_driver_proto_driver_proto_rawDesc = "" +
 	"\vOpenRequest\"\x0e\n" +
 	"\fOpenResponse\"\x0e\n" +
 	"\fCloseRequest\"\x0f\n" +
-	"\rCloseResponse\"\x85\x01\n" +
-	"\rConfigRequest\x129\n" +
-	"\x06config\x18\x01 \x03(\v2!.driver.ConfigRequest.ConfigEntryR\x06config\x1a9\n" +
-	"\vConfigEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x10\n" +
+	"\rCloseResponse\"@\n" +
+	"\rConfigRequest\x12/\n" +
+	"\x06config\x18\x01 \x01(\v2\x17.google.protobuf.StructR\x06config\"\x10\n" +
 	"\x0eConfigResponse\"\x12\n" +
 	"\x10GetPluginRequest\"1\n" +
 	"\x11GetPluginResponse\x12\x1c\n" +
@@ -617,7 +615,7 @@ func file_pkg_plugins_grpc_driver_proto_driver_proto_rawDescGZIP() []byte {
 	return file_pkg_plugins_grpc_driver_proto_driver_proto_rawDescData
 }
 
-var file_pkg_plugins_grpc_driver_proto_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_pkg_plugins_grpc_driver_proto_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_pkg_plugins_grpc_driver_proto_driver_proto_goTypes = []any{
 	(*GetPluginInfoRequest)(nil),  // 0: driver.GetPluginInfoRequest
 	(*GetPluginInfoResponse)(nil), // 1: driver.GetPluginInfoResponse
@@ -633,14 +631,14 @@ var file_pkg_plugins_grpc_driver_proto_driver_proto_goTypes = []any{
 	(*ConfigResponse)(nil),        // 11: driver.ConfigResponse
 	(*GetPluginRequest)(nil),      // 12: driver.GetPluginRequest
 	(*GetPluginResponse)(nil),     // 13: driver.GetPluginResponse
-	nil,                           // 14: driver.ConfigRequest.ConfigEntry
-	(*PluginInfo)(nil),            // 15: driver.PluginInfo
-	(*DriverCapabilities)(nil),    // 16: driver.DriverCapabilities
+	(*PluginInfo)(nil),            // 14: driver.PluginInfo
+	(*DriverCapabilities)(nil),    // 15: driver.DriverCapabilities
+	(*structpb.Struct)(nil),       // 16: google.protobuf.Struct
 }
 var file_pkg_plugins_grpc_driver_proto_driver_proto_depIdxs = []int32{
-	15, // 0: driver.GetPluginInfoResponse.info:type_name -> driver.PluginInfo
-	16, // 1: driver.CapabilitiesResponse.capabilities:type_name -> driver.DriverCapabilities
-	14, // 2: driver.ConfigRequest.config:type_name -> driver.ConfigRequest.ConfigEntry
+	14, // 0: driver.GetPluginInfoResponse.info:type_name -> driver.PluginInfo
+	15, // 1: driver.CapabilitiesResponse.capabilities:type_name -> driver.DriverCapabilities
+	16, // 2: driver.ConfigRequest.config:type_name -> google.protobuf.Struct
 	0,  // 3: driver.DriverService.GetPluginInfo:input_type -> driver.GetPluginInfoRequest
 	2,  // 4: driver.DriverService.ProbePlugin:input_type -> driver.ProbeRequest
 	4,  // 5: driver.DriverService.GetCapabilities:input_type -> driver.CapabilitiesRequest
@@ -680,7 +678,7 @@ func file_pkg_plugins_grpc_driver_proto_driver_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_grpc_driver_proto_driver_proto_rawDesc), len(file_pkg_plugins_grpc_driver_proto_driver_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

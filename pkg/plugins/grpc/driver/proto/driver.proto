@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package driver;
 
+import "google/protobuf/struct.proto";
 import "pkg/plugins/grpc/driver/proto/common.proto";
 
 option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/driver/proto";
@@ -42,7 +43,7 @@ message CloseRequest {}
 message CloseResponse {}
 
 message ConfigRequest {
-    map<string, string> config = 1;
+    google.protobuf.Struct config = 1;
 }
 message ConfigResponse {}
 

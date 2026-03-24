@@ -14,8 +14,9 @@ import (
 	wlog "github.com/mwantia/forge/pkg/log"
 	"github.com/mwantia/forge/pkg/plugins"
 	"github.com/mwantia/forge/pkg/plugins/grpc"
-	_ "github.com/mwantia/forge/plugins/ollama" // Import to register ollama plugin
-	_ "github.com/mwantia/forge/plugins/skills" // Import to register skills plugin
+	_ "github.com/mwantia/forge/plugins/ollama"     // Import to register ollama plugin
+	_ "github.com/mwantia/forge/plugins/skills"     // Import to register skills plugin
+	_ "github.com/mwantia/forge/plugins/workspace"  // Import to register workspace plugin
 	"github.com/spf13/cobra"
 )
 

@@ -2,7 +2,6 @@ package driver
 
 import (
 	"context"
-	"fmt"
 
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/mwantia/forge/pkg/plugins"
@@ -12,6 +11,7 @@ import (
 	providergrpc "github.com/mwantia/forge/pkg/plugins/grpc/provider"
 	toolsgrpc "github.com/mwantia/forge/pkg/plugins/grpc/tools"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Client implements plugins.Driver over gRPC.
@@ -68,26 +68,15 @@ func (c *Client) CloseDriver(ctx context.Context) error {
 }
 
 func (c *Client) ConfigDriver(ctx context.Context, config plugins.PluginConfig) error {
-	req := &proto.ConfigRequest{Config: make(map[string]string)}
-	for k, v := range config.ConfigMap {
-		switch val := v.(type) {
-		case string:
-			req.Config[k] = val
-		case bool:
-			if val {
-				req.Config[k] = "true"
-			} else {
-				req.Config[k] = "false"
-			}
-		case int, int64:
-			req.Config[k] = fmt.Sprintf("%d", val)
-		case float64:
-			req.Config[k] = fmt.Sprintf("%f", val)
-		default:
-			req.Config[k] = fmt.Sprintf("%v", val)
-		}
+	cfgStruct, err := structpb.NewStruct(config.ConfigMap)
+	if err != nil {
+		return err
 	}
-	_, err := c.client.ConfigDriver(ctx, req)
+	req := &proto.ConfigRequest{
+		Config: cfgStruct,
+	}
+
+	_, err = c.client.ConfigDriver(ctx, req)
 	return err
 }
 
