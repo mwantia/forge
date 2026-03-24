@@ -20,20 +20,21 @@ func init() {
 
 // OllamaDriver implements plugins.Driver for the Ollama LLM provider.
 type OllamaDriver struct {
-	log    hclog.Logger
-	config *OllamaConfig
-	client *http.Client
+	log          hclog.Logger
+	config       *OllamaConfig
+	client       *http.Client // used for unary requests (probe, embed, model ops)
+	streamClient *http.Client // no timeout — context controls cancellation for streams
 }
 
 // NewOllamaDriver creates a new Ollama driver that supports provider plugin type.
 func NewOllamaDriver(log hclog.Logger) plugins.Driver {
 	cfg := DefaultConfig()
+	timeout := time.Duration(cfg.Timeout) * time.Second
 	return &OllamaDriver{
-		log:    log.Named(PluginName),
-		config: cfg,
-		client: &http.Client{
-			Timeout: time.Duration(cfg.Timeout) * time.Second,
-		},
+		log:          log.Named(PluginName),
+		config:       cfg,
+		client:       &http.Client{Timeout: timeout},
+		streamClient: &http.Client{},
 	}
 }
 
@@ -97,6 +98,7 @@ func (d *OllamaDriver) ConfigDriver(ctx context.Context, config plugins.PluginCo
 		timeout = 60 * time.Second
 	}
 	d.client = &http.Client{Timeout: timeout}
+	d.streamClient = &http.Client{}
 
 	d.log.Info("Configured Ollama driver",
 		"address", cfg.Address,

@@ -16,22 +16,20 @@ func DefaultConfig() *OllamaConfig {
 	}
 }
 
-// OllamaRequest represents a request to the Ollama API.
+// OllamaRequest represents a request to the Ollama /api/chat endpoint.
 type OllamaRequest struct {
 	Model    string          `json:"model"`
 	Messages []OllamaMessage `json:"messages,omitempty"`
-	Prompt   string          `json:"prompt,omitempty"`
 	Stream   bool            `json:"stream"`
 	Options  OllamaOptions   `json:"options,omitempty"`
-	Tools    []OllamaTool   `json:"tools,omitempty"`
+	Tools    []OllamaTool    `json:"tools,omitempty"`
 }
 
 // OllamaMessage represents a message in the chat API.
 type OllamaMessage struct {
-	Role       string           `json:"role"`
-	Content    string           `json:"content"`
-	ToolCalls  []OllamaToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string           `json:"tool_call_id,omitempty"` // For tool result messages
+	Role      string           `json:"role"`
+	Content   string           `json:"content"`
+	ToolCalls []OllamaToolCall `json:"tool_calls,omitempty"`
 }
 
 // OllamaOptions represents additional options for generation.
@@ -42,25 +40,7 @@ type OllamaOptions struct {
 	TopK        int     `json:"top_k,omitempty"`
 }
 
-// OllamaResponse represents a response from the Ollama API.
-type OllamaResponse struct {
-	Model     string         `json:"model"`
-	CreatedAt string         `json:"created_at"`
-	Message   *OllamaMessage `json:"message"`
-	Response  string         `json:"response"`
-	Done      bool           `json:"done"`
-	Context   []int          `json:"context"`
-}
-
-// OllamaGenerateResponse is the response from /api/generate endpoint.
-type OllamaGenerateResponse struct {
-	Model     string `json:"model"`
-	CreatedAt string `json:"created_at"`
-	Response  string `json:"response"`
-	Done      bool   `json:"done"`
-}
-
-// OllamaChatResponse is the response from /api/chat endpoint.
+// OllamaChatResponse is a single streamed chunk from /api/chat.
 type OllamaChatResponse struct {
 	Model     string        `json:"model"`
 	CreatedAt string        `json:"created_at"`
@@ -68,16 +48,9 @@ type OllamaChatResponse struct {
 	Done      bool          `json:"done"`
 }
 
-// OllamaModelInfo represents model information from /api/show endpoint.
-type OllamaModelInfo struct {
-	Name      string `json:"name"`
-	Size      int64  `json:"size"`
-	QuantType string `json:"quant_type"`
-}
-
-// OllamaTool represents a tool in a request.
+// OllamaTool represents a tool definition in a request.
 type OllamaTool struct {
-	Type     string          `json:"type"`
+	Type     string         `json:"type"`
 	Function OllamaFunction `json:"function"`
 }
 
@@ -85,16 +58,79 @@ type OllamaTool struct {
 type OllamaFunction struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description,omitempty"`
-	Parameters  map[string]any `json:"parameters,omitempty"` // Can be nil/empty for tools with no parameters
+	Parameters  map[string]any `json:"parameters,omitempty"`
 }
 
-// OllamaToolCall represents a tool call in a response.
+// OllamaToolCall represents a tool call in a response message.
 type OllamaToolCall struct {
 	Function OllamaToolCallFunction `json:"function"`
 }
 
-// OllamaToolCallFunction contains name and arguments.
+// OllamaToolCallFunction contains the name and arguments of the call.
 type OllamaToolCallFunction struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments,omitempty"`
+}
+
+// OllamaEmbedRequest is the request body for /api/embed.
+type OllamaEmbedRequest struct {
+	Model  string `json:"model"`
+	Input  string `json:"input"`
+}
+
+// OllamaEmbedResponse is the response from /api/embed.
+type OllamaEmbedResponse struct {
+	Model      string      `json:"model"`
+	Embeddings [][]float32 `json:"embeddings"`
+}
+
+// OllamaTagsResponse is the response from /api/tags (list models).
+type OllamaTagsResponse struct {
+	Models []OllamaModelEntry `json:"models"`
+}
+
+// OllamaModelEntry describes a single model in the tags list.
+type OllamaModelEntry struct {
+	Name       string `json:"name"`
+	ModifiedAt string `json:"modified_at"`
+	Size       int64  `json:"size"`
+}
+
+// OllamaCreateRequest is the request body for /api/create.
+type OllamaCreateRequest struct {
+	Name      string `json:"name"`
+	Modelfile string `json:"modelfile"`
+	Stream    bool   `json:"stream"`
+}
+
+// OllamaCreateResponse is a streamed chunk from /api/create.
+type OllamaCreateResponse struct {
+	Status string `json:"status"`
+}
+
+// OllamaShowRequest is the request body for /api/show.
+type OllamaShowRequest struct {
+	Name string `json:"name"`
+}
+
+// OllamaShowResponse is the response from /api/show.
+type OllamaShowResponse struct {
+	Modelfile  string            `json:"modelfile"`
+	Parameters string            `json:"parameters"`
+	Template   string            `json:"template"`
+	Details    OllamaModelDetail `json:"details"`
+}
+
+// OllamaModelDetail holds details from /api/show.
+type OllamaModelDetail struct {
+	Format            string   `json:"format"`
+	Family            string   `json:"family"`
+	Families          []string `json:"families"`
+	ParameterSize     string   `json:"parameter_size"`
+	QuantizationLevel string   `json:"quantization_level"`
+}
+
+// OllamaDeleteRequest is the request body for /api/delete.
+type OllamaDeleteRequest struct {
+	Name string `json:"name"`
 }

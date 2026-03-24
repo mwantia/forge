@@ -5,24 +5,32 @@ package provider;
 option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto";
 
 service ProviderService {
-    rpc Generate(GenerateReq) returns (GenerateResp);
+    rpc Chat(ChatReq)                    returns (stream ChatChunk);
+    rpc Embed(EmbedReq)                  returns (EmbedResp);
+    rpc ListModels(ListModelsReq)        returns (ListModelsResp);
+    rpc CreateModel(CreateModelReq)      returns (CreateModelResp);
+    rpc GetModel(GetModelReq)            returns (GetModelResp);
+    rpc DeleteModel(DeleteModelReq)      returns (DeleteModelResp);
 }
 
-message GenerateReq {
-    string              model       = 1;
-    repeated MessageProto messages  = 2;
-    double              temperature = 3;
-    int32               max_tokens  = 4;
-    repeated ToolProto  tools       = 5;
-    map<string, string> metadata    = 6;
+// --- Chat ---
+
+message ChatReq {
+    string                model       = 1;
+    repeated MessageProto messages    = 2;
+    double                temperature = 3;
+    int32                 max_tokens  = 4;
+    repeated ToolDefProto tools       = 5;
+    map<string, string>   metadata    = 6;
 }
 
-message GenerateResp {
-    string     id      = 1;
-    string     content = 2;
-    string     role    = 3;
-    UsageProto usage   = 4;
-    string     model   = 5;
+message ChatChunk {
+    string                   id         = 1;
+    string                   role       = 2;
+    string                   delta      = 3;
+    bool                     done       = 4;
+    repeated ToolCallProto   tool_calls = 5;
+    string                   model      = 6;
 }
 
 message MessageProto {
@@ -30,13 +38,71 @@ message MessageProto {
     string content = 2;
 }
 
-message UsageProto {
-    int32 input_tokens  = 1;
-    int32 output_tokens = 2;
-}
-
-message ToolProto {
+message ToolDefProto {
     string              name        = 1;
     string              description = 2;
     map<string, string> parameters  = 3;
+}
+
+message ToolCallProto {
+    string              id        = 1;
+    string              name      = 2;
+    map<string, string> arguments = 3;
+}
+
+// --- Embed ---
+
+message EmbedReq {
+    string model   = 1;
+    string content = 2;
+}
+
+message EmbedResp {
+    repeated EmbeddingProto embeddings = 1;
+}
+
+message EmbeddingProto {
+    repeated float values = 1;
+}
+
+// --- Models ---
+
+message ListModelsReq {}
+
+message ListModelsResp {
+    repeated ModelProto models = 1;
+}
+
+message CreateModelReq {
+    string              name            = 1;
+    string              base_model      = 2;
+    string              prompt_template = 3;
+    string              system          = 4;
+    map<string, string> parameters      = 5;
+}
+
+message CreateModelResp {
+    ModelProto model = 1;
+}
+
+message GetModelReq {
+    string name = 1;
+}
+
+message GetModelResp {
+    ModelProto model = 1;
+}
+
+message DeleteModelReq {
+    string name = 1;
+}
+
+message DeleteModelResp {
+    bool success = 1;
+}
+
+message ModelProto {
+    string              name      = 1;
+    int32               dimension = 2;
+    map<string, string> metadata  = 3;
 }

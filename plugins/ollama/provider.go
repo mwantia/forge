@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
-	"github.com/google/uuid"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -23,7 +23,7 @@ func (p *OllamaProviderPlugin) GetLifecycle() plugins.Lifecycle {
 	return p.driver
 }
 
-func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.ChatMessage, tools []plugins.ToolCall, model *plugins.Model) (*plugins.ChatResult, error) {
+func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.ChatMessage, tools []plugins.ToolCall, model *plugins.Model) (plugins.ChatStream, error) {
 	if p.driver.config == nil {
 		return nil, fmt.Errorf("driver not configured")
 	}
@@ -37,23 +37,23 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 		temperature = model.Temperature
 	}
 
-	ollamaReq := OllamaRequest{
+	req := OllamaRequest{
 		Model:  modelName,
-		Stream: false,
+		Stream: true,
 		Options: OllamaOptions{
 			Temperature: temperature,
 		},
 	}
 
 	for _, msg := range messages {
-		ollamaReq.Messages = append(ollamaReq.Messages, OllamaMessage{
+		req.Messages = append(req.Messages, OllamaMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
 		})
 	}
 
 	for _, tool := range tools {
-		ollamaReq.Tools = append(ollamaReq.Tools, OllamaTool{
+		req.Tools = append(req.Tools, OllamaTool{
 			Type: "function",
 			Function: OllamaFunction{
 				Name:        tool.Name,
@@ -63,13 +63,56 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 		})
 	}
 
-	body, err := json.Marshal(ollamaReq)
+	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		p.driver.config.Address+"/api/chat", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := p.driver.streamClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	if httpResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(httpResp.Body)
+		httpResp.Body.Close()
+		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
+	}
+
+	return NewChatStream(httpResp.Body), nil
+}
+
+// --- Embed ---
+
+func (p *OllamaProviderPlugin) Embed(ctx context.Context, content string, model *plugins.Model) ([][]float32, error) {
+	if p.driver.config == nil {
+		return nil, fmt.Errorf("driver not configured")
+	}
+
+	modelName := p.driver.config.Model
+	if model != nil && model.ModelName != "" {
+		modelName = model.ModelName
+	}
+
+	req := OllamaEmbedRequest{
+		Model: modelName,
+		Input: content,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		p.driver.config.Address+"/api/embed", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -86,26 +129,179 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
 	}
 
-	var ollamaResp OllamaChatResponse
-	if err := json.NewDecoder(httpResp.Body).Decode(&ollamaResp); err != nil {
+	var resp OllamaEmbedResponse
+	if err := json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	result := &plugins.ChatResult{
-		ID:      uuid.New().String(),
-		Content: ollamaResp.Message.Content,
-		Role:    ollamaResp.Message.Role,
+	return resp.Embeddings, nil
+}
+
+// --- Models ---
+
+func (p *OllamaProviderPlugin) ListModels(ctx context.Context) ([]*plugins.Model, error) {
+	if p.driver.config == nil {
+		return nil, fmt.Errorf("driver not configured")
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		p.driver.config.Address+"/api/tags", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpResp, err := p.driver.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(httpResp.Body)
+		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
+	}
+
+	var resp OllamaTagsResponse
+	if err := json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	models := make([]*plugins.Model, len(resp.Models))
+	for i, m := range resp.Models {
+		models[i] = &plugins.Model{
+			ModelName: m.Name,
+			Metadata: map[string]any{
+				"size":        m.Size,
+				"modified_at": m.ModifiedAt,
+			},
+		}
+	}
+	return models, nil
+}
+
+func (p *OllamaProviderPlugin) CreateModel(ctx context.Context, modelName string, template *plugins.ModelTemplate) (*plugins.Model, error) {
+	if p.driver.config == nil {
+		return nil, fmt.Errorf("driver not configured")
+	}
+
+	modelfile := ""
+	if template != nil {
+		var sb strings.Builder
+		if template.BaseModel != "" {
+			sb.WriteString("FROM " + template.BaseModel + "\n")
+		}
+		if template.System != "" {
+			sb.WriteString("SYSTEM " + template.System + "\n")
+		}
+		if template.PromptTemplate != "" {
+			sb.WriteString("TEMPLATE " + template.PromptTemplate + "\n")
+		}
+		for k, v := range template.Parameters {
+			sb.WriteString(fmt.Sprintf("PARAMETER %s %v\n", k, v))
+		}
+		modelfile = sb.String()
+	}
+
+	req := OllamaCreateRequest{
+		Name:      modelName,
+		Modelfile: modelfile,
+		Stream:    false,
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		p.driver.config.Address+"/api/create", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := p.driver.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(httpResp.Body)
+		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
+	}
+
+	return &plugins.Model{ModelName: modelName}, nil
+}
+
+func (p *OllamaProviderPlugin) GetModel(ctx context.Context, name string) (*plugins.Model, error) {
+	if p.driver.config == nil {
+		return nil, fmt.Errorf("driver not configured")
+	}
+
+	req := OllamaShowRequest{Name: name}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		p.driver.config.Address+"/api/show", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := p.driver.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(httpResp.Body)
+		return nil, fmt.Errorf("ollama returned status %d: %s", httpResp.StatusCode, string(bodyBytes))
+	}
+
+	var resp OllamaShowResponse
+	if err := json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &plugins.Model{
+		ModelName: name,
 		Metadata: map[string]any{
-			"model": ollamaResp.Model,
+			"family":             resp.Details.Family,
+			"parameter_size":     resp.Details.ParameterSize,
+			"quantization_level": resp.Details.QuantizationLevel,
+			"format":             resp.Details.Format,
 		},
+	}, nil
+}
+
+func (p *OllamaProviderPlugin) DeleteModel(ctx context.Context, name string) (bool, error) {
+	if p.driver.config == nil {
+		return false, fmt.Errorf("driver not configured")
 	}
 
-	for _, tc := range ollamaResp.Message.ToolCalls {
-		result.ToolCalls = append(result.ToolCalls, plugins.ChatToolCall{
-			Name:      tc.Function.Name,
-			Arguments: tc.Function.Arguments,
-		})
+	req := OllamaDeleteRequest{Name: name}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	return result, nil
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+		p.driver.config.Address+"/api/delete", bytes.NewReader(body))
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := p.driver.client.Do(httpReq)
+	if err != nil {
+		return false, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	return httpResp.StatusCode == http.StatusOK, nil
 }

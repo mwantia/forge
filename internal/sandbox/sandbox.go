@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -94,18 +95,42 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 	for range maxIterations {
 		s.log.Debug("Chat request", "model", modelName, "messages", len(messages))
 
-		resp, err := provider.Chat(ctx, messages, nil, model)
+		stream, err := provider.Chat(ctx, messages, nil, model)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
 
+		// Drain the stream, printing deltas as they arrive.
+		var role, content string
+		var toolCalls []plugins.ChatToolCall
+		for {
+			chunk, err := stream.Recv()
+			if err != nil {
+				stream.Close()
+				if err == io.EOF {
+					break
+				}
+				return fmt.Errorf("stream error: %w", err)
+			}
+			if role == "" && chunk.Role != "" {
+				role = chunk.Role
+			}
+			fmt.Printf("%s", chunk.Delta)
+			content += chunk.Delta
+			if chunk.Done {
+				toolCalls = chunk.ToolCalls
+				stream.Close()
+				break
+			}
+		}
+		fmt.Println() // newline after streamed output
+
 		messages = append(messages, plugins.ChatMessage{
-			Role:    resp.Role,
-			Content: resp.Content,
+			Role:    role,
+			Content: content,
 		})
 
-		if len(resp.ToolCalls) == 0 {
-			fmt.Println(resp.Content)
+		if len(toolCalls) == 0 {
 			s.Cleanup()
 			return nil
 		}
