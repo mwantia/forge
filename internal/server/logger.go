@@ -8,7 +8,7 @@ import (
 	"github.com/mwantia/forge/pkg/metrics"
 )
 
-func (impl *Server) Logger() gin.HandlerFunc {
+func (s *Server) LoggerHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
@@ -17,11 +17,11 @@ func (impl *Server) Logger() gin.HandlerFunc {
 		duration := time.Since(start)
 		status := c.Writer.Status()
 
-		impl.log.Debug("| %-5s %s | %-3d | %v", c.Request.Method, c.Request.URL.Path, status, duration)
+		s.logger.Debug("| %-5s %s | %-3d | %v", c.Request.Method, c.Request.URL.Path, status, duration)
 
 		labels := []string{
 			c.Request.Method,
-			impl.cfg.Address,
+			s.config.Address,
 			c.Request.URL.Path,
 			strconv.Itoa(status),
 		}

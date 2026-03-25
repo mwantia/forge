@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 )
 
@@ -12,12 +13,12 @@ type AgentConfig struct {
 	LogLevel  string `hcl:"log_level,optional"`
 	PluginDir string `hcl:"plugin_dir,optional"`
 
-	Server  *ServerConfig  `hcl:"server,block"`
-	Metrics *MetricsConfig `hcl:"metrics,block"`
+	Server  *ServerConfig   `hcl:"server,block"`
+	Metrics *MetricsConfig  `hcl:"metrics,block"`
 	Plugins []*PluginConfig `hcl:"plugin,block"`
 }
 
-func NewDefault() *AgentConfig {
+func NewDefaultAgentConfig() *AgentConfig {
 	return &AgentConfig{
 		LogLevel: "INFO",
 		Server: &ServerConfig{
@@ -31,7 +32,7 @@ func NewDefault() *AgentConfig {
 }
 
 func Parse(path string) (*AgentConfig, error) {
-	cfg := NewDefault()
+	cfg := NewDefaultAgentConfig()
 	if path == "" {
 		return cfg, nil
 	}
@@ -39,8 +40,9 @@ func Parse(path string) (*AgentConfig, error) {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		return cfg, fmt.Errorf("unable to access config file '%s': %w", path, err)
 	}
+	ctx := &hcl.EvalContext{}
 
-	if err := hclsimple.DecodeFile(path, nil, cfg); err != nil {
+	if err := hclsimple.DecodeFile(path, ctx, cfg); err != nil {
 		return cfg, fmt.Errorf("error parsing config '%s': %w", path, err)
 	}
 

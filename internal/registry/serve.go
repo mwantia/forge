@@ -1,4 +1,4 @@
-package plugins
+package registry
 
 import (
 	"context"
@@ -29,13 +29,13 @@ func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*c
 	errs := errors.Errors{}
 
 	for _, cfg := range cfgs {
-		cm, err := r.GetPluginConfigMap(cfg.Config)
+		info, err := r.GetPluginDriverInfo(cfg)
 		if err != nil {
 			errs.Add(err)
 			continue
 		}
 
-		if err := r.servePlugin(ctx, cfg.Name, dir, cm); err != nil {
+		if err := r.servePlugin(ctx, dir, info); err != nil {
 			errs.Add(err)
 			continue
 		}
@@ -44,19 +44,23 @@ func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*c
 	return errs.Errors()
 }
 
-func (r *PluginRegistry) servePlugin(ctx context.Context, name, dir string, cm map[string]any) error {
-	path := filepath.Join(dir, name)
+func (r *PluginRegistry) servePlugin(ctx context.Context, dir string, info PluginDriverInfo) error {
+	path := filepath.Join(dir, info.Type)
 	args := make([]string, 0)
 	if _, err := os.Stat(path); err != nil {
 		path, err = os.Executable()
 		if err != nil {
 			return fmt.Errorf("failed to execute embedded plugin: %w", err)
 		}
-		args = []string{"plugin", name}
+		args = []string{"plugin", info.Type}
 	}
 
 	r.logger.Debug("Executing plugin", "path", path, "args", args)
-	driver, client, err := r.runPlugin(ctx, r.logger.Named(name), cm, path, args...)
+	name := info.Type
+	if info.Name != info.Type {
+		name += "." + info.Name
+	}
+	driver, client, err := r.runPlugin(ctx, r.logger.Named(name), info, path, args...)
 	if err != nil {
 		return fmt.Errorf("failed to run plugin: %w", err)
 	}
@@ -66,8 +70,8 @@ func (r *PluginRegistry) servePlugin(ctx context.Context, name, dir string, cm m
 		return fmt.Errorf("failed to load driver capabilities: %w", err)
 	}
 
-	r.drivers[name] = &PluginDriver{
-		Name:         name,
+	r.drivers[info.Name] = &PluginDriver{
+		Name:         info.Name,
 		Capabilities: caps,
 		Driver:       driver,
 		Cleanup:      func() { client.Kill() },
@@ -75,7 +79,7 @@ func (r *PluginRegistry) servePlugin(ctx context.Context, name, dir string, cm m
 	return nil
 }
 
-func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, cm map[string]any, path string, args ...string) (plugins.Driver, *goplugin.Client, error) {
+func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, info PluginDriverInfo, path string, args ...string) (plugins.Driver, *goplugin.Client, error) {
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: pluginsgrpc.Handshake,
 		Plugins:         pluginsgrpc.Plugins,
@@ -119,8 +123,8 @@ func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, cm 
 		return nil, client, fmt.Errorf("failed to open driver connections: %w", err)
 	}
 
-	if len(cm) > 0 {
-		if err := driver.ConfigDriver(ctx, plugins.PluginConfig{ConfigMap: cm}); err != nil {
+	if len(info.Config) > 0 {
+		if err := driver.ConfigDriver(ctx, plugins.PluginConfig{ConfigMap: info.Config}); err != nil {
 			client.Kill()
 			return nil, client, fmt.Errorf("failed to configure driver: %w", err)
 		}
@@ -129,27 +133,35 @@ func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, cm 
 	return driver, client, nil
 }
 
-func (r *PluginRegistry) GetPluginConfigMap(cfg *config.PluginConfigBody) (map[string]any, error) {
-	cm := make(map[string]any, 0)
-	// Return empty map if undefined config
-	if cfg == nil || cfg.Body == nil {
-		return cm, nil
+func (r *PluginRegistry) GetPluginDriverInfo(cfg *config.PluginConfig) (PluginDriverInfo, error) {
+	info := PluginDriverInfo{
+		Name:   cfg.Name,
+		Type:   cfg.Type,
+		Config: make(map[string]any),
 	}
-	attrs, diags := cfg.Body.JustAttributes()
+	// Overwrite empty name with type
+	if info.Name == "" {
+		info.Name = info.Type
+	}
+	// Return empty map if undefined config
+	if cfg.Config == nil || cfg.Config.Body == nil {
+		return info, nil
+	}
+	attrs, diags := cfg.Config.Body.JustAttributes()
 	if diags.HasErrors() {
-		return cm, fmt.Errorf("invalid plugin config: %v", diags.Error())
+		return info, fmt.Errorf("invalid plugin config: %v", diags.Error())
 	}
 
 	for name, attr := range attrs {
 		value, diags := attr.Expr.Value(&hcl.EvalContext{})
 		if diags.HasErrors() {
-			return cm, fmt.Errorf("invalid plugin config: %v", diags.Error())
+			return info, fmt.Errorf("invalid plugin config: %v", diags.Error())
 		}
 
-		cm[name] = ctyValueToGo(value)
+		info.Config[name] = ctyValueToGo(value)
 	}
 
-	return cm, nil
+	return info, nil
 }
 
 // ctyValueToGo converts a cty.Value to a plain Go value suitable for mapstructure decoding.

@@ -1,4 +1,4 @@
-package plugins
+package registry
 
 import (
 	"context"
@@ -11,25 +11,15 @@ import (
 )
 
 type PluginRegistry struct {
-	mutex sync.RWMutex
-
-	logger  hclog.Logger
+	mutex   sync.RWMutex
 	drivers map[string]*PluginDriver
+
+	logger hclog.Logger `fabric:"logger:reg"`
 }
 
-type PluginDriver struct {
-	Name         string
-	Capabilities *plugins.DriverCapabilities
-	Driver       plugins.Driver
-	Cleanup      PluginDriverCleanup
-}
-
-type PluginDriverCleanup func()
-
-func NewRegistry(logger hclog.Logger) *PluginRegistry {
-	return &PluginRegistry{
-		drivers: make(map[string]*PluginDriver),
-		logger:  logger.Named("registry"),
+func (r *PluginRegistry) Provider() *PluginProviderNamespace {
+	return &PluginProviderNamespace{
+		registry: r,
 	}
 }
 
@@ -39,13 +29,13 @@ func (r *PluginRegistry) CleanupDrivers() {
 	}
 }
 
-func (r *PluginRegistry) GetProviderPlugin(ctx context.Context, name string) (plugins.ProviderPlugin, error) {
+func (r *PluginRegistry) GetProvider(ctx context.Context, name string) (plugins.ProviderPlugin, error) {
 	driver, ok := r.drivers[strings.ToLower(name)]
 	if ok {
 		return driver.Driver.GetProviderPlugin(ctx)
 	}
 
-	return nil, fmt.Errorf("unknown provider name defined")
+	return nil, fmt.Errorf("unknown provider plugin name defined")
 }
 
 func (r *PluginRegistry) GetToolsPlugin(ctx context.Context, name string) (plugins.ToolsPlugin, error) {
@@ -62,6 +52,10 @@ func (r *PluginRegistry) GetToolsPlugin(ctx context.Context, name string) (plugi
 func (r *PluginRegistry) GetAllToolsPlugins(ctx context.Context) map[string]plugins.ToolsPlugin {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
+
+	if r.drivers == nil {
+		return make(map[string]plugins.ToolsPlugin)
+	}
 
 	result := make(map[string]plugins.ToolsPlugin)
 	for name, driver := range r.drivers {

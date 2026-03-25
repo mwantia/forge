@@ -186,12 +186,12 @@ func (d *WorkspaceDriver) resolvePath(path string) (string, error) {
 		return d.config.Home, nil
 	}
 
-	if strings.HasPrefix(path, "~/") {
+	if strings.HasPrefix(path, "~") {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("failed to get user home directory: %w", err)
 		}
-		path = filepath.Join(home, path[2:])
+		path = filepath.Join(home, path[1:])
 	}
 
 	if !filepath.IsAbs(path) {
@@ -210,12 +210,12 @@ func (d *WorkspaceDriver) validatePath(path string) error {
 	}
 
 	for _, pattern := range d.config.Allowlist {
-		if strings.HasPrefix(pattern, "~/") {
+		if strings.HasPrefix(pattern, "~") {
 			userHome, err := os.UserHomeDir()
 			if err != nil {
 				continue
 			}
-			pattern = filepath.Join(userHome, pattern[2:])
+			pattern = filepath.Join(userHome, pattern[1:])
 		}
 
 		re, err := regexp.Compile(pattern)
@@ -244,12 +244,12 @@ func (d *WorkspaceDriver) validateCommand(command string) error {
 	}
 
 	for _, pattern := range d.config.Allowlist {
-		if strings.HasPrefix(pattern, "~/") {
+		if strings.HasPrefix(pattern, "~") {
 			userHome, err := os.UserHomeDir()
 			if err != nil {
 				continue
 			}
-			pattern = filepath.Join(userHome, pattern[2:])
+			pattern = filepath.Join(userHome, pattern[1:])
 		}
 
 		re, err := regexp.Compile(pattern)

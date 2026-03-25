@@ -14,16 +14,16 @@ import (
 )
 
 type Metrics struct {
-	log hclog.Logger
-	cfg config.MetricsConfig
-
-	reg  *prometheus.Registry
 	prom prometheus.Registerer
+	reg  *prometheus.Registry
 	mux  *http.ServeMux
 	srv  *http.Server
+
+	logger hclog.Logger          `fabric:"logger:metrics"`
+	config *config.MetricsConfig `fabric:"config:metrics"`
 }
 
-func NewMetrics(cfg config.AgentConfig, log hclog.Logger) (*Metrics, error) {
+func NewMetrics(cfg *config.AgentConfig, log hclog.Logger) (*Metrics, error) {
 	mux := http.NewServeMux()
 	reg := prometheus.NewRegistry()
 	prom := prometheus.WrapRegistererWith(prometheus.Labels{}, reg)
@@ -33,8 +33,6 @@ func NewMetrics(cfg config.AgentConfig, log hclog.Logger) (*Metrics, error) {
 	}
 
 	return &Metrics{
-		log:  log.Named("metrics"),
-		cfg:  *cfg.Metrics,
 		reg:  reg,
 		prom: prom,
 		mux:  mux,
@@ -42,27 +40,35 @@ func NewMetrics(cfg config.AgentConfig, log hclog.Logger) (*Metrics, error) {
 	}, nil
 }
 
-func (impl *Metrics) Setup() (func() error, error) {
-	impl.prom.MustRegister(collectors.NewGoCollector())
-	impl.prom.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+func (m *Metrics) Setup() (func() error, error) {
+	m.mux = http.NewServeMux()
+	m.reg = prometheus.NewRegistry()
+	m.prom = prometheus.WrapRegistererWith(prometheus.Labels{}, m.reg)
+	m.srv = &http.Server{
+		Addr:    m.config.Address,
+		Handler: m.mux,
+	}
 
-	impl.prom.MustRegister(metrics.ServerHttpRequestsDurationSeconds)
-	impl.prom.MustRegister(metrics.ServerHttpRequestsTotal)
+	m.prom.MustRegister(collectors.NewGoCollector())
+	m.prom.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	impl.mux.Handle("/metrics", promhttp.HandlerFor(impl.reg, promhttp.HandlerOpts{}))
+	m.prom.MustRegister(metrics.ServerHttpRequestsDurationSeconds)
+	m.prom.MustRegister(metrics.ServerHttpRequestsTotal)
+
+	m.mux.Handle("/metrics", promhttp.HandlerFor(m.reg, promhttp.HandlerOpts{}))
 
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		impl.log.Debug("Performing metrics shutdown...")
-		return impl.srv.Shutdown(shutdown)
+		m.logger.Debug("Performing metrics shutdown...")
+		return m.srv.Shutdown(shutdown)
 	}, nil
 }
 
-func (impl *Metrics) Serve(ctx context.Context) error {
-	impl.log.Info("Serving metrics server", "address", impl.cfg.Address)
-	if err := impl.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+func (m *Metrics) Serve(ctx context.Context) error {
+	m.logger.Info("Serving metrics server", "address", m.config.Address)
+	if err := m.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 

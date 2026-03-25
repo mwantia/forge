@@ -3,6 +3,10 @@
     {
         "name": "Forge",
         "path": "."
+    },
+    {
+      "name":"Fabric",
+      "path": "../fabric"
     }
   ]
 }

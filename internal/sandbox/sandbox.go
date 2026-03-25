@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
-	reg "github.com/mwantia/forge/internal/plugins"
+	"github.com/mwantia/forge/internal/registry"
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
@@ -18,7 +18,7 @@ import (
 type Sandbox struct {
 	log      hclog.Logger
 	cfg      config.AgentConfig
-	registry *reg.PluginRegistry
+	registry *registry.PluginRegistry
 }
 
 // Result holds the result of a sandbox execution.
@@ -54,7 +54,7 @@ func NewSandbox(cfg config.AgentConfig) *Sandbox {
 	return &Sandbox{
 		log:      log,
 		cfg:      cfg,
-		registry: reg.NewRegistry(log),
+		registry: &registry.PluginRegistry{},
 	}
 }
 
@@ -65,23 +65,10 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 		s.log.Error("Plugins failed to load", "errors", err.Error())
 	}
 
-	parts := strings.SplitN(flags.Model, "/", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid model format, expected '<provider>/<model>', got '%s'", flags.Model)
-	}
-
-	providerName := parts[0]
-	modelName := parts[1]
-
-	provider, err := s.registry.GetProviderPlugin(ctx, providerName)
-	if err != nil {
-		return fmt.Errorf("provider plugin not supported by '%s': %w", providerName, err)
-	}
-
-	s.log.Trace("Model", "name", modelName)
-
 	// Collect tools from all loaded tools plugins.
-	// toolsMap maps tool name → the plugin that owns it for dispatch during execution.
+	// toolsMap maps prefixed tool name ("driverName/toolName") → the plugin that owns it.
+	// Tools are exposed to the LLM with the prefix so multiple plugins with overlapping
+	// tool names (e.g. two workspace instances) are disambiguated.
 	toolsMap := make(map[string]plugins.ToolsPlugin)
 	var availableTools []plugins.ToolCall
 
@@ -92,8 +79,11 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 			continue
 		}
 		for _, def := range resp.Tools {
-			availableTools = append(availableTools, plugins.ToolCall(def))
-			toolsMap[def.Name] = tp
+			prefixed := driverName + "/" + def.Name
+			tool := plugins.ToolCall(def)
+			tool.Name = prefixed
+			availableTools = append(availableTools, tool)
+			toolsMap[prefixed] = tp
 		}
 	}
 
@@ -106,17 +96,11 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 		},
 	}
 
-	model := &plugins.Model{
-		ModelName:   modelName,
-		Temperature: 0.7,
-	}
-
 	defer s.Cleanup()
 	maxIterations := 20
-	for range maxIterations {
-		s.log.Debug("Chat request", "model", modelName, "messages", len(messages))
 
-		stream, err := provider.Chat(ctx, messages, availableTools, model)
+	for range maxIterations {
+		stream, err := s.registry.Provider().Chat(ctx, flags.Model, messages, availableTools)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
@@ -175,8 +159,13 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 				resultContent = fmt.Sprintf("error: tool '%s' not found", tc.Name)
 				s.log.Warn("Tool not found", "tool", tc.Name)
 			} else {
+				// Strip the "driverName/" prefix to get the real tool name.
+				realName := tc.Name
+				if idx := strings.Index(tc.Name, "/"); idx >= 0 {
+					realName = tc.Name[idx+1:]
+				}
 				execResp, err := tp.Execute(ctx, plugins.ExecuteRequest{
-					Tool:      tc.Name,
+					Tool:      realName,
 					Arguments: tc.Arguments,
 					CallID:    tc.ID,
 				})

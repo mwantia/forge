@@ -22,9 +22,9 @@ func (a *Agent) serveRunner(ctx context.Context, runner Runner) error {
 	go func() {
 		defer a.wait.Done()
 
-		a.log.Debug("Executing runner goroutine...")
+		a.logger.Debug("Executing runner goroutine...")
 		if err := runner.Serve(ctx); err != nil {
-			a.log.Error("error serving runner: %w", err)
+			a.logger.Error("error serving runner: %w", err)
 		}
 	}()
 
