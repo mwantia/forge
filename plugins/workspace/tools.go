@@ -13,129 +13,114 @@ import (
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
-// toolDefinitions maps tool names to their JSON Schema definitions.
-var toolDefinitions = map[string]plugins.ToolDefinition{
-	"create": {
-		Name:        "create",
-		Description: "Create a new file with optional content",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "File path relative to workspace home",
-				},
-				"content": map[string]any{
-					"type":        "string",
-					"description": "Initial file content (optional, defaults to empty)",
-				},
-			},
-			"required": []string{"path"},
-		},
-	},
-	"read": {
-		Name:        "read",
-		Description: "Read the contents of a file",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "File path relative to workspace home",
-				},
-			},
-			"required": []string{"path"},
-		},
-	},
-	"write": {
-		Name:        "write",
-		Description: "Write content to a file, creating it if it does not exist",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "File path relative to workspace home",
-				},
-				"content": map[string]any{
-					"type":        "string",
-					"description": "Content to write to the file",
-				},
-			},
-			"required": []string{"path", "content"},
-		},
-	},
-	"delete": {
-		Name:        "delete",
-		Description: "Delete a file or directory (recursive)",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "File or directory path relative to workspace home",
-				},
-			},
-			"required": []string{"path"},
-		},
-	},
-	"list": {
-		Name:        "list",
-		Description: "List the contents of a directory",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"path": map[string]any{
-					"type":        "string",
-					"description": "Directory path relative to workspace home (defaults to home directory)",
-				},
-			},
-		},
-	},
-	"exec": {
-		Name:        "exec",
-		Description: "Execute a command in the workspace directory",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"command": map[string]any{
-					"type":        "string",
-					"description": "Command to execute",
-				},
-				"args": map[string]any{
-					"type":        "array",
-					"description": "Arguments to pass to the command",
-					"items":       map[string]any{"type": "string"},
-				},
-				"workdir": map[string]any{
-					"type":        "string",
-					"description": "Working directory for the command (defaults to workspace home)",
-				},
-			},
-			"required": []string{"command"},
-		},
-	},
-}
-
 func (d *WorkspaceDriver) GetLifecycle() plugins.Lifecycle {
 	return d
 }
 
-func (d *WorkspaceDriver) List(ctx context.Context) (*plugins.ListToolsResponse, error) {
+func (d *WorkspaceDriver) ListTools(_ context.Context, filter plugins.ListToolsFilter) (*plugins.ListToolsResponse, error) {
 	if d.config == nil {
 		return nil, fmt.Errorf("plugin not configured")
 	}
 
 	tools := make([]plugins.ToolDefinition, 0, len(d.config.Tools))
 	for _, name := range d.config.Tools {
-		if def, ok := toolDefinitions[name]; ok {
-			tools = append(tools, def)
-		} else {
+		def, ok := toolDefinitions[name]
+		if !ok {
 			d.log.Warn("Unknown tool in config, skipping", "tool", name)
+			continue
+		}
+		if matchesFilter(def, filter) {
+			tools = append(tools, def)
 		}
 	}
 
 	return &plugins.ListToolsResponse{Tools: tools}, nil
+}
+
+func (d *WorkspaceDriver) GetTool(_ context.Context, name string) (*plugins.ToolDefinition, error) {
+	if d.config == nil {
+		return nil, fmt.Errorf("plugin not configured")
+	}
+
+	def, ok := toolDefinitions[name]
+	if !ok {
+		return nil, fmt.Errorf("tool %q not found", name)
+	}
+
+	// Only expose tools that are enabled in the config.
+	for _, enabled := range d.config.Tools {
+		if enabled == name {
+			return &def, nil
+		}
+	}
+	return nil, fmt.Errorf("tool %q is not enabled", name)
+}
+
+func (d *WorkspaceDriver) Validate(_ context.Context, req plugins.ExecuteRequest) (*plugins.ValidateResponse, error) {
+	if d.config == nil {
+		return nil, fmt.Errorf("plugin not configured")
+	}
+
+	errs := validateToolArgs(req.Tool, req.Arguments)
+	return &plugins.ValidateResponse{Valid: len(errs) == 0, Errors: errs}, nil
+}
+
+// matchesFilter reports whether def satisfies the given filter.
+func matchesFilter(def plugins.ToolDefinition, f plugins.ListToolsFilter) bool {
+	if def.Deprecated && !f.Deprecated {
+		return false
+	}
+	if f.Prefix != "" && !strings.HasPrefix(def.Name, f.Prefix) {
+		return false
+	}
+	if len(f.Tags) > 0 {
+		for _, want := range f.Tags {
+			for _, have := range def.Tags {
+				if have == want {
+					goto tagMatched
+				}
+			}
+		}
+		return false
+	tagMatched:
+	}
+	return true
+}
+
+// requiredStringArg returns an error string if the named argument is absent or not a string.
+func requiredStringArg(args map[string]any, name string) string {
+	v, ok := args[name]
+	if !ok {
+		return fmt.Sprintf("%q is required", name)
+	}
+	if _, ok := v.(string); !ok {
+		return fmt.Sprintf("%q must be a string", name)
+	}
+	return ""
+}
+
+// validateToolArgs performs argument validation for each known tool.
+func validateToolArgs(tool string, args map[string]any) []string {
+	var errs []string
+	add := func(e string) {
+		if e != "" {
+			errs = append(errs, e)
+		}
+	}
+	switch tool {
+	case "create", "read", "delete", "list":
+		if tool != "list" {
+			add(requiredStringArg(args, "path"))
+		}
+	case "write":
+		add(requiredStringArg(args, "path"))
+		add(requiredStringArg(args, "content"))
+	case "exec":
+		add(requiredStringArg(args, "command"))
+	default:
+		errs = append(errs, fmt.Sprintf("unknown tool %q", tool))
+	}
+	return errs
 }
 
 func (d *WorkspaceDriver) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {

@@ -19,6 +19,7 @@ func init() {
 
 // SkillsDriver implements plugins.Driver for the skills plugin.
 type SkillsToolsDriver struct {
+	plugins.UnimplementedToolsPlugin
 	log    hclog.Logger
 	config *SkillsToolsConfig
 	skills map[string]*Skill

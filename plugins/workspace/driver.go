@@ -21,6 +21,7 @@ func init() {
 
 // WorkspaceDriver implements plugins.Driver for filesystem access.
 type WorkspaceDriver struct {
+	plugins.UnimplementedToolsPlugin
 	log    hclog.Logger
 	config *WorkspaceConfig
 }

@@ -73,15 +73,18 @@ func (s *Sandbox) Run(ctx context.Context, flags SandboxFlags) error {
 	var availableTools []plugins.ToolCall
 
 	for driverName, tp := range s.registry.GetAllToolsPlugins(ctx) {
-		resp, err := tp.List(ctx)
+		resp, err := tp.ListTools(ctx, plugins.ListToolsFilter{})
 		if err != nil {
 			s.log.Warn("Failed to list tools from plugin", "driver", driverName, "error", err)
 			continue
 		}
 		for _, def := range resp.Tools {
 			prefixed := driverName + "/" + def.Name
-			tool := plugins.ToolCall(def)
-			tool.Name = prefixed
+			tool := plugins.ToolCall{
+				Name:        prefixed,
+				Description: def.Description,
+				Parameters:  def.Parameters,
+			}
 			availableTools = append(availableTools, tool)
 			toolsMap[prefixed] = tp
 		}

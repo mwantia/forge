@@ -19,16 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ToolsService_List_FullMethodName    = "/tools.ToolsService/List"
-	ToolsService_Execute_FullMethodName = "/tools.ToolsService/Execute"
+	ToolsService_ListTools_FullMethodName     = "/tools.ToolsService/ListTools"
+	ToolsService_GetTool_FullMethodName       = "/tools.ToolsService/GetTool"
+	ToolsService_Execute_FullMethodName       = "/tools.ToolsService/Execute"
+	ToolsService_ExecuteStream_FullMethodName = "/tools.ToolsService/ExecuteStream"
+	ToolsService_Cancel_FullMethodName        = "/tools.ToolsService/Cancel"
+	ToolsService_Validate_FullMethodName      = "/tools.ToolsService/Validate"
 )
 
 // ToolsServiceClient is the client API for ToolsService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ToolsServiceClient interface {
-	List(ctx context.Context, in *ListToolsReq, opts ...grpc.CallOption) (*ListToolsResp, error)
-	Execute(ctx context.Context, in *ExecuteReq, opts ...grpc.CallOption) (*ExecuteResp, error)
+	ListTools(ctx context.Context, in *ListToolsRequest, opts ...grpc.CallOption) (*ListToolsResponse, error)
+	GetTool(ctx context.Context, in *GetToolRequest, opts ...grpc.CallOption) (*GetToolResponse, error)
+	Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (*ExecuteResponse, error)
+	ExecuteStream(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteChunk], error)
+	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
+	Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error)
 }
 
 type toolsServiceClient struct {
@@ -39,20 +47,69 @@ func NewToolsServiceClient(cc grpc.ClientConnInterface) ToolsServiceClient {
 	return &toolsServiceClient{cc}
 }
 
-func (c *toolsServiceClient) List(ctx context.Context, in *ListToolsReq, opts ...grpc.CallOption) (*ListToolsResp, error) {
+func (c *toolsServiceClient) ListTools(ctx context.Context, in *ListToolsRequest, opts ...grpc.CallOption) (*ListToolsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListToolsResp)
-	err := c.cc.Invoke(ctx, ToolsService_List_FullMethodName, in, out, cOpts...)
+	out := new(ListToolsResponse)
+	err := c.cc.Invoke(ctx, ToolsService_ListTools_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *toolsServiceClient) Execute(ctx context.Context, in *ExecuteReq, opts ...grpc.CallOption) (*ExecuteResp, error) {
+func (c *toolsServiceClient) GetTool(ctx context.Context, in *GetToolRequest, opts ...grpc.CallOption) (*GetToolResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ExecuteResp)
+	out := new(GetToolResponse)
+	err := c.cc.Invoke(ctx, ToolsService_GetTool_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *toolsServiceClient) Execute(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (*ExecuteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExecuteResponse)
 	err := c.cc.Invoke(ctx, ToolsService_Execute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *toolsServiceClient) ExecuteStream(ctx context.Context, in *ExecuteRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteChunk], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ToolsService_ServiceDesc.Streams[0], ToolsService_ExecuteStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ExecuteRequest, ExecuteChunk]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ToolsService_ExecuteStreamClient = grpc.ServerStreamingClient[ExecuteChunk]
+
+func (c *toolsServiceClient) Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelResponse)
+	err := c.cc.Invoke(ctx, ToolsService_Cancel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *toolsServiceClient) Validate(ctx context.Context, in *ValidateRequest, opts ...grpc.CallOption) (*ValidateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateResponse)
+	err := c.cc.Invoke(ctx, ToolsService_Validate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +120,12 @@ func (c *toolsServiceClient) Execute(ctx context.Context, in *ExecuteReq, opts .
 // All implementations must embed UnimplementedToolsServiceServer
 // for forward compatibility.
 type ToolsServiceServer interface {
-	List(context.Context, *ListToolsReq) (*ListToolsResp, error)
-	Execute(context.Context, *ExecuteReq) (*ExecuteResp, error)
+	ListTools(context.Context, *ListToolsRequest) (*ListToolsResponse, error)
+	GetTool(context.Context, *GetToolRequest) (*GetToolResponse, error)
+	Execute(context.Context, *ExecuteRequest) (*ExecuteResponse, error)
+	ExecuteStream(*ExecuteRequest, grpc.ServerStreamingServer[ExecuteChunk]) error
+	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
+	Validate(context.Context, *ValidateRequest) (*ValidateResponse, error)
 	mustEmbedUnimplementedToolsServiceServer()
 }
 
@@ -75,11 +136,23 @@ type ToolsServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedToolsServiceServer struct{}
 
-func (UnimplementedToolsServiceServer) List(context.Context, *ListToolsReq) (*ListToolsResp, error) {
-	return nil, status.Error(codes.Unimplemented, "method List not implemented")
+func (UnimplementedToolsServiceServer) ListTools(context.Context, *ListToolsRequest) (*ListToolsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTools not implemented")
 }
-func (UnimplementedToolsServiceServer) Execute(context.Context, *ExecuteReq) (*ExecuteResp, error) {
+func (UnimplementedToolsServiceServer) GetTool(context.Context, *GetToolRequest) (*GetToolResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTool not implemented")
+}
+func (UnimplementedToolsServiceServer) Execute(context.Context, *ExecuteRequest) (*ExecuteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Execute not implemented")
+}
+func (UnimplementedToolsServiceServer) ExecuteStream(*ExecuteRequest, grpc.ServerStreamingServer[ExecuteChunk]) error {
+	return status.Error(codes.Unimplemented, "method ExecuteStream not implemented")
+}
+func (UnimplementedToolsServiceServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Cancel not implemented")
+}
+func (UnimplementedToolsServiceServer) Validate(context.Context, *ValidateRequest) (*ValidateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Validate not implemented")
 }
 func (UnimplementedToolsServiceServer) mustEmbedUnimplementedToolsServiceServer() {}
 func (UnimplementedToolsServiceServer) testEmbeddedByValue()                      {}
@@ -102,26 +175,44 @@ func RegisterToolsServiceServer(s grpc.ServiceRegistrar, srv ToolsServiceServer)
 	s.RegisterService(&ToolsService_ServiceDesc, srv)
 }
 
-func _ToolsService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListToolsReq)
+func _ToolsService_ListTools_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListToolsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ToolsServiceServer).List(ctx, in)
+		return srv.(ToolsServiceServer).ListTools(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ToolsService_List_FullMethodName,
+		FullMethod: ToolsService_ListTools_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ToolsServiceServer).List(ctx, req.(*ListToolsReq))
+		return srv.(ToolsServiceServer).ListTools(ctx, req.(*ListToolsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ToolsService_GetTool_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetToolRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ToolsServiceServer).GetTool(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ToolsService_GetTool_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ToolsServiceServer).GetTool(ctx, req.(*GetToolRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ToolsService_Execute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExecuteReq)
+	in := new(ExecuteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -133,7 +224,54 @@ func _ToolsService_Execute_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: ToolsService_Execute_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ToolsServiceServer).Execute(ctx, req.(*ExecuteReq))
+		return srv.(ToolsServiceServer).Execute(ctx, req.(*ExecuteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ToolsService_ExecuteStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExecuteRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ToolsServiceServer).ExecuteStream(m, &grpc.GenericServerStream[ExecuteRequest, ExecuteChunk]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ToolsService_ExecuteStreamServer = grpc.ServerStreamingServer[ExecuteChunk]
+
+func _ToolsService_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ToolsServiceServer).Cancel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ToolsService_Cancel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ToolsServiceServer).Cancel(ctx, req.(*CancelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ToolsService_Validate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ToolsServiceServer).Validate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ToolsService_Validate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ToolsServiceServer).Validate(ctx, req.(*ValidateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -146,14 +284,32 @@ var ToolsService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ToolsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "List",
-			Handler:    _ToolsService_List_Handler,
+			MethodName: "ListTools",
+			Handler:    _ToolsService_ListTools_Handler,
+		},
+		{
+			MethodName: "GetTool",
+			Handler:    _ToolsService_GetTool_Handler,
 		},
 		{
 			MethodName: "Execute",
 			Handler:    _ToolsService_Execute_Handler,
 		},
+		{
+			MethodName: "Cancel",
+			Handler:    _ToolsService_Cancel_Handler,
+		},
+		{
+			MethodName: "Validate",
+			Handler:    _ToolsService_Validate_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ExecuteStream",
+			Handler:       _ToolsService_ExecuteStream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "pkg/plugins/grpc/tools/proto/tools.proto",
 }
