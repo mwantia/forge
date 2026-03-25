@@ -27,8 +27,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MemoryServiceClient interface {
-	Store(ctx context.Context, in *StoreReq, opts ...grpc.CallOption) (*StoreResp, error)
-	Retrieve(ctx context.Context, in *RetrieveReq, opts ...grpc.CallOption) (*RetrieveResp, error)
+	Store(ctx context.Context, in *StoreRequest, opts ...grpc.CallOption) (*StoreResponse, error)
+	Retrieve(ctx context.Context, in *RetrieveRequest, opts ...grpc.CallOption) (*RetrieveResponse, error)
 }
 
 type memoryServiceClient struct {
@@ -39,9 +39,9 @@ func NewMemoryServiceClient(cc grpc.ClientConnInterface) MemoryServiceClient {
 	return &memoryServiceClient{cc}
 }
 
-func (c *memoryServiceClient) Store(ctx context.Context, in *StoreReq, opts ...grpc.CallOption) (*StoreResp, error) {
+func (c *memoryServiceClient) Store(ctx context.Context, in *StoreRequest, opts ...grpc.CallOption) (*StoreResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(StoreResp)
+	out := new(StoreResponse)
 	err := c.cc.Invoke(ctx, MemoryService_Store_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -49,9 +49,9 @@ func (c *memoryServiceClient) Store(ctx context.Context, in *StoreReq, opts ...g
 	return out, nil
 }
 
-func (c *memoryServiceClient) Retrieve(ctx context.Context, in *RetrieveReq, opts ...grpc.CallOption) (*RetrieveResp, error) {
+func (c *memoryServiceClient) Retrieve(ctx context.Context, in *RetrieveRequest, opts ...grpc.CallOption) (*RetrieveResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RetrieveResp)
+	out := new(RetrieveResponse)
 	err := c.cc.Invoke(ctx, MemoryService_Retrieve_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -63,8 +63,8 @@ func (c *memoryServiceClient) Retrieve(ctx context.Context, in *RetrieveReq, opt
 // All implementations must embed UnimplementedMemoryServiceServer
 // for forward compatibility.
 type MemoryServiceServer interface {
-	Store(context.Context, *StoreReq) (*StoreResp, error)
-	Retrieve(context.Context, *RetrieveReq) (*RetrieveResp, error)
+	Store(context.Context, *StoreRequest) (*StoreResponse, error)
+	Retrieve(context.Context, *RetrieveRequest) (*RetrieveResponse, error)
 	mustEmbedUnimplementedMemoryServiceServer()
 }
 
@@ -75,10 +75,10 @@ type MemoryServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMemoryServiceServer struct{}
 
-func (UnimplementedMemoryServiceServer) Store(context.Context, *StoreReq) (*StoreResp, error) {
+func (UnimplementedMemoryServiceServer) Store(context.Context, *StoreRequest) (*StoreResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Store not implemented")
 }
-func (UnimplementedMemoryServiceServer) Retrieve(context.Context, *RetrieveReq) (*RetrieveResp, error) {
+func (UnimplementedMemoryServiceServer) Retrieve(context.Context, *RetrieveRequest) (*RetrieveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Retrieve not implemented")
 }
 func (UnimplementedMemoryServiceServer) mustEmbedUnimplementedMemoryServiceServer() {}
@@ -103,7 +103,7 @@ func RegisterMemoryServiceServer(s grpc.ServiceRegistrar, srv MemoryServiceServe
 }
 
 func _MemoryService_Store_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StoreReq)
+	in := new(StoreRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -115,13 +115,13 @@ func _MemoryService_Store_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: MemoryService_Store_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MemoryServiceServer).Store(ctx, req.(*StoreReq))
+		return srv.(MemoryServiceServer).Store(ctx, req.(*StoreRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _MemoryService_Retrieve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RetrieveReq)
+	in := new(RetrieveRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func _MemoryService_Retrieve_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: MemoryService_Retrieve_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MemoryServiceServer).Retrieve(ctx, req.(*RetrieveReq))
+		return srv.(MemoryServiceServer).Retrieve(ctx, req.(*RetrieveRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

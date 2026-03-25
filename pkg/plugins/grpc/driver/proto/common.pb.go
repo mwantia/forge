@@ -86,10 +86,10 @@ func (x *PluginInfo) GetVersion() string {
 type DriverCapabilities struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Types         []string               `protobuf:"bytes,1,rep,name=types,proto3" json:"types,omitempty"`
-	Provider      *ProviderCaps          `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
-	Memory        *MemoryCaps            `protobuf:"bytes,3,opt,name=memory,proto3" json:"memory,omitempty"`
-	Channel       *ChannelCaps           `protobuf:"bytes,4,opt,name=channel,proto3" json:"channel,omitempty"`
-	Tools         *ToolsCaps             `protobuf:"bytes,5,opt,name=tools,proto3" json:"tools,omitempty"`
+	Provider      *ProviderCapabilities  `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
+	Memory        *MemoryCapabilities    `protobuf:"bytes,3,opt,name=memory,proto3" json:"memory,omitempty"`
+	Channel       *ChannelCapabilities   `protobuf:"bytes,4,opt,name=channel,proto3" json:"channel,omitempty"`
+	Tools         *ToolsCapabilities     `protobuf:"bytes,5,opt,name=tools,proto3" json:"tools,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -131,35 +131,35 @@ func (x *DriverCapabilities) GetTypes() []string {
 	return nil
 }
 
-func (x *DriverCapabilities) GetProvider() *ProviderCaps {
+func (x *DriverCapabilities) GetProvider() *ProviderCapabilities {
 	if x != nil {
 		return x.Provider
 	}
 	return nil
 }
 
-func (x *DriverCapabilities) GetMemory() *MemoryCaps {
+func (x *DriverCapabilities) GetMemory() *MemoryCapabilities {
 	if x != nil {
 		return x.Memory
 	}
 	return nil
 }
 
-func (x *DriverCapabilities) GetChannel() *ChannelCaps {
+func (x *DriverCapabilities) GetChannel() *ChannelCapabilities {
 	if x != nil {
 		return x.Channel
 	}
 	return nil
 }
 
-func (x *DriverCapabilities) GetTools() *ToolsCaps {
+func (x *DriverCapabilities) GetTools() *ToolsCapabilities {
 	if x != nil {
 		return x.Tools
 	}
 	return nil
 }
 
-type ProviderCaps struct {
+type ProviderCapabilities struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	SupportsStreaming bool                   `protobuf:"varint,1,opt,name=supports_streaming,json=supportsStreaming,proto3" json:"supports_streaming,omitempty"`
 	SupportsVision    bool                   `protobuf:"varint,2,opt,name=supports_vision,json=supportsVision,proto3" json:"supports_vision,omitempty"`
@@ -167,20 +167,20 @@ type ProviderCaps struct {
 	sizeCache         protoimpl.SizeCache
 }
 
-func (x *ProviderCaps) Reset() {
-	*x = ProviderCaps{}
+func (x *ProviderCapabilities) Reset() {
+	*x = ProviderCapabilities{}
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ProviderCaps) String() string {
+func (x *ProviderCapabilities) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ProviderCaps) ProtoMessage() {}
+func (*ProviderCapabilities) ProtoMessage() {}
 
-func (x *ProviderCaps) ProtoReflect() protoreflect.Message {
+func (x *ProviderCapabilities) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -192,26 +192,26 @@ func (x *ProviderCaps) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ProviderCaps.ProtoReflect.Descriptor instead.
-func (*ProviderCaps) Descriptor() ([]byte, []int) {
+// Deprecated: Use ProviderCapabilities.ProtoReflect.Descriptor instead.
+func (*ProviderCapabilities) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ProviderCaps) GetSupportsStreaming() bool {
+func (x *ProviderCapabilities) GetSupportsStreaming() bool {
 	if x != nil {
 		return x.SupportsStreaming
 	}
 	return false
 }
 
-func (x *ProviderCaps) GetSupportsVision() bool {
+func (x *ProviderCapabilities) GetSupportsVision() bool {
 	if x != nil {
 		return x.SupportsVision
 	}
 	return false
 }
 
-type MemoryCaps struct {
+type MemoryCapabilities struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	SupportsVectorSearch bool                   `protobuf:"varint,1,opt,name=supports_vector_search,json=supportsVectorSearch,proto3" json:"supports_vector_search,omitempty"`
 	MaxContextSize       int32                  `protobuf:"varint,2,opt,name=max_context_size,json=maxContextSize,proto3" json:"max_context_size,omitempty"`
@@ -219,20 +219,20 @@ type MemoryCaps struct {
 	sizeCache            protoimpl.SizeCache
 }
 
-func (x *MemoryCaps) Reset() {
-	*x = MemoryCaps{}
+func (x *MemoryCapabilities) Reset() {
+	*x = MemoryCapabilities{}
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MemoryCaps) String() string {
+func (x *MemoryCapabilities) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MemoryCaps) ProtoMessage() {}
+func (*MemoryCapabilities) ProtoMessage() {}
 
-func (x *MemoryCaps) ProtoReflect() protoreflect.Message {
+func (x *MemoryCapabilities) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -244,26 +244,26 @@ func (x *MemoryCaps) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MemoryCaps.ProtoReflect.Descriptor instead.
-func (*MemoryCaps) Descriptor() ([]byte, []int) {
+// Deprecated: Use MemoryCapabilities.ProtoReflect.Descriptor instead.
+func (*MemoryCapabilities) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *MemoryCaps) GetSupportsVectorSearch() bool {
+func (x *MemoryCapabilities) GetSupportsVectorSearch() bool {
 	if x != nil {
 		return x.SupportsVectorSearch
 	}
 	return false
 }
 
-func (x *MemoryCaps) GetMaxContextSize() int32 {
+func (x *MemoryCapabilities) GetMaxContextSize() int32 {
 	if x != nil {
 		return x.MaxContextSize
 	}
 	return 0
 }
 
-type ChannelCaps struct {
+type ChannelCapabilities struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	SupportsDirectMessages bool                   `protobuf:"varint,1,opt,name=supports_direct_messages,json=supportsDirectMessages,proto3" json:"supports_direct_messages,omitempty"`
 	SupportsThreads        bool                   `protobuf:"varint,2,opt,name=supports_threads,json=supportsThreads,proto3" json:"supports_threads,omitempty"`
@@ -271,20 +271,20 @@ type ChannelCaps struct {
 	sizeCache              protoimpl.SizeCache
 }
 
-func (x *ChannelCaps) Reset() {
-	*x = ChannelCaps{}
+func (x *ChannelCapabilities) Reset() {
+	*x = ChannelCapabilities{}
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ChannelCaps) String() string {
+func (x *ChannelCapabilities) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ChannelCaps) ProtoMessage() {}
+func (*ChannelCapabilities) ProtoMessage() {}
 
-func (x *ChannelCaps) ProtoReflect() protoreflect.Message {
+func (x *ChannelCapabilities) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -296,46 +296,46 @@ func (x *ChannelCaps) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ChannelCaps.ProtoReflect.Descriptor instead.
-func (*ChannelCaps) Descriptor() ([]byte, []int) {
+// Deprecated: Use ChannelCapabilities.ProtoReflect.Descriptor instead.
+func (*ChannelCapabilities) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ChannelCaps) GetSupportsDirectMessages() bool {
+func (x *ChannelCapabilities) GetSupportsDirectMessages() bool {
 	if x != nil {
 		return x.SupportsDirectMessages
 	}
 	return false
 }
 
-func (x *ChannelCaps) GetSupportsThreads() bool {
+func (x *ChannelCapabilities) GetSupportsThreads() bool {
 	if x != nil {
 		return x.SupportsThreads
 	}
 	return false
 }
 
-type ToolsCaps struct {
+type ToolsCapabilities struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	SupportsAsyncExecution bool                   `protobuf:"varint,1,opt,name=supports_async_execution,json=supportsAsyncExecution,proto3" json:"supports_async_execution,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
 
-func (x *ToolsCaps) Reset() {
-	*x = ToolsCaps{}
+func (x *ToolsCapabilities) Reset() {
+	*x = ToolsCapabilities{}
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ToolsCaps) String() string {
+func (x *ToolsCapabilities) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ToolsCaps) ProtoMessage() {}
+func (*ToolsCapabilities) ProtoMessage() {}
 
-func (x *ToolsCaps) ProtoReflect() protoreflect.Message {
+func (x *ToolsCapabilities) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -347,12 +347,12 @@ func (x *ToolsCaps) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ToolsCaps.ProtoReflect.Descriptor instead.
-func (*ToolsCaps) Descriptor() ([]byte, []int) {
+// Deprecated: Use ToolsCapabilities.ProtoReflect.Descriptor instead.
+func (*ToolsCapabilities) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ToolsCaps) GetSupportsAsyncExecution() bool {
+func (x *ToolsCapabilities) GetSupportsAsyncExecution() bool {
 	if x != nil {
 		return x.SupportsAsyncExecution
 	}
@@ -368,24 +368,23 @@ const file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc = "" +
 	"PluginInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06author\x18\x02 \x01(\tR\x06author\x12\x18\n" +
-	"\aversion\x18\x03 \x01(\tR\aversion\"\xe0\x01\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"\x80\x02\n" +
 	"\x12DriverCapabilities\x12\x14\n" +
-	"\x05types\x18\x01 \x03(\tR\x05types\x120\n" +
-	"\bprovider\x18\x02 \x01(\v2\x14.driver.ProviderCapsR\bprovider\x12*\n" +
-	"\x06memory\x18\x03 \x01(\v2\x12.driver.MemoryCapsR\x06memory\x12-\n" +
-	"\achannel\x18\x04 \x01(\v2\x13.driver.ChannelCapsR\achannel\x12'\n" +
-	"\x05tools\x18\x05 \x01(\v2\x11.driver.ToolsCapsR\x05tools\"f\n" +
-	"\fProviderCaps\x12-\n" +
+	"\x05types\x18\x01 \x03(\tR\x05types\x128\n" +
+	"\bprovider\x18\x02 \x01(\v2\x1c.driver.ProviderCapabilitiesR\bprovider\x122\n" +
+	"\x06memory\x18\x03 \x01(\v2\x1a.driver.MemoryCapabilitiesR\x06memory\x125\n" +
+	"\achannel\x18\x04 \x01(\v2\x1b.driver.ChannelCapabilitiesR\achannel\x12/\n" +
+	"\x05tools\x18\x05 \x01(\v2\x19.driver.ToolsCapabilitiesR\x05tools\"n\n" +
+	"\x14ProviderCapabilities\x12-\n" +
 	"\x12supports_streaming\x18\x01 \x01(\bR\x11supportsStreaming\x12'\n" +
-	"\x0fsupports_vision\x18\x02 \x01(\bR\x0esupportsVision\"l\n" +
-	"\n" +
-	"MemoryCaps\x124\n" +
+	"\x0fsupports_vision\x18\x02 \x01(\bR\x0esupportsVision\"t\n" +
+	"\x12MemoryCapabilities\x124\n" +
 	"\x16supports_vector_search\x18\x01 \x01(\bR\x14supportsVectorSearch\x12(\n" +
-	"\x10max_context_size\x18\x02 \x01(\x05R\x0emaxContextSize\"r\n" +
-	"\vChannelCaps\x128\n" +
+	"\x10max_context_size\x18\x02 \x01(\x05R\x0emaxContextSize\"z\n" +
+	"\x13ChannelCapabilities\x128\n" +
 	"\x18supports_direct_messages\x18\x01 \x01(\bR\x16supportsDirectMessages\x12)\n" +
-	"\x10supports_threads\x18\x02 \x01(\bR\x0fsupportsThreads\"E\n" +
-	"\tToolsCaps\x128\n" +
+	"\x10supports_threads\x18\x02 \x01(\bR\x0fsupportsThreads\"M\n" +
+	"\x11ToolsCapabilities\x128\n" +
 	"\x18supports_async_execution\x18\x01 \x01(\bR\x16supportsAsyncExecutionB8Z6github.com/mwantia/forge/pkg/plugins/grpc/driver/protob\x06proto3"
 
 var (
@@ -402,18 +401,18 @@ func file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP() []byte {
 
 var file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_plugins_grpc_driver_proto_common_proto_goTypes = []any{
-	(*PluginInfo)(nil),         // 0: driver.PluginInfo
-	(*DriverCapabilities)(nil), // 1: driver.DriverCapabilities
-	(*ProviderCaps)(nil),       // 2: driver.ProviderCaps
-	(*MemoryCaps)(nil),         // 3: driver.MemoryCaps
-	(*ChannelCaps)(nil),        // 4: driver.ChannelCaps
-	(*ToolsCaps)(nil),          // 5: driver.ToolsCaps
+	(*PluginInfo)(nil),           // 0: driver.PluginInfo
+	(*DriverCapabilities)(nil),   // 1: driver.DriverCapabilities
+	(*ProviderCapabilities)(nil), // 2: driver.ProviderCapabilities
+	(*MemoryCapabilities)(nil),   // 3: driver.MemoryCapabilities
+	(*ChannelCapabilities)(nil),  // 4: driver.ChannelCapabilities
+	(*ToolsCapabilities)(nil),    // 5: driver.ToolsCapabilities
 }
 var file_pkg_plugins_grpc_driver_proto_common_proto_depIdxs = []int32{
-	2, // 0: driver.DriverCapabilities.provider:type_name -> driver.ProviderCaps
-	3, // 1: driver.DriverCapabilities.memory:type_name -> driver.MemoryCaps
-	4, // 2: driver.DriverCapabilities.channel:type_name -> driver.ChannelCaps
-	5, // 3: driver.DriverCapabilities.tools:type_name -> driver.ToolsCaps
+	2, // 0: driver.DriverCapabilities.provider:type_name -> driver.ProviderCapabilities
+	3, // 1: driver.DriverCapabilities.memory:type_name -> driver.MemoryCapabilities
+	4, // 2: driver.DriverCapabilities.channel:type_name -> driver.ChannelCapabilities
+	5, // 3: driver.DriverCapabilities.tools:type_name -> driver.ToolsCapabilities
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name

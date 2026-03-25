@@ -20,7 +20,7 @@ func NewServer(impl plugins.Driver) *Server {
 	return &Server{impl: impl}
 }
 
-func (s *Server) Chat(req *proto.ChatReq, stream proto.ProviderService_ChatServer) error {
+func (s *Server) Chat(req *proto.ChatRequest, stream proto.ProviderService_ChatServer) error {
 	ctx := stream.Context()
 
 	plugin, err := s.impl.GetProviderPlugin(ctx)
@@ -103,7 +103,7 @@ func (s *Server) Chat(req *proto.ChatReq, stream proto.ProviderService_ChatServe
 	}
 }
 
-func (s *Server) Embed(ctx context.Context, req *proto.EmbedReq) (*proto.EmbedResp, error) {
+func (s *Server) Embed(ctx context.Context, req *proto.EmbedRequest) (*proto.EmbedResponse, error) {
 	plugin, err := s.impl.GetProviderPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -115,14 +115,14 @@ func (s *Server) Embed(ctx context.Context, req *proto.EmbedReq) (*proto.EmbedRe
 		return nil, err
 	}
 
-	resp := &proto.EmbedResp{}
+	resp := &proto.EmbedResponse{}
 	for _, vec := range vectors {
 		resp.Embeddings = append(resp.Embeddings, &proto.EmbeddingProto{Values: vec})
 	}
 	return resp, nil
 }
 
-func (s *Server) ListModels(ctx context.Context, _ *proto.ListModelsReq) (*proto.ListModelsResp, error) {
+func (s *Server) ListModels(ctx context.Context, _ *proto.ListModelsRequest) (*proto.ListModelsResponse, error) {
 	plugin, err := s.impl.GetProviderPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (s *Server) ListModels(ctx context.Context, _ *proto.ListModelsReq) (*proto
 		return nil, err
 	}
 
-	resp := &proto.ListModelsResp{}
+	resp := &proto.ListModelsResponse{}
 	for _, m := range models {
 		pm := &proto.ModelProto{
 			Name:      m.ModelName,
@@ -148,7 +148,7 @@ func (s *Server) ListModels(ctx context.Context, _ *proto.ListModelsReq) (*proto
 	return resp, nil
 }
 
-func (s *Server) CreateModel(ctx context.Context, req *proto.CreateModelReq) (*proto.CreateModelResp, error) {
+func (s *Server) CreateModel(ctx context.Context, req *proto.CreateModelRequest) (*proto.CreateModelResponse, error) {
 	plugin, err := s.impl.GetProviderPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -170,12 +170,12 @@ func (s *Server) CreateModel(ctx context.Context, req *proto.CreateModelReq) (*p
 		return nil, err
 	}
 
-	return &proto.CreateModelResp{
+	return &proto.CreateModelResponse{
 		Model: &proto.ModelProto{Name: model.ModelName, Dimension: int32(model.Dimension)},
 	}, nil
 }
 
-func (s *Server) GetModel(ctx context.Context, req *proto.GetModelReq) (*proto.GetModelResp, error) {
+func (s *Server) GetModel(ctx context.Context, req *proto.GetModelRequest) (*proto.GetModelResponse, error) {
 	plugin, err := s.impl.GetProviderPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -186,12 +186,12 @@ func (s *Server) GetModel(ctx context.Context, req *proto.GetModelReq) (*proto.G
 		return nil, err
 	}
 
-	return &proto.GetModelResp{
+	return &proto.GetModelResponse{
 		Model: &proto.ModelProto{Name: model.ModelName, Dimension: int32(model.Dimension)},
 	}, nil
 }
 
-func (s *Server) DeleteModel(ctx context.Context, req *proto.DeleteModelReq) (*proto.DeleteModelResp, error) {
+func (s *Server) DeleteModel(ctx context.Context, req *proto.DeleteModelRequest) (*proto.DeleteModelResponse, error) {
 	plugin, err := s.impl.GetProviderPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -202,5 +202,5 @@ func (s *Server) DeleteModel(ctx context.Context, req *proto.DeleteModelReq) (*p
 		return nil, err
 	}
 
-	return &proto.DeleteModelResp{Success: ok}, nil
+	return &proto.DeleteModelResponse{Success: ok}, nil
 }

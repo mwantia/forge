@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SendReq struct {
+type SendRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
@@ -30,20 +30,20 @@ type SendReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendReq) Reset() {
-	*x = SendReq{}
+func (x *SendRequest) Reset() {
+	*x = SendRequest{}
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendReq) String() string {
+func (x *SendRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendReq) ProtoMessage() {}
+func (*SendRequest) ProtoMessage() {}
 
-func (x *SendReq) ProtoReflect() protoreflect.Message {
+func (x *SendRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,53 +55,53 @@ func (x *SendReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendReq.ProtoReflect.Descriptor instead.
-func (*SendReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendRequest.ProtoReflect.Descriptor instead.
+func (*SendRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SendReq) GetChannelId() string {
+func (x *SendRequest) GetChannelId() string {
 	if x != nil {
 		return x.ChannelId
 	}
 	return ""
 }
 
-func (x *SendReq) GetContent() string {
+func (x *SendRequest) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *SendReq) GetMetadata() map[string]string {
+func (x *SendRequest) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
 	}
 	return nil
 }
 
-type SendResp struct {
+type SendResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MessageId     string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendResp) Reset() {
-	*x = SendResp{}
+func (x *SendResponse) Reset() {
+	*x = SendResponse{}
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendResp) String() string {
+func (x *SendResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendResp) ProtoMessage() {}
+func (*SendResponse) ProtoMessage() {}
 
-func (x *SendResp) ProtoReflect() protoreflect.Message {
+func (x *SendResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -113,39 +113,39 @@ func (x *SendResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendResp.ProtoReflect.Descriptor instead.
-func (*SendResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendResponse.ProtoReflect.Descriptor instead.
+func (*SendResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SendResp) GetMessageId() string {
+func (x *SendResponse) GetMessageId() string {
 	if x != nil {
 		return x.MessageId
 	}
 	return ""
 }
 
-type ReceiveReq struct {
+type ReceiveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ReceiveReq) Reset() {
-	*x = ReceiveReq{}
+func (x *ReceiveRequest) Reset() {
+	*x = ReceiveRequest{}
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ReceiveReq) String() string {
+func (x *ReceiveRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ReceiveReq) ProtoMessage() {}
+func (*ReceiveRequest) ProtoMessage() {}
 
-func (x *ReceiveReq) ProtoReflect() protoreflect.Message {
+func (x *ReceiveRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -157,19 +157,19 @@ func (x *ReceiveReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ReceiveReq.ProtoReflect.Descriptor instead.
-func (*ReceiveReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use ReceiveRequest.ProtoReflect.Descriptor instead.
+func (*ReceiveRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ReceiveReq) GetChannelId() string {
+func (x *ReceiveRequest) GetChannelId() string {
 	if x != nil {
 		return x.ChannelId
 	}
 	return ""
 }
 
-type MessageEvt struct {
+type MessageEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ChannelId     string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
@@ -180,20 +180,20 @@ type MessageEvt struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MessageEvt) Reset() {
-	*x = MessageEvt{}
+func (x *MessageEvent) Reset() {
+	*x = MessageEvent{}
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MessageEvt) String() string {
+func (x *MessageEvent) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MessageEvt) ProtoMessage() {}
+func (*MessageEvent) ProtoMessage() {}
 
-func (x *MessageEvt) ProtoReflect() protoreflect.Message {
+func (x *MessageEvent) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -205,40 +205,40 @@ func (x *MessageEvt) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MessageEvt.ProtoReflect.Descriptor instead.
-func (*MessageEvt) Descriptor() ([]byte, []int) {
+// Deprecated: Use MessageEvent.ProtoReflect.Descriptor instead.
+func (*MessageEvent) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *MessageEvt) GetId() string {
+func (x *MessageEvent) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *MessageEvt) GetChannelId() string {
+func (x *MessageEvent) GetChannelId() string {
 	if x != nil {
 		return x.ChannelId
 	}
 	return ""
 }
 
-func (x *MessageEvt) GetAuthorId() string {
+func (x *MessageEvent) GetAuthorId() string {
 	if x != nil {
 		return x.AuthorId
 	}
 	return ""
 }
 
-func (x *MessageEvt) GetContent() string {
+func (x *MessageEvent) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *MessageEvt) GetMetadata() map[string]string {
+func (x *MessageEvent) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
 	}
@@ -249,36 +249,34 @@ var File_pkg_plugins_grpc_channel_proto_channel_proto protoreflect.FileDescripto
 
 const file_pkg_plugins_grpc_channel_proto_channel_proto_rawDesc = "" +
 	"\n" +
-	",pkg/plugins/grpc/channel/proto/channel.proto\x12\achannel\"\xbb\x01\n" +
-	"\aSendReq\x12\x1d\n" +
+	",pkg/plugins/grpc/channel/proto/channel.proto\x12\achannel\"\xc3\x01\n" +
+	"\vSendRequest\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12:\n" +
-	"\bmetadata\x18\x03 \x03(\v2\x1e.channel.SendReq.MetadataEntryR\bmetadata\x1a;\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12>\n" +
+	"\bmetadata\x18\x03 \x03(\v2\".channel.SendRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\")\n" +
-	"\bSendResp\x12\x1d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"-\n" +
+	"\fSendResponse\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x01 \x01(\tR\tmessageId\"+\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\"/\n" +
+	"\x0eReceiveRequest\x12\x1d\n" +
 	"\n" +
-	"ReceiveReq\x12\x1d\n" +
-	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\"\xee\x01\n" +
-	"\n" +
-	"MessageEvt\x12\x0e\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\"\xf2\x01\n" +
+	"\fMessageEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tauthor_id\x18\x03 \x01(\tR\bauthorId\x12\x18\n" +
-	"\acontent\x18\x04 \x01(\tR\acontent\x12=\n" +
-	"\bmetadata\x18\x05 \x03(\v2!.channel.MessageEvt.MetadataEntryR\bmetadata\x1a;\n" +
+	"\acontent\x18\x04 \x01(\tR\acontent\x12?\n" +
+	"\bmetadata\x18\x05 \x03(\v2#.channel.MessageEvent.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012t\n" +
-	"\x0eChannelService\x12+\n" +
-	"\x04Send\x12\x10.channel.SendReq\x1a\x11.channel.SendResp\x125\n" +
-	"\aReceive\x12\x13.channel.ReceiveReq\x1a\x13.channel.MessageEvt0\x01B9Z7github.com/mwantia/forge/pkg/plugins/grpc/channel/protob\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x82\x01\n" +
+	"\x0eChannelService\x123\n" +
+	"\x04Send\x12\x14.channel.SendRequest\x1a\x15.channel.SendResponse\x12;\n" +
+	"\aReceive\x12\x17.channel.ReceiveRequest\x1a\x15.channel.MessageEvent0\x01B9Z7github.com/mwantia/forge/pkg/plugins/grpc/channel/protob\x06proto3"
 
 var (
 	file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescOnce sync.Once
@@ -294,20 +292,20 @@ func file_pkg_plugins_grpc_channel_proto_channel_proto_rawDescGZIP() []byte {
 
 var file_pkg_plugins_grpc_channel_proto_channel_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_plugins_grpc_channel_proto_channel_proto_goTypes = []any{
-	(*SendReq)(nil),    // 0: channel.SendReq
-	(*SendResp)(nil),   // 1: channel.SendResp
-	(*ReceiveReq)(nil), // 2: channel.ReceiveReq
-	(*MessageEvt)(nil), // 3: channel.MessageEvt
-	nil,                // 4: channel.SendReq.MetadataEntry
-	nil,                // 5: channel.MessageEvt.MetadataEntry
+	(*SendRequest)(nil),    // 0: channel.SendRequest
+	(*SendResponse)(nil),   // 1: channel.SendResponse
+	(*ReceiveRequest)(nil), // 2: channel.ReceiveRequest
+	(*MessageEvent)(nil),   // 3: channel.MessageEvent
+	nil,                    // 4: channel.SendRequest.MetadataEntry
+	nil,                    // 5: channel.MessageEvent.MetadataEntry
 }
 var file_pkg_plugins_grpc_channel_proto_channel_proto_depIdxs = []int32{
-	4, // 0: channel.SendReq.metadata:type_name -> channel.SendReq.MetadataEntry
-	5, // 1: channel.MessageEvt.metadata:type_name -> channel.MessageEvt.MetadataEntry
-	0, // 2: channel.ChannelService.Send:input_type -> channel.SendReq
-	2, // 3: channel.ChannelService.Receive:input_type -> channel.ReceiveReq
-	1, // 4: channel.ChannelService.Send:output_type -> channel.SendResp
-	3, // 5: channel.ChannelService.Receive:output_type -> channel.MessageEvt
+	4, // 0: channel.SendRequest.metadata:type_name -> channel.SendRequest.MetadataEntry
+	5, // 1: channel.MessageEvent.metadata:type_name -> channel.MessageEvent.MetadataEntry
+	0, // 2: channel.ChannelService.Send:input_type -> channel.SendRequest
+	2, // 3: channel.ChannelService.Receive:input_type -> channel.ReceiveRequest
+	1, // 4: channel.ChannelService.Send:output_type -> channel.SendResponse
+	3, // 5: channel.ChannelService.Receive:output_type -> channel.MessageEvent
 	4, // [4:6] is the sub-list for method output_type
 	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

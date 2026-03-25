@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ChatReq struct {
+type ChatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	Messages      []*MessageProto        `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
@@ -34,20 +34,20 @@ type ChatReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ChatReq) Reset() {
-	*x = ChatReq{}
+func (x *ChatRequest) Reset() {
+	*x = ChatRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ChatReq) String() string {
+func (x *ChatRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ChatReq) ProtoMessage() {}
+func (*ChatRequest) ProtoMessage() {}
 
-func (x *ChatReq) ProtoReflect() protoreflect.Message {
+func (x *ChatRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -59,47 +59,47 @@ func (x *ChatReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ChatReq.ProtoReflect.Descriptor instead.
-func (*ChatReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use ChatRequest.ProtoReflect.Descriptor instead.
+func (*ChatRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ChatReq) GetModel() string {
+func (x *ChatRequest) GetModel() string {
 	if x != nil {
 		return x.Model
 	}
 	return ""
 }
 
-func (x *ChatReq) GetMessages() []*MessageProto {
+func (x *ChatRequest) GetMessages() []*MessageProto {
 	if x != nil {
 		return x.Messages
 	}
 	return nil
 }
 
-func (x *ChatReq) GetTemperature() float64 {
+func (x *ChatRequest) GetTemperature() float64 {
 	if x != nil {
 		return x.Temperature
 	}
 	return 0
 }
 
-func (x *ChatReq) GetMaxTokens() int32 {
+func (x *ChatRequest) GetMaxTokens() int32 {
 	if x != nil {
 		return x.MaxTokens
 	}
 	return 0
 }
 
-func (x *ChatReq) GetTools() []*ToolDefProto {
+func (x *ChatRequest) GetTools() []*ToolDefProto {
 	if x != nil {
 		return x.Tools
 	}
 	return nil
 }
 
-func (x *ChatReq) GetMetadata() map[string]string {
+func (x *ChatRequest) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
 	}
@@ -370,7 +370,7 @@ func (x *ToolCallProto) GetArguments() *structpb.Struct {
 	return nil
 }
 
-type EmbedReq struct {
+type EmbedRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         string                 `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
@@ -378,20 +378,20 @@ type EmbedReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EmbedReq) Reset() {
-	*x = EmbedReq{}
+func (x *EmbedRequest) Reset() {
+	*x = EmbedRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EmbedReq) String() string {
+func (x *EmbedRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EmbedReq) ProtoMessage() {}
+func (*EmbedRequest) ProtoMessage() {}
 
-func (x *EmbedReq) ProtoReflect() protoreflect.Message {
+func (x *EmbedRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -403,46 +403,46 @@ func (x *EmbedReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EmbedReq.ProtoReflect.Descriptor instead.
-func (*EmbedReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use EmbedRequest.ProtoReflect.Descriptor instead.
+func (*EmbedRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *EmbedReq) GetModel() string {
+func (x *EmbedRequest) GetModel() string {
 	if x != nil {
 		return x.Model
 	}
 	return ""
 }
 
-func (x *EmbedReq) GetContent() string {
+func (x *EmbedRequest) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-type EmbedResp struct {
+type EmbedResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Embeddings    []*EmbeddingProto      `protobuf:"bytes,1,rep,name=embeddings,proto3" json:"embeddings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *EmbedResp) Reset() {
-	*x = EmbedResp{}
+func (x *EmbedResponse) Reset() {
+	*x = EmbedResponse{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *EmbedResp) String() string {
+func (x *EmbedResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*EmbedResp) ProtoMessage() {}
+func (*EmbedResponse) ProtoMessage() {}
 
-func (x *EmbedResp) ProtoReflect() protoreflect.Message {
+func (x *EmbedResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -454,12 +454,12 @@ func (x *EmbedResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use EmbedResp.ProtoReflect.Descriptor instead.
-func (*EmbedResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use EmbedResponse.ProtoReflect.Descriptor instead.
+func (*EmbedResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *EmbedResp) GetEmbeddings() []*EmbeddingProto {
+func (x *EmbedResponse) GetEmbeddings() []*EmbeddingProto {
 	if x != nil {
 		return x.Embeddings
 	}
@@ -510,26 +510,26 @@ func (x *EmbeddingProto) GetValues() []float32 {
 	return nil
 }
 
-type ListModelsReq struct {
+type ListModelsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListModelsReq) Reset() {
-	*x = ListModelsReq{}
+func (x *ListModelsRequest) Reset() {
+	*x = ListModelsRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListModelsReq) String() string {
+func (x *ListModelsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListModelsReq) ProtoMessage() {}
+func (*ListModelsRequest) ProtoMessage() {}
 
-func (x *ListModelsReq) ProtoReflect() protoreflect.Message {
+func (x *ListModelsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -541,32 +541,32 @@ func (x *ListModelsReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListModelsReq.ProtoReflect.Descriptor instead.
-func (*ListModelsReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListModelsRequest.ProtoReflect.Descriptor instead.
+func (*ListModelsRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{8}
 }
 
-type ListModelsResp struct {
+type ListModelsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Models        []*ModelProto          `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListModelsResp) Reset() {
-	*x = ListModelsResp{}
+func (x *ListModelsResponse) Reset() {
+	*x = ListModelsResponse{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListModelsResp) String() string {
+func (x *ListModelsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListModelsResp) ProtoMessage() {}
+func (*ListModelsResponse) ProtoMessage() {}
 
-func (x *ListModelsResp) ProtoReflect() protoreflect.Message {
+func (x *ListModelsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -578,19 +578,19 @@ func (x *ListModelsResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListModelsResp.ProtoReflect.Descriptor instead.
-func (*ListModelsResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListModelsResponse.ProtoReflect.Descriptor instead.
+func (*ListModelsResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *ListModelsResp) GetModels() []*ModelProto {
+func (x *ListModelsResponse) GetModels() []*ModelProto {
 	if x != nil {
 		return x.Models
 	}
 	return nil
 }
 
-type CreateModelReq struct {
+type CreateModelRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	BaseModel      string                 `protobuf:"bytes,2,opt,name=base_model,json=baseModel,proto3" json:"base_model,omitempty"`
@@ -601,20 +601,20 @@ type CreateModelReq struct {
 	sizeCache      protoimpl.SizeCache
 }
 
-func (x *CreateModelReq) Reset() {
-	*x = CreateModelReq{}
+func (x *CreateModelRequest) Reset() {
+	*x = CreateModelRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateModelReq) String() string {
+func (x *CreateModelRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateModelReq) ProtoMessage() {}
+func (*CreateModelRequest) ProtoMessage() {}
 
-func (x *CreateModelReq) ProtoReflect() protoreflect.Message {
+func (x *CreateModelRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -626,67 +626,67 @@ func (x *CreateModelReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateModelReq.ProtoReflect.Descriptor instead.
-func (*CreateModelReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateModelRequest.ProtoReflect.Descriptor instead.
+func (*CreateModelRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *CreateModelReq) GetName() string {
+func (x *CreateModelRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *CreateModelReq) GetBaseModel() string {
+func (x *CreateModelRequest) GetBaseModel() string {
 	if x != nil {
 		return x.BaseModel
 	}
 	return ""
 }
 
-func (x *CreateModelReq) GetPromptTemplate() string {
+func (x *CreateModelRequest) GetPromptTemplate() string {
 	if x != nil {
 		return x.PromptTemplate
 	}
 	return ""
 }
 
-func (x *CreateModelReq) GetSystem() string {
+func (x *CreateModelRequest) GetSystem() string {
 	if x != nil {
 		return x.System
 	}
 	return ""
 }
 
-func (x *CreateModelReq) GetParameters() map[string]string {
+func (x *CreateModelRequest) GetParameters() map[string]string {
 	if x != nil {
 		return x.Parameters
 	}
 	return nil
 }
 
-type CreateModelResp struct {
+type CreateModelResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         *ModelProto            `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateModelResp) Reset() {
-	*x = CreateModelResp{}
+func (x *CreateModelResponse) Reset() {
+	*x = CreateModelResponse{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateModelResp) String() string {
+func (x *CreateModelResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateModelResp) ProtoMessage() {}
+func (*CreateModelResponse) ProtoMessage() {}
 
-func (x *CreateModelResp) ProtoReflect() protoreflect.Message {
+func (x *CreateModelResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -698,39 +698,39 @@ func (x *CreateModelResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateModelResp.ProtoReflect.Descriptor instead.
-func (*CreateModelResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateModelResponse.ProtoReflect.Descriptor instead.
+func (*CreateModelResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *CreateModelResp) GetModel() *ModelProto {
+func (x *CreateModelResponse) GetModel() *ModelProto {
 	if x != nil {
 		return x.Model
 	}
 	return nil
 }
 
-type GetModelReq struct {
+type GetModelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetModelReq) Reset() {
-	*x = GetModelReq{}
+func (x *GetModelRequest) Reset() {
+	*x = GetModelRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetModelReq) String() string {
+func (x *GetModelRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetModelReq) ProtoMessage() {}
+func (*GetModelRequest) ProtoMessage() {}
 
-func (x *GetModelReq) ProtoReflect() protoreflect.Message {
+func (x *GetModelRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -742,39 +742,39 @@ func (x *GetModelReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetModelReq.ProtoReflect.Descriptor instead.
-func (*GetModelReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetModelRequest.ProtoReflect.Descriptor instead.
+func (*GetModelRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *GetModelReq) GetName() string {
+func (x *GetModelRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-type GetModelResp struct {
+type GetModelResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         *ModelProto            `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetModelResp) Reset() {
-	*x = GetModelResp{}
+func (x *GetModelResponse) Reset() {
+	*x = GetModelResponse{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetModelResp) String() string {
+func (x *GetModelResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetModelResp) ProtoMessage() {}
+func (*GetModelResponse) ProtoMessage() {}
 
-func (x *GetModelResp) ProtoReflect() protoreflect.Message {
+func (x *GetModelResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -786,39 +786,39 @@ func (x *GetModelResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetModelResp.ProtoReflect.Descriptor instead.
-func (*GetModelResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetModelResponse.ProtoReflect.Descriptor instead.
+func (*GetModelResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *GetModelResp) GetModel() *ModelProto {
+func (x *GetModelResponse) GetModel() *ModelProto {
 	if x != nil {
 		return x.Model
 	}
 	return nil
 }
 
-type DeleteModelReq struct {
+type DeleteModelRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteModelReq) Reset() {
-	*x = DeleteModelReq{}
+func (x *DeleteModelRequest) Reset() {
+	*x = DeleteModelRequest{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteModelReq) String() string {
+func (x *DeleteModelRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteModelReq) ProtoMessage() {}
+func (*DeleteModelRequest) ProtoMessage() {}
 
-func (x *DeleteModelReq) ProtoReflect() protoreflect.Message {
+func (x *DeleteModelRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -830,39 +830,39 @@ func (x *DeleteModelReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteModelReq.ProtoReflect.Descriptor instead.
-func (*DeleteModelReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteModelRequest.ProtoReflect.Descriptor instead.
+func (*DeleteModelRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *DeleteModelReq) GetName() string {
+func (x *DeleteModelRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-type DeleteModelResp struct {
+type DeleteModelResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteModelResp) Reset() {
-	*x = DeleteModelResp{}
+func (x *DeleteModelResponse) Reset() {
+	*x = DeleteModelResponse{}
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DeleteModelResp) String() string {
+func (x *DeleteModelResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DeleteModelResp) ProtoMessage() {}
+func (*DeleteModelResponse) ProtoMessage() {}
 
-func (x *DeleteModelResp) ProtoReflect() protoreflect.Message {
+func (x *DeleteModelResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -874,12 +874,12 @@ func (x *DeleteModelResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DeleteModelResp.ProtoReflect.Descriptor instead.
-func (*DeleteModelResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeleteModelResponse.ProtoReflect.Descriptor instead.
+func (*DeleteModelResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *DeleteModelResp) GetSuccess() bool {
+func (x *DeleteModelResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
@@ -950,15 +950,15 @@ var File_pkg_plugins_grpc_provider_proto_provider_proto protoreflect.FileDescrip
 
 const file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc = "" +
 	"\n" +
-	".pkg/plugins/grpc/provider/proto/provider.proto\x12\bprovider\x1a\x1cgoogle/protobuf/struct.proto\"\xbc\x02\n" +
-	"\aChatReq\x12\x14\n" +
+	".pkg/plugins/grpc/provider/proto/provider.proto\x12\bprovider\x1a\x1cgoogle/protobuf/struct.proto\"\xc4\x02\n" +
+	"\vChatRequest\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x122\n" +
 	"\bmessages\x18\x02 \x03(\v2\x16.provider.MessageProtoR\bmessages\x12 \n" +
 	"\vtemperature\x18\x03 \x01(\x01R\vtemperature\x12\x1d\n" +
 	"\n" +
 	"max_tokens\x18\x04 \x01(\x05R\tmaxTokens\x12,\n" +
-	"\x05tools\x18\x05 \x03(\v2\x16.provider.ToolDefProtoR\x05tools\x12;\n" +
-	"\bmetadata\x18\x06 \x03(\v2\x1f.provider.ChatReq.MetadataEntryR\bmetadata\x1a;\n" +
+	"\x05tools\x18\x05 \x03(\v2\x16.provider.ToolDefProtoR\x05tools\x12?\n" +
+	"\bmetadata\x18\x06 \x03(\v2#.provider.ChatRequest.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa7\x01\n" +
@@ -984,40 +984,40 @@ const file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc = "" +
 	"\rToolCallProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x125\n" +
-	"\targuments\x18\x03 \x01(\v2\x17.google.protobuf.StructR\targuments\":\n" +
-	"\bEmbedReq\x12\x14\n" +
+	"\targuments\x18\x03 \x01(\v2\x17.google.protobuf.StructR\targuments\">\n" +
+	"\fEmbedRequest\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\"E\n" +
-	"\tEmbedResp\x128\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\"I\n" +
+	"\rEmbedResponse\x128\n" +
 	"\n" +
 	"embeddings\x18\x01 \x03(\v2\x18.provider.EmbeddingProtoR\n" +
 	"embeddings\"(\n" +
 	"\x0eEmbeddingProto\x12\x16\n" +
-	"\x06values\x18\x01 \x03(\x02R\x06values\"\x0f\n" +
-	"\rListModelsReq\">\n" +
-	"\x0eListModelsResp\x12,\n" +
-	"\x06models\x18\x01 \x03(\v2\x14.provider.ModelProtoR\x06models\"\x8d\x02\n" +
-	"\x0eCreateModelReq\x12\x12\n" +
+	"\x06values\x18\x01 \x03(\x02R\x06values\"\x13\n" +
+	"\x11ListModelsRequest\"B\n" +
+	"\x12ListModelsResponse\x12,\n" +
+	"\x06models\x18\x01 \x03(\v2\x14.provider.ModelProtoR\x06models\"\x95\x02\n" +
+	"\x12CreateModelRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1d\n" +
 	"\n" +
 	"base_model\x18\x02 \x01(\tR\tbaseModel\x12'\n" +
 	"\x0fprompt_template\x18\x03 \x01(\tR\x0epromptTemplate\x12\x16\n" +
-	"\x06system\x18\x04 \x01(\tR\x06system\x12H\n" +
+	"\x06system\x18\x04 \x01(\tR\x06system\x12L\n" +
 	"\n" +
-	"parameters\x18\x05 \x03(\v2(.provider.CreateModelReq.ParametersEntryR\n" +
+	"parameters\x18\x05 \x03(\v2,.provider.CreateModelRequest.ParametersEntryR\n" +
 	"parameters\x1a=\n" +
 	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"=\n" +
-	"\x0fCreateModelResp\x12*\n" +
-	"\x05model\x18\x01 \x01(\v2\x14.provider.ModelProtoR\x05model\"!\n" +
-	"\vGetModelReq\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\":\n" +
-	"\fGetModelResp\x12*\n" +
-	"\x05model\x18\x01 \x01(\v2\x14.provider.ModelProtoR\x05model\"$\n" +
-	"\x0eDeleteModelReq\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"+\n" +
-	"\x0fDeleteModelResp\x12\x18\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"A\n" +
+	"\x13CreateModelResponse\x12*\n" +
+	"\x05model\x18\x01 \x01(\v2\x14.provider.ModelProtoR\x05model\"%\n" +
+	"\x0fGetModelRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\">\n" +
+	"\x10GetModelResponse\x12*\n" +
+	"\x05model\x18\x01 \x01(\v2\x14.provider.ModelProtoR\x05model\"(\n" +
+	"\x12DeleteModelRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"/\n" +
+	"\x13DeleteModelResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xbb\x01\n" +
 	"\n" +
 	"ModelProto\x12\x12\n" +
@@ -1026,15 +1026,15 @@ const file_pkg_plugins_grpc_provider_proto_provider_proto_rawDesc = "" +
 	"\bmetadata\x18\x03 \x03(\v2\".provider.ModelProto.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xf9\x02\n" +
-	"\x0fProviderService\x120\n" +
-	"\x04Chat\x12\x11.provider.ChatReq\x1a\x13.provider.ChatChunk0\x01\x120\n" +
-	"\x05Embed\x12\x12.provider.EmbedReq\x1a\x13.provider.EmbedResp\x12?\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\xa5\x03\n" +
+	"\x0fProviderService\x124\n" +
+	"\x04Chat\x12\x15.provider.ChatRequest\x1a\x13.provider.ChatChunk0\x01\x128\n" +
+	"\x05Embed\x12\x16.provider.EmbedRequest\x1a\x17.provider.EmbedResponse\x12G\n" +
 	"\n" +
-	"ListModels\x12\x17.provider.ListModelsReq\x1a\x18.provider.ListModelsResp\x12B\n" +
-	"\vCreateModel\x12\x18.provider.CreateModelReq\x1a\x19.provider.CreateModelResp\x129\n" +
-	"\bGetModel\x12\x15.provider.GetModelReq\x1a\x16.provider.GetModelResp\x12B\n" +
-	"\vDeleteModel\x12\x18.provider.DeleteModelReq\x1a\x19.provider.DeleteModelRespB:Z8github.com/mwantia/forge/pkg/plugins/grpc/provider/protob\x06proto3"
+	"ListModels\x12\x1b.provider.ListModelsRequest\x1a\x1c.provider.ListModelsResponse\x12J\n" +
+	"\vCreateModel\x12\x1c.provider.CreateModelRequest\x1a\x1d.provider.CreateModelResponse\x12A\n" +
+	"\bGetModel\x12\x19.provider.GetModelRequest\x1a\x1a.provider.GetModelResponse\x12J\n" +
+	"\vDeleteModel\x12\x1c.provider.DeleteModelRequest\x1a\x1d.provider.DeleteModelResponseB:Z8github.com/mwantia/forge/pkg/plugins/grpc/provider/protob\x06proto3"
 
 var (
 	file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescOnce sync.Once
@@ -1050,54 +1050,54 @@ func file_pkg_plugins_grpc_provider_proto_provider_proto_rawDescGZIP() []byte {
 
 var file_pkg_plugins_grpc_provider_proto_provider_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_pkg_plugins_grpc_provider_proto_provider_proto_goTypes = []any{
-	(*ChatReq)(nil),         // 0: provider.ChatReq
-	(*ChatChunk)(nil),       // 1: provider.ChatChunk
-	(*MessageProto)(nil),    // 2: provider.MessageProto
-	(*ToolDefProto)(nil),    // 3: provider.ToolDefProto
-	(*ToolCallProto)(nil),   // 4: provider.ToolCallProto
-	(*EmbedReq)(nil),        // 5: provider.EmbedReq
-	(*EmbedResp)(nil),       // 6: provider.EmbedResp
-	(*EmbeddingProto)(nil),  // 7: provider.EmbeddingProto
-	(*ListModelsReq)(nil),   // 8: provider.ListModelsReq
-	(*ListModelsResp)(nil),  // 9: provider.ListModelsResp
-	(*CreateModelReq)(nil),  // 10: provider.CreateModelReq
-	(*CreateModelResp)(nil), // 11: provider.CreateModelResp
-	(*GetModelReq)(nil),     // 12: provider.GetModelReq
-	(*GetModelResp)(nil),    // 13: provider.GetModelResp
-	(*DeleteModelReq)(nil),  // 14: provider.DeleteModelReq
-	(*DeleteModelResp)(nil), // 15: provider.DeleteModelResp
-	(*ModelProto)(nil),      // 16: provider.ModelProto
-	nil,                     // 17: provider.ChatReq.MetadataEntry
-	nil,                     // 18: provider.CreateModelReq.ParametersEntry
-	nil,                     // 19: provider.ModelProto.MetadataEntry
-	(*structpb.Struct)(nil), // 20: google.protobuf.Struct
+	(*ChatRequest)(nil),         // 0: provider.ChatRequest
+	(*ChatChunk)(nil),           // 1: provider.ChatChunk
+	(*MessageProto)(nil),        // 2: provider.MessageProto
+	(*ToolDefProto)(nil),        // 3: provider.ToolDefProto
+	(*ToolCallProto)(nil),       // 4: provider.ToolCallProto
+	(*EmbedRequest)(nil),        // 5: provider.EmbedRequest
+	(*EmbedResponse)(nil),       // 6: provider.EmbedResponse
+	(*EmbeddingProto)(nil),      // 7: provider.EmbeddingProto
+	(*ListModelsRequest)(nil),   // 8: provider.ListModelsRequest
+	(*ListModelsResponse)(nil),  // 9: provider.ListModelsResponse
+	(*CreateModelRequest)(nil),  // 10: provider.CreateModelRequest
+	(*CreateModelResponse)(nil), // 11: provider.CreateModelResponse
+	(*GetModelRequest)(nil),     // 12: provider.GetModelRequest
+	(*GetModelResponse)(nil),    // 13: provider.GetModelResponse
+	(*DeleteModelRequest)(nil),  // 14: provider.DeleteModelRequest
+	(*DeleteModelResponse)(nil), // 15: provider.DeleteModelResponse
+	(*ModelProto)(nil),          // 16: provider.ModelProto
+	nil,                         // 17: provider.ChatRequest.MetadataEntry
+	nil,                         // 18: provider.CreateModelRequest.ParametersEntry
+	nil,                         // 19: provider.ModelProto.MetadataEntry
+	(*structpb.Struct)(nil),     // 20: google.protobuf.Struct
 }
 var file_pkg_plugins_grpc_provider_proto_provider_proto_depIdxs = []int32{
-	2,  // 0: provider.ChatReq.messages:type_name -> provider.MessageProto
-	3,  // 1: provider.ChatReq.tools:type_name -> provider.ToolDefProto
-	17, // 2: provider.ChatReq.metadata:type_name -> provider.ChatReq.MetadataEntry
+	2,  // 0: provider.ChatRequest.messages:type_name -> provider.MessageProto
+	3,  // 1: provider.ChatRequest.tools:type_name -> provider.ToolDefProto
+	17, // 2: provider.ChatRequest.metadata:type_name -> provider.ChatRequest.MetadataEntry
 	4,  // 3: provider.ChatChunk.tool_calls:type_name -> provider.ToolCallProto
 	4,  // 4: provider.MessageProto.tool_calls:type_name -> provider.ToolCallProto
 	20, // 5: provider.ToolDefProto.parameters:type_name -> google.protobuf.Struct
 	20, // 6: provider.ToolCallProto.arguments:type_name -> google.protobuf.Struct
-	7,  // 7: provider.EmbedResp.embeddings:type_name -> provider.EmbeddingProto
-	16, // 8: provider.ListModelsResp.models:type_name -> provider.ModelProto
-	18, // 9: provider.CreateModelReq.parameters:type_name -> provider.CreateModelReq.ParametersEntry
-	16, // 10: provider.CreateModelResp.model:type_name -> provider.ModelProto
-	16, // 11: provider.GetModelResp.model:type_name -> provider.ModelProto
+	7,  // 7: provider.EmbedResponse.embeddings:type_name -> provider.EmbeddingProto
+	16, // 8: provider.ListModelsResponse.models:type_name -> provider.ModelProto
+	18, // 9: provider.CreateModelRequest.parameters:type_name -> provider.CreateModelRequest.ParametersEntry
+	16, // 10: provider.CreateModelResponse.model:type_name -> provider.ModelProto
+	16, // 11: provider.GetModelResponse.model:type_name -> provider.ModelProto
 	19, // 12: provider.ModelProto.metadata:type_name -> provider.ModelProto.MetadataEntry
-	0,  // 13: provider.ProviderService.Chat:input_type -> provider.ChatReq
-	5,  // 14: provider.ProviderService.Embed:input_type -> provider.EmbedReq
-	8,  // 15: provider.ProviderService.ListModels:input_type -> provider.ListModelsReq
-	10, // 16: provider.ProviderService.CreateModel:input_type -> provider.CreateModelReq
-	12, // 17: provider.ProviderService.GetModel:input_type -> provider.GetModelReq
-	14, // 18: provider.ProviderService.DeleteModel:input_type -> provider.DeleteModelReq
+	0,  // 13: provider.ProviderService.Chat:input_type -> provider.ChatRequest
+	5,  // 14: provider.ProviderService.Embed:input_type -> provider.EmbedRequest
+	8,  // 15: provider.ProviderService.ListModels:input_type -> provider.ListModelsRequest
+	10, // 16: provider.ProviderService.CreateModel:input_type -> provider.CreateModelRequest
+	12, // 17: provider.ProviderService.GetModel:input_type -> provider.GetModelRequest
+	14, // 18: provider.ProviderService.DeleteModel:input_type -> provider.DeleteModelRequest
 	1,  // 19: provider.ProviderService.Chat:output_type -> provider.ChatChunk
-	6,  // 20: provider.ProviderService.Embed:output_type -> provider.EmbedResp
-	9,  // 21: provider.ProviderService.ListModels:output_type -> provider.ListModelsResp
-	11, // 22: provider.ProviderService.CreateModel:output_type -> provider.CreateModelResp
-	13, // 23: provider.ProviderService.GetModel:output_type -> provider.GetModelResp
-	15, // 24: provider.ProviderService.DeleteModel:output_type -> provider.DeleteModelResp
+	6,  // 20: provider.ProviderService.Embed:output_type -> provider.EmbedResponse
+	9,  // 21: provider.ProviderService.ListModels:output_type -> provider.ListModelsResponse
+	11, // 22: provider.ProviderService.CreateModel:output_type -> provider.CreateModelResponse
+	13, // 23: provider.ProviderService.GetModel:output_type -> provider.GetModelResponse
+	15, // 24: provider.ProviderService.DeleteModel:output_type -> provider.DeleteModelResponse
 	19, // [19:25] is the sub-list for method output_type
 	13, // [13:19] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name

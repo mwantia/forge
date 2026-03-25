@@ -10,7 +10,6 @@ import (
 )
 
 type AgentConfig struct {
-	LogLevel  string `hcl:"log_level,optional"`
 	PluginDir string `hcl:"plugin_dir,optional"`
 
 	Server  *ServerConfig   `hcl:"server,block"`
@@ -20,7 +19,6 @@ type AgentConfig struct {
 
 func NewDefaultAgentConfig() *AgentConfig {
 	return &AgentConfig{
-		LogLevel: "INFO",
 		Server: &ServerConfig{
 			Address: "127.0.0.1:9280",
 			Token:   "",

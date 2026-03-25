@@ -21,7 +21,7 @@ func NewClient(conn *grpc.ClientConn) *Client {
 func (c *Client) GetLifecycle() plugins.Lifecycle { return nil }
 
 func (c *Client) Send(ctx context.Context, channel, content string, metadata map[string]any) (string, error) {
-	req := &proto.SendReq{
+	req := &proto.SendRequest{
 		ChannelId: channel,
 		Content:   content,
 		Metadata:  make(map[string]string),
@@ -37,7 +37,7 @@ func (c *Client) Send(ctx context.Context, channel, content string, metadata map
 }
 
 func (c *Client) Receive(ctx context.Context) (<-chan plugins.ChannelMessage, error) {
-	stream, err := c.client.Receive(ctx, &proto.ReceiveReq{})
+	stream, err := c.client.Receive(ctx, &proto.ReceiveRequest{})
 	if err != nil {
 		return nil, err
 	}

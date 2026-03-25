@@ -105,25 +105,25 @@ func capsToProto(caps *plugins.DriverCapabilities) *proto.DriverCapabilities {
 	}
 	p := &proto.DriverCapabilities{Types: caps.Types}
 	if caps.Provider != nil {
-		p.Provider = &proto.ProviderCaps{
+		p.Provider = &proto.ProviderCapabilities{
 			SupportsStreaming: caps.Provider.SupportsStreaming,
 			SupportsVision:    caps.Provider.SupportsVision,
 		}
 	}
 	if caps.Memory != nil {
-		p.Memory = &proto.MemoryCaps{
+		p.Memory = &proto.MemoryCapabilities{
 			SupportsVectorSearch: caps.Memory.SupportsVectorSearch,
 			MaxContextSize:       int32(caps.Memory.MaxContextSize),
 		}
 	}
 	if caps.Channel != nil {
-		p.Channel = &proto.ChannelCaps{
+		p.Channel = &proto.ChannelCapabilities{
 			SupportsDirectMessages: caps.Channel.SupportsDirectMessages,
 			SupportsThreads:        caps.Channel.SupportsThreads,
 		}
 	}
 	if caps.Tools != nil {
-		p.Tools = &proto.ToolsCaps{
+		p.Tools = &proto.ToolsCapabilities{
 			SupportsAsyncExecution: caps.Tools.SupportsAsyncExecution,
 		}
 	}

@@ -18,7 +18,7 @@ func NewServer(impl plugins.Driver) *Server {
 	return &Server{impl: impl}
 }
 
-func (s *Server) Store(ctx context.Context, req *proto.StoreReq) (*proto.StoreResp, error) {
+func (s *Server) Store(ctx context.Context, req *proto.StoreRequest) (*proto.StoreResponse, error) {
 	plugin, err := s.impl.GetMemoryPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -36,10 +36,10 @@ func (s *Server) Store(ctx context.Context, req *proto.StoreReq) (*proto.StoreRe
 	if err != nil {
 		return nil, err
 	}
-	return &proto.StoreResp{Id: resource.ID}, nil
+	return &proto.StoreResponse{Id: resource.ID}, nil
 }
 
-func (s *Server) Retrieve(ctx context.Context, req *proto.RetrieveReq) (*proto.RetrieveResp, error) {
+func (s *Server) Retrieve(ctx context.Context, req *proto.RetrieveRequest) (*proto.RetrieveResponse, error) {
 	plugin, err := s.impl.GetMemoryPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (s *Server) Retrieve(ctx context.Context, req *proto.RetrieveReq) (*proto.R
 		return nil, err
 	}
 
-	protoResp := &proto.RetrieveResp{}
+	protoResp := &proto.RetrieveResponse{}
 	for _, r := range resources {
 		metadata := make(map[string]string)
 		for k, v := range r.Metadata {

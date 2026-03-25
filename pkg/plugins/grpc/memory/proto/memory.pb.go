@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type StoreReq struct {
+type StoreRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Content       string                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,2,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -30,20 +30,20 @@ type StoreReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StoreReq) Reset() {
-	*x = StoreReq{}
+func (x *StoreRequest) Reset() {
+	*x = StoreRequest{}
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StoreReq) String() string {
+func (x *StoreRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StoreReq) ProtoMessage() {}
+func (*StoreRequest) ProtoMessage() {}
 
-func (x *StoreReq) ProtoReflect() protoreflect.Message {
+func (x *StoreRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,53 +55,53 @@ func (x *StoreReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StoreReq.ProtoReflect.Descriptor instead.
-func (*StoreReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use StoreRequest.ProtoReflect.Descriptor instead.
+func (*StoreRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *StoreReq) GetContent() string {
+func (x *StoreRequest) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *StoreReq) GetMetadata() map[string]string {
+func (x *StoreRequest) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
 	}
 	return nil
 }
 
-func (x *StoreReq) GetNamespace() string {
+func (x *StoreRequest) GetNamespace() string {
 	if x != nil {
 		return x.Namespace
 	}
 	return ""
 }
 
-type StoreResp struct {
+type StoreResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *StoreResp) Reset() {
-	*x = StoreResp{}
+func (x *StoreResponse) Reset() {
+	*x = StoreResponse{}
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StoreResp) String() string {
+func (x *StoreResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StoreResp) ProtoMessage() {}
+func (*StoreResponse) ProtoMessage() {}
 
-func (x *StoreResp) ProtoReflect() protoreflect.Message {
+func (x *StoreResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -113,19 +113,19 @@ func (x *StoreResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use StoreResp.ProtoReflect.Descriptor instead.
-func (*StoreResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use StoreResponse.ProtoReflect.Descriptor instead.
+func (*StoreResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *StoreResp) GetId() string {
+func (x *StoreResponse) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-type RetrieveReq struct {
+type RetrieveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
@@ -135,20 +135,20 @@ type RetrieveReq struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RetrieveReq) Reset() {
-	*x = RetrieveReq{}
+func (x *RetrieveRequest) Reset() {
+	*x = RetrieveRequest{}
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RetrieveReq) String() string {
+func (x *RetrieveRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RetrieveReq) ProtoMessage() {}
+func (*RetrieveRequest) ProtoMessage() {}
 
-func (x *RetrieveReq) ProtoReflect() protoreflect.Message {
+func (x *RetrieveRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -160,60 +160,60 @@ func (x *RetrieveReq) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RetrieveReq.ProtoReflect.Descriptor instead.
-func (*RetrieveReq) Descriptor() ([]byte, []int) {
+// Deprecated: Use RetrieveRequest.ProtoReflect.Descriptor instead.
+func (*RetrieveRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RetrieveReq) GetQuery() string {
+func (x *RetrieveRequest) GetQuery() string {
 	if x != nil {
 		return x.Query
 	}
 	return ""
 }
 
-func (x *RetrieveReq) GetLimit() int32 {
+func (x *RetrieveRequest) GetLimit() int32 {
 	if x != nil {
 		return x.Limit
 	}
 	return 0
 }
 
-func (x *RetrieveReq) GetNamespace() string {
+func (x *RetrieveRequest) GetNamespace() string {
 	if x != nil {
 		return x.Namespace
 	}
 	return ""
 }
 
-func (x *RetrieveReq) GetFilter() map[string]string {
+func (x *RetrieveRequest) GetFilter() map[string]string {
 	if x != nil {
 		return x.Filter
 	}
 	return nil
 }
 
-type RetrieveResp struct {
+type RetrieveResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Results       []*MemoryResultProto   `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RetrieveResp) Reset() {
-	*x = RetrieveResp{}
+func (x *RetrieveResponse) Reset() {
+	*x = RetrieveResponse{}
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RetrieveResp) String() string {
+func (x *RetrieveResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RetrieveResp) ProtoMessage() {}
+func (*RetrieveResponse) ProtoMessage() {}
 
-func (x *RetrieveResp) ProtoReflect() protoreflect.Message {
+func (x *RetrieveResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -225,12 +225,12 @@ func (x *RetrieveResp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RetrieveResp.ProtoReflect.Descriptor instead.
-func (*RetrieveResp) Descriptor() ([]byte, []int) {
+// Deprecated: Use RetrieveResponse.ProtoReflect.Descriptor instead.
+func (*RetrieveResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *RetrieveResp) GetResults() []*MemoryResultProto {
+func (x *RetrieveResponse) GetResults() []*MemoryResultProto {
 	if x != nil {
 		return x.Results
 	}
@@ -309,25 +309,25 @@ var File_pkg_plugins_grpc_memory_proto_memory_proto protoreflect.FileDescriptor
 
 const file_pkg_plugins_grpc_memory_proto_memory_proto_rawDesc = "" +
 	"\n" +
-	"*pkg/plugins/grpc/memory/proto/memory.proto\x12\x06memory\"\xbb\x01\n" +
-	"\bStoreReq\x12\x18\n" +
-	"\acontent\x18\x01 \x01(\tR\acontent\x12:\n" +
-	"\bmetadata\x18\x02 \x03(\v2\x1e.memory.StoreReq.MetadataEntryR\bmetadata\x12\x1c\n" +
+	"*pkg/plugins/grpc/memory/proto/memory.proto\x12\x06memory\"\xc3\x01\n" +
+	"\fStoreRequest\x12\x18\n" +
+	"\acontent\x18\x01 \x01(\tR\acontent\x12>\n" +
+	"\bmetadata\x18\x02 \x03(\v2\".memory.StoreRequest.MetadataEntryR\bmetadata\x12\x1c\n" +
 	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x1b\n" +
-	"\tStoreResp\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xcb\x01\n" +
-	"\vRetrieveReq\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x1f\n" +
+	"\rStoreResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xd3\x01\n" +
+	"\x0fRetrieveRequest\x12\x14\n" +
 	"\x05query\x18\x01 \x01(\tR\x05query\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1c\n" +
-	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x127\n" +
-	"\x06filter\x18\x04 \x03(\v2\x1f.memory.RetrieveReq.FilterEntryR\x06filter\x1a9\n" +
+	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x12;\n" +
+	"\x06filter\x18\x04 \x03(\v2#.memory.RetrieveRequest.FilterEntryR\x06filter\x1a9\n" +
 	"\vFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"C\n" +
-	"\fRetrieveResp\x123\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"G\n" +
+	"\x10RetrieveResponse\x123\n" +
 	"\aresults\x18\x01 \x03(\v2\x19.memory.MemoryResultProtoR\aresults\"\xd5\x01\n" +
 	"\x11MemoryResultProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
@@ -336,10 +336,10 @@ const file_pkg_plugins_grpc_memory_proto_memory_proto_rawDesc = "" +
 	"\bmetadata\x18\x04 \x03(\v2'.memory.MemoryResultProto.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012t\n" +
-	"\rMemoryService\x12,\n" +
-	"\x05Store\x12\x10.memory.StoreReq\x1a\x11.memory.StoreResp\x125\n" +
-	"\bRetrieve\x12\x13.memory.RetrieveReq\x1a\x14.memory.RetrieveRespB8Z6github.com/mwantia/forge/pkg/plugins/grpc/memory/protob\x06proto3"
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x84\x01\n" +
+	"\rMemoryService\x124\n" +
+	"\x05Store\x12\x14.memory.StoreRequest\x1a\x15.memory.StoreResponse\x12=\n" +
+	"\bRetrieve\x12\x17.memory.RetrieveRequest\x1a\x18.memory.RetrieveResponseB8Z6github.com/mwantia/forge/pkg/plugins/grpc/memory/protob\x06proto3"
 
 var (
 	file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescOnce sync.Once
@@ -355,24 +355,24 @@ func file_pkg_plugins_grpc_memory_proto_memory_proto_rawDescGZIP() []byte {
 
 var file_pkg_plugins_grpc_memory_proto_memory_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_pkg_plugins_grpc_memory_proto_memory_proto_goTypes = []any{
-	(*StoreReq)(nil),          // 0: memory.StoreReq
-	(*StoreResp)(nil),         // 1: memory.StoreResp
-	(*RetrieveReq)(nil),       // 2: memory.RetrieveReq
-	(*RetrieveResp)(nil),      // 3: memory.RetrieveResp
+	(*StoreRequest)(nil),      // 0: memory.StoreRequest
+	(*StoreResponse)(nil),     // 1: memory.StoreResponse
+	(*RetrieveRequest)(nil),   // 2: memory.RetrieveRequest
+	(*RetrieveResponse)(nil),  // 3: memory.RetrieveResponse
 	(*MemoryResultProto)(nil), // 4: memory.MemoryResultProto
-	nil,                       // 5: memory.StoreReq.MetadataEntry
-	nil,                       // 6: memory.RetrieveReq.FilterEntry
+	nil,                       // 5: memory.StoreRequest.MetadataEntry
+	nil,                       // 6: memory.RetrieveRequest.FilterEntry
 	nil,                       // 7: memory.MemoryResultProto.MetadataEntry
 }
 var file_pkg_plugins_grpc_memory_proto_memory_proto_depIdxs = []int32{
-	5, // 0: memory.StoreReq.metadata:type_name -> memory.StoreReq.MetadataEntry
-	6, // 1: memory.RetrieveReq.filter:type_name -> memory.RetrieveReq.FilterEntry
-	4, // 2: memory.RetrieveResp.results:type_name -> memory.MemoryResultProto
+	5, // 0: memory.StoreRequest.metadata:type_name -> memory.StoreRequest.MetadataEntry
+	6, // 1: memory.RetrieveRequest.filter:type_name -> memory.RetrieveRequest.FilterEntry
+	4, // 2: memory.RetrieveResponse.results:type_name -> memory.MemoryResultProto
 	7, // 3: memory.MemoryResultProto.metadata:type_name -> memory.MemoryResultProto.MetadataEntry
-	0, // 4: memory.MemoryService.Store:input_type -> memory.StoreReq
-	2, // 5: memory.MemoryService.Retrieve:input_type -> memory.RetrieveReq
-	1, // 6: memory.MemoryService.Store:output_type -> memory.StoreResp
-	3, // 7: memory.MemoryService.Retrieve:output_type -> memory.RetrieveResp
+	0, // 4: memory.MemoryService.Store:input_type -> memory.StoreRequest
+	2, // 5: memory.MemoryService.Retrieve:input_type -> memory.RetrieveRequest
+	1, // 6: memory.MemoryService.Store:output_type -> memory.StoreResponse
+	3, // 7: memory.MemoryService.Retrieve:output_type -> memory.RetrieveResponse
 	6, // [6:8] is the sub-list for method output_type
 	4, // [4:6] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name

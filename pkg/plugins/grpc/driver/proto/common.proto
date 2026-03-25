@@ -13,28 +13,28 @@ message PluginInfo {
 
 // DriverCapabilities describes what a driver supports.
 message DriverCapabilities {
-    repeated string types = 1;
-    ProviderCaps    provider = 2;
-    MemoryCaps      memory   = 3;
-    ChannelCaps     channel  = 4;
-    ToolsCaps       tools    = 5;
+    repeated string      types = 1;
+    ProviderCapabilities provider = 2;
+    MemoryCapabilities   memory   = 3;
+    ChannelCapabilities  channel  = 4;
+    ToolsCapabilities    tools    = 5;
 }
 
-message ProviderCaps {
+message ProviderCapabilities {
     bool supports_streaming = 1;
     bool supports_vision    = 2;
 }
 
-message MemoryCaps {
+message MemoryCapabilities {
     bool  supports_vector_search = 1;
     int32 max_context_size       = 2;
 }
 
-message ChannelCaps {
+message ChannelCapabilities {
     bool supports_direct_messages = 1;
     bool supports_threads         = 2;
 }
 
-message ToolsCaps {
+message ToolsCapabilities {
     bool supports_async_execution = 1;
 }

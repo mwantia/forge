@@ -5,25 +5,25 @@ package channel;
 option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/channel/proto";
 
 service ChannelService {
-    rpc Send(SendReq)                    returns (SendResp);
-    rpc Receive(ReceiveReq)              returns (stream MessageEvt);
+    rpc Send(SendRequest)                    returns (SendResponse);
+    rpc Receive(ReceiveRequest)              returns (stream MessageEvent);
 }
 
-message SendReq {
+message SendRequest {
     string              channel_id = 1;
     string              content    = 2;
     map<string, string> metadata   = 3;
 }
 
-message SendResp {
+message SendResponse {
     string message_id = 1;
 }
 
-message ReceiveReq {
+message ReceiveRequest {
     string channel_id = 1;
 }
 
-message MessageEvt {
+message MessageEvent {
     string              id         = 1;
     string              channel_id = 2;
     string              author_id  = 3;

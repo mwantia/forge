@@ -53,7 +53,7 @@ func (s *grpcChatStream) Close() error {
 }
 
 func (c *Client) Chat(ctx context.Context, messages []plugins.ChatMessage, tools []plugins.ToolCall, model *plugins.Model) (plugins.ChatStream, error) {
-	req := &proto.ChatReq{}
+	req := &proto.ChatRequest{}
 	if model != nil {
 		req.Model = model.ModelName
 		req.Temperature = model.Temperature
@@ -98,7 +98,7 @@ func (c *Client) Chat(ctx context.Context, messages []plugins.ChatMessage, tools
 }
 
 func (c *Client) Embed(ctx context.Context, content string, model *plugins.Model) ([][]float32, error) {
-	req := &proto.EmbedReq{Content: content}
+	req := &proto.EmbedRequest{Content: content}
 	if model != nil {
 		req.Model = model.ModelName
 	}
@@ -114,7 +114,7 @@ func (c *Client) Embed(ctx context.Context, content string, model *plugins.Model
 }
 
 func (c *Client) ListModels(ctx context.Context) ([]*plugins.Model, error) {
-	resp, err := c.client.ListModels(ctx, &proto.ListModelsReq{})
+	resp, err := c.client.ListModels(ctx, &proto.ListModelsRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (c *Client) ListModels(ctx context.Context) ([]*plugins.Model, error) {
 }
 
 func (c *Client) CreateModel(ctx context.Context, modelName string, template *plugins.ModelTemplate) (*plugins.Model, error) {
-	req := &proto.CreateModelReq{Name: modelName}
+	req := &proto.CreateModelRequest{Name: modelName}
 	if template != nil {
 		req.BaseModel = template.BaseModel
 		req.PromptTemplate = template.PromptTemplate
@@ -155,7 +155,7 @@ func (c *Client) CreateModel(ctx context.Context, modelName string, template *pl
 }
 
 func (c *Client) GetModel(ctx context.Context, name string) (*plugins.Model, error) {
-	resp, err := c.client.GetModel(ctx, &proto.GetModelReq{Name: name})
+	resp, err := c.client.GetModel(ctx, &proto.GetModelRequest{Name: name})
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (c *Client) GetModel(ctx context.Context, name string) (*plugins.Model, err
 }
 
 func (c *Client) DeleteModel(ctx context.Context, name string) (bool, error) {
-	resp, err := c.client.DeleteModel(ctx, &proto.DeleteModelReq{Name: name})
+	resp, err := c.client.DeleteModel(ctx, &proto.DeleteModelRequest{Name: name})
 	if err != nil {
 		return false, err
 	}

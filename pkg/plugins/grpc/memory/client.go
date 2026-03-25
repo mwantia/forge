@@ -21,7 +21,7 @@ func NewClient(conn *grpc.ClientConn) *Client {
 }
 
 func (c *Client) StoreResource(ctx context.Context, sessionID, content string, metadata map[string]any) (*plugins.MemoryResource, error) {
-	protoReq := &proto.StoreReq{
+	protoReq := &proto.StoreRequest{
 		Content:   content,
 		Namespace: sessionID,
 		Metadata:  make(map[string]string),
@@ -38,7 +38,7 @@ func (c *Client) StoreResource(ctx context.Context, sessionID, content string, m
 }
 
 func (c *Client) RetrieveResource(ctx context.Context, sessionID, query string, limit int, filter map[string]any) ([]*plugins.MemoryResource, error) {
-	protoReq := &proto.RetrieveReq{
+	protoReq := &proto.RetrieveRequest{
 		Query:     query,
 		Limit:     int32(limit),
 		Namespace: sessionID,

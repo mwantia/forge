@@ -7,17 +7,17 @@ import "google/protobuf/struct.proto";
 option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/provider/proto";
 
 service ProviderService {
-    rpc Chat(ChatReq)                    returns (stream ChatChunk);
-    rpc Embed(EmbedReq)                  returns (EmbedResp);
-    rpc ListModels(ListModelsReq)        returns (ListModelsResp);
-    rpc CreateModel(CreateModelReq)      returns (CreateModelResp);
-    rpc GetModel(GetModelReq)            returns (GetModelResp);
-    rpc DeleteModel(DeleteModelReq)      returns (DeleteModelResp);
+    rpc Chat(ChatRequest)                    returns (stream ChatChunk);
+    rpc Embed(EmbedRequest)                  returns (EmbedResponse);
+    rpc ListModels(ListModelsRequest)        returns (ListModelsResponse);
+    rpc CreateModel(CreateModelRequest)      returns (CreateModelResponse);
+    rpc GetModel(GetModelRequest)            returns (GetModelResponse);
+    rpc DeleteModel(DeleteModelRequest)      returns (DeleteModelResponse);
 }
 
 // --- Chat ---
 
-message ChatReq {
+message ChatRequest {
     string                model       = 1;
     repeated MessageProto messages    = 2;
     double                temperature = 3;
@@ -55,12 +55,12 @@ message ToolCallProto {
 
 // --- Embed ---
 
-message EmbedReq {
+message EmbedRequest {
     string model   = 1;
     string content = 2;
 }
 
-message EmbedResp {
+message EmbedResponse {
     repeated EmbeddingProto embeddings = 1;
 }
 
@@ -70,13 +70,13 @@ message EmbeddingProto {
 
 // --- Models ---
 
-message ListModelsReq {}
+message ListModelsRequest {}
 
-message ListModelsResp {
+message ListModelsResponse {
     repeated ModelProto models = 1;
 }
 
-message CreateModelReq {
+message CreateModelRequest {
     string              name            = 1;
     string              base_model      = 2;
     string              prompt_template = 3;
@@ -84,23 +84,23 @@ message CreateModelReq {
     map<string, string> parameters      = 5;
 }
 
-message CreateModelResp {
+message CreateModelResponse {
     ModelProto model = 1;
 }
 
-message GetModelReq {
+message GetModelRequest {
     string name = 1;
 }
 
-message GetModelResp {
+message GetModelResponse {
     ModelProto model = 1;
 }
 
-message DeleteModelReq {
+message DeleteModelRequest {
     string name = 1;
 }
 
-message DeleteModelResp {
+message DeleteModelResponse {
     bool success = 1;
 }
 

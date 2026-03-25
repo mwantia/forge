@@ -27,8 +27,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChannelServiceClient interface {
-	Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*SendResp, error)
-	Receive(ctx context.Context, in *ReceiveReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvt], error)
+	Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error)
+	Receive(ctx context.Context, in *ReceiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error)
 }
 
 type channelServiceClient struct {
@@ -39,9 +39,9 @@ func NewChannelServiceClient(cc grpc.ClientConnInterface) ChannelServiceClient {
 	return &channelServiceClient{cc}
 }
 
-func (c *channelServiceClient) Send(ctx context.Context, in *SendReq, opts ...grpc.CallOption) (*SendResp, error) {
+func (c *channelServiceClient) Send(ctx context.Context, in *SendRequest, opts ...grpc.CallOption) (*SendResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendResp)
+	out := new(SendResponse)
 	err := c.cc.Invoke(ctx, ChannelService_Send_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -49,13 +49,13 @@ func (c *channelServiceClient) Send(ctx context.Context, in *SendReq, opts ...gr
 	return out, nil
 }
 
-func (c *channelServiceClient) Receive(ctx context.Context, in *ReceiveReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvt], error) {
+func (c *channelServiceClient) Receive(ctx context.Context, in *ReceiveRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[MessageEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &ChannelService_ServiceDesc.Streams[0], ChannelService_Receive_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[ReceiveReq, MessageEvt]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ReceiveRequest, MessageEvent]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -66,14 +66,14 @@ func (c *channelServiceClient) Receive(ctx context.Context, in *ReceiveReq, opts
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChannelService_ReceiveClient = grpc.ServerStreamingClient[MessageEvt]
+type ChannelService_ReceiveClient = grpc.ServerStreamingClient[MessageEvent]
 
 // ChannelServiceServer is the server API for ChannelService service.
 // All implementations must embed UnimplementedChannelServiceServer
 // for forward compatibility.
 type ChannelServiceServer interface {
-	Send(context.Context, *SendReq) (*SendResp, error)
-	Receive(*ReceiveReq, grpc.ServerStreamingServer[MessageEvt]) error
+	Send(context.Context, *SendRequest) (*SendResponse, error)
+	Receive(*ReceiveRequest, grpc.ServerStreamingServer[MessageEvent]) error
 	mustEmbedUnimplementedChannelServiceServer()
 }
 
@@ -84,10 +84,10 @@ type ChannelServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedChannelServiceServer struct{}
 
-func (UnimplementedChannelServiceServer) Send(context.Context, *SendReq) (*SendResp, error) {
+func (UnimplementedChannelServiceServer) Send(context.Context, *SendRequest) (*SendResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Send not implemented")
 }
-func (UnimplementedChannelServiceServer) Receive(*ReceiveReq, grpc.ServerStreamingServer[MessageEvt]) error {
+func (UnimplementedChannelServiceServer) Receive(*ReceiveRequest, grpc.ServerStreamingServer[MessageEvent]) error {
 	return status.Error(codes.Unimplemented, "method Receive not implemented")
 }
 func (UnimplementedChannelServiceServer) mustEmbedUnimplementedChannelServiceServer() {}
@@ -112,7 +112,7 @@ func RegisterChannelServiceServer(s grpc.ServiceRegistrar, srv ChannelServiceSer
 }
 
 func _ChannelService_Send_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendReq)
+	in := new(SendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -124,21 +124,21 @@ func _ChannelService_Send_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: ChannelService_Send_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChannelServiceServer).Send(ctx, req.(*SendReq))
+		return srv.(ChannelServiceServer).Send(ctx, req.(*SendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ChannelService_Receive_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ReceiveReq)
+	m := new(ReceiveRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ChannelServiceServer).Receive(m, &grpc.GenericServerStream[ReceiveReq, MessageEvt]{ServerStream: stream})
+	return srv.(ChannelServiceServer).Receive(m, &grpc.GenericServerStream[ReceiveRequest, MessageEvent]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ChannelService_ReceiveServer = grpc.ServerStreamingServer[MessageEvt]
+type ChannelService_ReceiveServer = grpc.ServerStreamingServer[MessageEvent]
 
 // ChannelService_ServiceDesc is the grpc.ServiceDesc for ChannelService service.
 // It's only intended for direct use with grpc.RegisterService,

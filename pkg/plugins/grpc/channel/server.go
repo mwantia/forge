@@ -18,7 +18,7 @@ func NewServer(impl plugins.Driver) *Server {
 	return &Server{impl: impl}
 }
 
-func (s *Server) Send(ctx context.Context, req *proto.SendReq) (*proto.SendResp, error) {
+func (s *Server) Send(ctx context.Context, req *proto.SendRequest) (*proto.SendResponse, error) {
 	plugin, err := s.impl.GetChannelPlugin(ctx)
 	if err != nil {
 		return nil, err
@@ -36,12 +36,12 @@ func (s *Server) Send(ctx context.Context, req *proto.SendReq) (*proto.SendResp,
 	if err != nil {
 		return nil, err
 	}
-	return &proto.SendResp{
+	return &proto.SendResponse{
 		MessageId: id,
 	}, nil
 }
 
-func (s *Server) Receive(req *proto.ReceiveReq, srv proto.ChannelService_ReceiveServer) error {
+func (s *Server) Receive(req *proto.ReceiveRequest, srv proto.ChannelService_ReceiveServer) error {
 	plugin, err := s.impl.GetChannelPlugin(srv.Context())
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (s *Server) Receive(req *proto.ReceiveReq, srv proto.ChannelService_Receive
 		for k, v := range evt.Metadata {
 			metadata[k] = fmt.Sprintf("%v", v)
 		}
-		if err := srv.Send(&proto.MessageEvt{
+		if err := srv.Send(&proto.MessageEvent{
 			Id:        evt.ID,
 			ChannelId: evt.Channel,
 			AuthorId:  evt.Author,

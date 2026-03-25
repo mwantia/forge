@@ -31,12 +31,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProviderServiceClient interface {
-	Chat(ctx context.Context, in *ChatReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatChunk], error)
-	Embed(ctx context.Context, in *EmbedReq, opts ...grpc.CallOption) (*EmbedResp, error)
-	ListModels(ctx context.Context, in *ListModelsReq, opts ...grpc.CallOption) (*ListModelsResp, error)
-	CreateModel(ctx context.Context, in *CreateModelReq, opts ...grpc.CallOption) (*CreateModelResp, error)
-	GetModel(ctx context.Context, in *GetModelReq, opts ...grpc.CallOption) (*GetModelResp, error)
-	DeleteModel(ctx context.Context, in *DeleteModelReq, opts ...grpc.CallOption) (*DeleteModelResp, error)
+	Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatChunk], error)
+	Embed(ctx context.Context, in *EmbedRequest, opts ...grpc.CallOption) (*EmbedResponse, error)
+	ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error)
+	CreateModel(ctx context.Context, in *CreateModelRequest, opts ...grpc.CallOption) (*CreateModelResponse, error)
+	GetModel(ctx context.Context, in *GetModelRequest, opts ...grpc.CallOption) (*GetModelResponse, error)
+	DeleteModel(ctx context.Context, in *DeleteModelRequest, opts ...grpc.CallOption) (*DeleteModelResponse, error)
 }
 
 type providerServiceClient struct {
@@ -47,13 +47,13 @@ func NewProviderServiceClient(cc grpc.ClientConnInterface) ProviderServiceClient
 	return &providerServiceClient{cc}
 }
 
-func (c *providerServiceClient) Chat(ctx context.Context, in *ChatReq, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatChunk], error) {
+func (c *providerServiceClient) Chat(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatChunk], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &ProviderService_ServiceDesc.Streams[0], ProviderService_Chat_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[ChatReq, ChatChunk]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ChatRequest, ChatChunk]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -66,9 +66,9 @@ func (c *providerServiceClient) Chat(ctx context.Context, in *ChatReq, opts ...g
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ProviderService_ChatClient = grpc.ServerStreamingClient[ChatChunk]
 
-func (c *providerServiceClient) Embed(ctx context.Context, in *EmbedReq, opts ...grpc.CallOption) (*EmbedResp, error) {
+func (c *providerServiceClient) Embed(ctx context.Context, in *EmbedRequest, opts ...grpc.CallOption) (*EmbedResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EmbedResp)
+	out := new(EmbedResponse)
 	err := c.cc.Invoke(ctx, ProviderService_Embed_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -76,9 +76,9 @@ func (c *providerServiceClient) Embed(ctx context.Context, in *EmbedReq, opts ..
 	return out, nil
 }
 
-func (c *providerServiceClient) ListModels(ctx context.Context, in *ListModelsReq, opts ...grpc.CallOption) (*ListModelsResp, error) {
+func (c *providerServiceClient) ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListModelsResp)
+	out := new(ListModelsResponse)
 	err := c.cc.Invoke(ctx, ProviderService_ListModels_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -86,9 +86,9 @@ func (c *providerServiceClient) ListModels(ctx context.Context, in *ListModelsRe
 	return out, nil
 }
 
-func (c *providerServiceClient) CreateModel(ctx context.Context, in *CreateModelReq, opts ...grpc.CallOption) (*CreateModelResp, error) {
+func (c *providerServiceClient) CreateModel(ctx context.Context, in *CreateModelRequest, opts ...grpc.CallOption) (*CreateModelResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateModelResp)
+	out := new(CreateModelResponse)
 	err := c.cc.Invoke(ctx, ProviderService_CreateModel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -96,9 +96,9 @@ func (c *providerServiceClient) CreateModel(ctx context.Context, in *CreateModel
 	return out, nil
 }
 
-func (c *providerServiceClient) GetModel(ctx context.Context, in *GetModelReq, opts ...grpc.CallOption) (*GetModelResp, error) {
+func (c *providerServiceClient) GetModel(ctx context.Context, in *GetModelRequest, opts ...grpc.CallOption) (*GetModelResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetModelResp)
+	out := new(GetModelResponse)
 	err := c.cc.Invoke(ctx, ProviderService_GetModel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -106,9 +106,9 @@ func (c *providerServiceClient) GetModel(ctx context.Context, in *GetModelReq, o
 	return out, nil
 }
 
-func (c *providerServiceClient) DeleteModel(ctx context.Context, in *DeleteModelReq, opts ...grpc.CallOption) (*DeleteModelResp, error) {
+func (c *providerServiceClient) DeleteModel(ctx context.Context, in *DeleteModelRequest, opts ...grpc.CallOption) (*DeleteModelResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteModelResp)
+	out := new(DeleteModelResponse)
 	err := c.cc.Invoke(ctx, ProviderService_DeleteModel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -120,12 +120,12 @@ func (c *providerServiceClient) DeleteModel(ctx context.Context, in *DeleteModel
 // All implementations must embed UnimplementedProviderServiceServer
 // for forward compatibility.
 type ProviderServiceServer interface {
-	Chat(*ChatReq, grpc.ServerStreamingServer[ChatChunk]) error
-	Embed(context.Context, *EmbedReq) (*EmbedResp, error)
-	ListModels(context.Context, *ListModelsReq) (*ListModelsResp, error)
-	CreateModel(context.Context, *CreateModelReq) (*CreateModelResp, error)
-	GetModel(context.Context, *GetModelReq) (*GetModelResp, error)
-	DeleteModel(context.Context, *DeleteModelReq) (*DeleteModelResp, error)
+	Chat(*ChatRequest, grpc.ServerStreamingServer[ChatChunk]) error
+	Embed(context.Context, *EmbedRequest) (*EmbedResponse, error)
+	ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error)
+	CreateModel(context.Context, *CreateModelRequest) (*CreateModelResponse, error)
+	GetModel(context.Context, *GetModelRequest) (*GetModelResponse, error)
+	DeleteModel(context.Context, *DeleteModelRequest) (*DeleteModelResponse, error)
 	mustEmbedUnimplementedProviderServiceServer()
 }
 
@@ -136,22 +136,22 @@ type ProviderServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedProviderServiceServer struct{}
 
-func (UnimplementedProviderServiceServer) Chat(*ChatReq, grpc.ServerStreamingServer[ChatChunk]) error {
+func (UnimplementedProviderServiceServer) Chat(*ChatRequest, grpc.ServerStreamingServer[ChatChunk]) error {
 	return status.Error(codes.Unimplemented, "method Chat not implemented")
 }
-func (UnimplementedProviderServiceServer) Embed(context.Context, *EmbedReq) (*EmbedResp, error) {
+func (UnimplementedProviderServiceServer) Embed(context.Context, *EmbedRequest) (*EmbedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Embed not implemented")
 }
-func (UnimplementedProviderServiceServer) ListModels(context.Context, *ListModelsReq) (*ListModelsResp, error) {
+func (UnimplementedProviderServiceServer) ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListModels not implemented")
 }
-func (UnimplementedProviderServiceServer) CreateModel(context.Context, *CreateModelReq) (*CreateModelResp, error) {
+func (UnimplementedProviderServiceServer) CreateModel(context.Context, *CreateModelRequest) (*CreateModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateModel not implemented")
 }
-func (UnimplementedProviderServiceServer) GetModel(context.Context, *GetModelReq) (*GetModelResp, error) {
+func (UnimplementedProviderServiceServer) GetModel(context.Context, *GetModelRequest) (*GetModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetModel not implemented")
 }
-func (UnimplementedProviderServiceServer) DeleteModel(context.Context, *DeleteModelReq) (*DeleteModelResp, error) {
+func (UnimplementedProviderServiceServer) DeleteModel(context.Context, *DeleteModelRequest) (*DeleteModelResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteModel not implemented")
 }
 func (UnimplementedProviderServiceServer) mustEmbedUnimplementedProviderServiceServer() {}
@@ -176,18 +176,18 @@ func RegisterProviderServiceServer(s grpc.ServiceRegistrar, srv ProviderServiceS
 }
 
 func _ProviderService_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ChatReq)
+	m := new(ChatRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ProviderServiceServer).Chat(m, &grpc.GenericServerStream[ChatReq, ChatChunk]{ServerStream: stream})
+	return srv.(ProviderServiceServer).Chat(m, &grpc.GenericServerStream[ChatRequest, ChatChunk]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ProviderService_ChatServer = grpc.ServerStreamingServer[ChatChunk]
 
 func _ProviderService_Embed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EmbedReq)
+	in := new(EmbedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -199,13 +199,13 @@ func _ProviderService_Embed_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: ProviderService_Embed_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServiceServer).Embed(ctx, req.(*EmbedReq))
+		return srv.(ProviderServiceServer).Embed(ctx, req.(*EmbedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ProviderService_ListModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListModelsReq)
+	in := new(ListModelsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -217,13 +217,13 @@ func _ProviderService_ListModels_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: ProviderService_ListModels_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServiceServer).ListModels(ctx, req.(*ListModelsReq))
+		return srv.(ProviderServiceServer).ListModels(ctx, req.(*ListModelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ProviderService_CreateModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateModelReq)
+	in := new(CreateModelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -235,13 +235,13 @@ func _ProviderService_CreateModel_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: ProviderService_CreateModel_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServiceServer).CreateModel(ctx, req.(*CreateModelReq))
+		return srv.(ProviderServiceServer).CreateModel(ctx, req.(*CreateModelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ProviderService_GetModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetModelReq)
+	in := new(GetModelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -253,13 +253,13 @@ func _ProviderService_GetModel_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: ProviderService_GetModel_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServiceServer).GetModel(ctx, req.(*GetModelReq))
+		return srv.(ProviderServiceServer).GetModel(ctx, req.(*GetModelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ProviderService_DeleteModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteModelReq)
+	in := new(DeleteModelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func _ProviderService_DeleteModel_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: ProviderService_DeleteModel_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProviderServiceServer).DeleteModel(ctx, req.(*DeleteModelReq))
+		return srv.(ProviderServiceServer).DeleteModel(ctx, req.(*DeleteModelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
