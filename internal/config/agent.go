@@ -11,6 +11,7 @@ import (
 
 type AgentConfig struct {
 	PluginDir string `hcl:"plugin_dir,optional"`
+	DataDir   string `hcl:"data_dir,optional"`
 
 	Server  *ServerConfig   `hcl:"server,block"`
 	Metrics *MetricsConfig  `hcl:"metrics,block"`

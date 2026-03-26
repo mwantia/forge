@@ -21,7 +21,7 @@ func (s *Server) LoggerHandler() gin.HandlerFunc {
 
 		labels := []string{
 			c.Request.Method,
-			s.config.Address,
+			s.config.Server.Address,
 			c.Request.URL.Path,
 			strconv.Itoa(status),
 		}

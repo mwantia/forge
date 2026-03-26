@@ -10,6 +10,7 @@ import (
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/registry"
 	"github.com/mwantia/forge/internal/server/api"
+	"github.com/mwantia/forge/internal/session"
 )
 
 type Server struct {
@@ -17,7 +18,7 @@ type Server struct {
 	srv    *http.Server
 
 	logger   hclog.Logger             `fabric:"logger:server"`
-	config   *config.ServerConfig     `fabric:"config:server"`
+	config   *config.AgentConfig      `fabric:"config"`
 	registry *registry.PluginRegistry `fabric:"inject"`
 }
 
@@ -25,9 +26,11 @@ func (s *Server) Setup() (func() error, error) {
 	gin.SetMode(gin.ReleaseMode)
 	s.engine = gin.New()
 	s.srv = &http.Server{
-		Addr:    s.config.Address,
+		Addr:    s.config.Server.Address,
 		Handler: s.engine,
 	}
+
+	mgr := session.NewManager(s.logger, s.config.DataDir, s.registry)
 
 	s.engine.Use(s.LoggerHandler(), s.Recovery())
 
@@ -46,9 +49,6 @@ func (s *Server) Setup() (func() error, error) {
 	authed.POST("models/:provider", api.CreateModel(s.registry))
 	authed.DELETE("models/:provider/:model", api.DeleteModel(s.registry))
 
-	// Chat
-	authed.POST("chat/completions", api.Chat(s.registry))
-
 	// Embeddings
 	authed.POST("embeddings", api.Embed(s.registry))
 
@@ -60,6 +60,14 @@ func (s *Server) Setup() (func() error, error) {
 	authed.POST("tools/:driver/:tool/execute", api.ExecuteTool(s.registry))
 	authed.DELETE("tools/:driver/cancel/:call_id", api.CancelTool(s.registry))
 
+	// Sessions
+	authed.GET("sessions", api.ListSessions(mgr))
+	authed.POST("sessions", api.CreateSession(mgr))
+	authed.GET("sessions/:id", api.GetSession(mgr))
+	authed.DELETE("sessions/:id", api.DeleteSession(mgr))
+	authed.GET("sessions/:id/messages", api.ListMessages(mgr))
+	authed.POST("sessions/:id/messages", api.AddMessage(mgr))
+
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -70,7 +78,7 @@ func (s *Server) Setup() (func() error, error) {
 }
 
 func (s *Server) Serve(ctx context.Context) error {
-	s.logger.Info("Serving http server", "address", s.config.Address)
+	s.logger.Info("Serving http server", "address", s.config.Server.Address)
 	if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
