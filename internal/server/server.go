@@ -34,6 +34,32 @@ func (s *Server) Setup() (func() error, error) {
 	v1 := s.engine.Group("/v1")
 	v1.GET("health", api.Health())
 
+	authed := v1.Group("/", s.AuthMiddleware())
+
+	// Plugins
+	authed.GET("plugins", api.ListPlugins(s.registry))
+	authed.GET("plugins/:name", api.GetPlugin(s.registry))
+
+	// Models
+	authed.GET("models", api.ListModels(s.registry))
+	authed.GET("models/:provider", api.ListProviderModels(s.registry))
+	authed.POST("models/:provider", api.CreateModel(s.registry))
+	authed.DELETE("models/:provider/:model", api.DeleteModel(s.registry))
+
+	// Chat
+	authed.POST("chat/completions", api.Chat(s.registry))
+
+	// Embeddings
+	authed.POST("embeddings", api.Embed(s.registry))
+
+	// Tools
+	authed.GET("tools", api.ListTools(s.registry))
+	authed.GET("tools/:driver", api.ListDriverTools(s.registry))
+	authed.GET("tools/:driver/:tool", api.GetDriverTool(s.registry))
+	authed.POST("tools/:driver/:tool/validate", api.ValidateTool(s.registry))
+	authed.POST("tools/:driver/:tool/execute", api.ExecuteTool(s.registry))
+	authed.DELETE("tools/:driver/cancel/:call_id", api.CancelTool(s.registry))
+
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

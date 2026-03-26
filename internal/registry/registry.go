@@ -49,13 +49,46 @@ func (r *PluginRegistry) GetToolsPlugin(ctx context.Context, name string) (plugi
 
 // GetAllToolsPlugins returns a map of driver name → ToolsPlugin for every loaded
 // driver that advertises tools capability.
-func (r *PluginRegistry) GetAllToolsPlugins(ctx context.Context) map[string]plugins.ToolsPlugin {
+func (r *PluginRegistry) ListDrivers() []*PluginDriver {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	if r.drivers == nil {
-		return make(map[string]plugins.ToolsPlugin)
+	result := make([]*PluginDriver, 0, len(r.drivers))
+	for _, d := range r.drivers {
+		result = append(result, d)
 	}
+	return result
+}
+
+func (r *PluginRegistry) GetDriver(name string) *PluginDriver {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	return r.drivers[strings.ToLower(name)]
+}
+
+func (r *PluginRegistry) GetAllProviders(ctx context.Context) map[string]plugins.ProviderPlugin {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	result := make(map[string]plugins.ProviderPlugin)
+	for name, driver := range r.drivers {
+		if driver.Capabilities == nil || driver.Capabilities.Provider == nil {
+			continue
+		}
+		p, err := driver.Driver.GetProviderPlugin(ctx)
+		if err != nil {
+			r.logger.Warn("Failed to get provider plugin", "driver", name, "error", err)
+			continue
+		}
+		result[name] = p
+	}
+	return result
+}
+
+func (r *PluginRegistry) GetAllToolsPlugins(ctx context.Context) map[string]plugins.ToolsPlugin {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 
 	result := make(map[string]plugins.ToolsPlugin)
 	for name, driver := range r.drivers {

@@ -1,4 +1,4 @@
-package workspace
+package filesystem
 
 import (
 	"context"
@@ -13,32 +13,32 @@ import (
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
-const PluginName = "workspace"
+const PluginName = "filesystem"
 
 func init() {
-	plugins.Register(PluginName, NewWorkspaceDriver)
+	plugins.Register(PluginName, NewFileSystemDriver)
 }
 
-// WorkspaceDriver implements plugins.Driver for filesystem access.
-type WorkspaceDriver struct {
+// FileSystemDriver implements plugins.Driver for filesystem access.
+type FileSystemDriver struct {
 	plugins.UnimplementedToolsPlugin
 	log    hclog.Logger
-	config *WorkspaceConfig
+	config *FileSystemConfig
 }
 
-type WorkspaceConfig struct {
+type FileSystemConfig struct {
 	Home      string   `mapstructure:"home"`
 	Tools     []string `mapstructure:"tools"`
 	Allowlist []string `mapstructure:"allowlist"`
 }
 
-func NewWorkspaceDriver(log hclog.Logger) plugins.Driver {
-	return &WorkspaceDriver{
+func NewFileSystemDriver(log hclog.Logger) plugins.Driver {
+	return &FileSystemDriver{
 		log: log.Named(PluginName),
 	}
 }
 
-func (d *WorkspaceDriver) GetPluginInfo() plugins.PluginInfo {
+func (d *FileSystemDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
 		Name:    PluginName,
 		Author:  "forge",
@@ -46,11 +46,11 @@ func (d *WorkspaceDriver) GetPluginInfo() plugins.PluginInfo {
 	}
 }
 
-func (d *WorkspaceDriver) ProbePlugin(ctx context.Context) (bool, error) {
+func (d *FileSystemDriver) ProbePlugin(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (d *WorkspaceDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
+func (d *FileSystemDriver) GetCapabilities(ctx context.Context) (*plugins.DriverCapabilities, error) {
 	return &plugins.DriverCapabilities{
 		Types: []string{plugins.PluginTypeTools},
 		Tools: &plugins.ToolsCapabilities{
@@ -59,15 +59,15 @@ func (d *WorkspaceDriver) GetCapabilities(ctx context.Context) (*plugins.DriverC
 	}, nil
 }
 
-func (d *WorkspaceDriver) OpenDriver(ctx context.Context) error {
+func (d *FileSystemDriver) OpenDriver(ctx context.Context) error {
 	return nil
 }
 
-func (d *WorkspaceDriver) CloseDriver(ctx context.Context) error {
+func (d *FileSystemDriver) CloseDriver(ctx context.Context) error {
 	return nil
 }
 
-func (d *WorkspaceDriver) ConfigDriver(ctx context.Context, config plugins.PluginConfig) error {
+func (d *FileSystemDriver) ConfigDriver(ctx context.Context, config plugins.PluginConfig) error {
 	if err := mapstructure.Decode(config.ConfigMap, &d.config); err != nil {
 		return fmt.Errorf("failed to decode config: %w", err)
 	}
@@ -100,22 +100,22 @@ func (d *WorkspaceDriver) ConfigDriver(ctx context.Context, config plugins.Plugi
 		return fmt.Errorf("home '%s' is not a directory", d.config.Home)
 	}
 
-	d.log.Info("Workspace configured", "home", d.config.Home, "tools", d.config.Tools, "allowlist", len(d.config.Allowlist))
+	d.log.Info("FileSystem configured", "home", d.config.Home, "tools", d.config.Tools, "allowlist", len(d.config.Allowlist))
 	return nil
 }
 
-func (d *WorkspaceDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderPlugin, error) {
+func (d *FileSystemDriver) GetProviderPlugin(ctx context.Context) (plugins.ProviderPlugin, error) {
 	return nil, errors.ErrPluginNotSupported
 }
 
-func (d *WorkspaceDriver) GetMemoryPlugin(ctx context.Context) (plugins.MemoryPlugin, error) {
+func (d *FileSystemDriver) GetMemoryPlugin(ctx context.Context) (plugins.MemoryPlugin, error) {
 	return nil, errors.ErrPluginNotSupported
 }
 
-func (d *WorkspaceDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPlugin, error) {
+func (d *FileSystemDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPlugin, error) {
 	return nil, errors.ErrPluginNotSupported
 }
 
-func (d *WorkspaceDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
+func (d *FileSystemDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
 	return d, nil
 }

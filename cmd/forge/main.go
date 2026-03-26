@@ -12,9 +12,9 @@ import (
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/sandbox"
 	wlog "github.com/mwantia/forge/pkg/log"
-	_ "github.com/mwantia/forge/plugins/ollama"    // Import to register ollama plugin
-	_ "github.com/mwantia/forge/plugins/skills"    // Import to register skills plugin
-	_ "github.com/mwantia/forge/plugins/workspace" // Import to register workspace plugin
+	_ "github.com/mwantia/forge/plugins/filesystem" // Import to register filesystem plugin
+	_ "github.com/mwantia/forge/plugins/ollama"     // Import to register ollama plugin
+	_ "github.com/mwantia/forge/plugins/skills"     // Import to register skills plugin
 	"github.com/spf13/cobra"
 )
 

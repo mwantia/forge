@@ -1,4 +1,4 @@
-package workspace
+package filesystem
 
 import (
 	"bytes"
@@ -13,11 +13,11 @@ import (
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
-func (d *WorkspaceDriver) GetLifecycle() plugins.Lifecycle {
+func (d *FileSystemDriver) GetLifecycle() plugins.Lifecycle {
 	return d
 }
 
-func (d *WorkspaceDriver) ListTools(_ context.Context, filter plugins.ListToolsFilter) (*plugins.ListToolsResponse, error) {
+func (d *FileSystemDriver) ListTools(_ context.Context, filter plugins.ListToolsFilter) (*plugins.ListToolsResponse, error) {
 	if d.config == nil {
 		return nil, fmt.Errorf("plugin not configured")
 	}
@@ -37,7 +37,7 @@ func (d *WorkspaceDriver) ListTools(_ context.Context, filter plugins.ListToolsF
 	return &plugins.ListToolsResponse{Tools: tools}, nil
 }
 
-func (d *WorkspaceDriver) GetTool(_ context.Context, name string) (*plugins.ToolDefinition, error) {
+func (d *FileSystemDriver) GetTool(_ context.Context, name string) (*plugins.ToolDefinition, error) {
 	if d.config == nil {
 		return nil, fmt.Errorf("plugin not configured")
 	}
@@ -56,7 +56,7 @@ func (d *WorkspaceDriver) GetTool(_ context.Context, name string) (*plugins.Tool
 	return nil, fmt.Errorf("tool %q is not enabled", name)
 }
 
-func (d *WorkspaceDriver) Validate(_ context.Context, req plugins.ExecuteRequest) (*plugins.ValidateResponse, error) {
+func (d *FileSystemDriver) Validate(_ context.Context, req plugins.ExecuteRequest) (*plugins.ValidateResponse, error) {
 	if d.config == nil {
 		return nil, fmt.Errorf("plugin not configured")
 	}
@@ -123,7 +123,7 @@ func validateToolArgs(tool string, args map[string]any) []string {
 	return errs
 }
 
-func (d *WorkspaceDriver) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
 	if d.config == nil {
 		return nil, fmt.Errorf("plugin not configured")
 	}
@@ -138,7 +138,7 @@ func (d *WorkspaceDriver) Execute(ctx context.Context, req plugins.ExecuteReques
 	}
 	if !enabled {
 		return &plugins.ExecuteResponse{
-			Result:  fmt.Sprintf("tool '%s' is not enabled in workspace configuration", req.Tool),
+			Result:  fmt.Sprintf("tool '%s' is not enabled in filesystem configuration", req.Tool),
 			IsError: true,
 		}, nil
 	}
@@ -164,9 +164,9 @@ func (d *WorkspaceDriver) Execute(ctx context.Context, req plugins.ExecuteReques
 	}
 }
 
-// resolvePath converts a path to an absolute path rooted at workspace home.
+// resolvePath converts a path to an absolute path rooted at filesystem home.
 // Relative paths are joined to home; absolute paths and ~-prefixed paths are expanded as-is.
-func (d *WorkspaceDriver) resolvePath(path string) (string, error) {
+func (d *FileSystemDriver) resolvePath(path string) (string, error) {
 	if path == "" {
 		return d.config.Home, nil
 	}
@@ -186,9 +186,9 @@ func (d *WorkspaceDriver) resolvePath(path string) (string, error) {
 	return filepath.Clean(path), nil
 }
 
-// validatePath checks that path is within the workspace home directory.
+// validatePath checks that path is within the filesystem home directory.
 // For paths outside home, it checks the allowlist patterns.
-func (d *WorkspaceDriver) validatePath(path string) error {
+func (d *FileSystemDriver) validatePath(path string) error {
 	home := d.config.Home
 	if strings.HasPrefix(path, home+string(filepath.Separator)) || path == home {
 		return nil
@@ -218,12 +218,12 @@ func (d *WorkspaceDriver) validatePath(path string) error {
 		}
 	}
 
-	return fmt.Errorf("path '%s' is outside workspace home and not permitted by allowlist", path)
+	return fmt.Errorf("path '%s' is outside filesystem home and not permitted by allowlist", path)
 }
 
 // validateCommand checks the command against the allowlist when one is configured.
 // If the allowlist is empty, any command is permitted.
-func (d *WorkspaceDriver) validateCommand(command string) error {
+func (d *FileSystemDriver) validateCommand(command string) error {
 	if len(d.config.Allowlist) == 0 {
 		return nil
 	}
@@ -254,7 +254,7 @@ func (d *WorkspaceDriver) validateCommand(command string) error {
 	return fmt.Errorf("command '%s' is not permitted by allowlist", command)
 }
 
-func (d *WorkspaceDriver) execCreate(args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execCreate(args map[string]any) (*plugins.ExecuteResponse, error) {
 	pathArg, ok := args["path"].(string)
 	if !ok || pathArg == "" {
 		return &plugins.ExecuteResponse{Result: "path is required", IsError: true}, nil
@@ -303,7 +303,7 @@ func (d *WorkspaceDriver) execCreate(args map[string]any) (*plugins.ExecuteRespo
 	}, nil
 }
 
-func (d *WorkspaceDriver) execRead(args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execRead(args map[string]any) (*plugins.ExecuteResponse, error) {
 	pathArg, ok := args["path"].(string)
 	if !ok || pathArg == "" {
 		return &plugins.ExecuteResponse{Result: "path is required", IsError: true}, nil
@@ -335,7 +335,7 @@ func (d *WorkspaceDriver) execRead(args map[string]any) (*plugins.ExecuteRespons
 	}, nil
 }
 
-func (d *WorkspaceDriver) execWrite(args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execWrite(args map[string]any) (*plugins.ExecuteResponse, error) {
 	pathArg, ok := args["path"].(string)
 	if !ok || pathArg == "" {
 		return &plugins.ExecuteResponse{Result: "path is required", IsError: true}, nil
@@ -377,7 +377,7 @@ func (d *WorkspaceDriver) execWrite(args map[string]any) (*plugins.ExecuteRespon
 	}, nil
 }
 
-func (d *WorkspaceDriver) execDelete(args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execDelete(args map[string]any) (*plugins.ExecuteResponse, error) {
 	pathArg, ok := args["path"].(string)
 	if !ok || pathArg == "" {
 		return &plugins.ExecuteResponse{Result: "path is required", IsError: true}, nil
@@ -392,7 +392,7 @@ func (d *WorkspaceDriver) execDelete(args map[string]any) (*plugins.ExecuteRespo
 	}
 
 	if resolved == d.config.Home {
-		return &plugins.ExecuteResponse{Result: "cannot delete workspace home directory", IsError: true}, nil
+		return &plugins.ExecuteResponse{Result: "cannot delete filesystem home directory", IsError: true}, nil
 	}
 
 	if err := os.RemoveAll(resolved); err != nil {
@@ -411,7 +411,7 @@ func (d *WorkspaceDriver) execDelete(args map[string]any) (*plugins.ExecuteRespo
 	}, nil
 }
 
-func (d *WorkspaceDriver) execList(args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execList(args map[string]any) (*plugins.ExecuteResponse, error) {
 	pathArg, _ := args["path"].(string)
 
 	resolved, err := d.resolvePath(pathArg)
@@ -457,7 +457,7 @@ func (d *WorkspaceDriver) execList(args map[string]any) (*plugins.ExecuteRespons
 	}, nil
 }
 
-func (d *WorkspaceDriver) execCommand(ctx context.Context, args map[string]any) (*plugins.ExecuteResponse, error) {
+func (d *FileSystemDriver) execCommand(ctx context.Context, args map[string]any) (*plugins.ExecuteResponse, error) {
 	command, ok := args["command"].(string)
 	if !ok || command == "" {
 		return &plugins.ExecuteResponse{Result: "command is required", IsError: true}, nil

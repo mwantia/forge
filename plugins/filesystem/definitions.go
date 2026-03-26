@@ -1,4 +1,4 @@
-package workspace
+package filesystem
 
 import "github.com/mwantia/forge/pkg/plugins"
 
