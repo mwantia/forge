@@ -9,12 +9,10 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/pkg/errors"
 	"github.com/mwantia/forge/pkg/plugins"
 	pluginsgrpc "github.com/mwantia/forge/pkg/plugins/grpc"
-	"github.com/zclconf/go-cty/cty"
 )
 
 func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*config.PluginConfig) error {
@@ -135,62 +133,19 @@ func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, inf
 
 func (r *PluginRegistry) GetPluginDriverInfo(cfg *config.PluginConfig) (PluginDriverInfo, error) {
 	info := PluginDriverInfo{
-		Name:   cfg.Name,
-		Type:   cfg.Type,
-		Config: make(map[string]any),
+		Name: cfg.Name,
+		Type: cfg.Type,
 	}
 	// Overwrite empty name with type
 	if info.Name == "" {
 		info.Name = info.Type
 	}
-	// Return empty map if undefined config
-	if cfg.Config == nil || cfg.Config.Body == nil {
-		return info, nil
-	}
-	attrs, diags := cfg.Config.Body.JustAttributes()
-	if diags.HasErrors() {
-		return info, fmt.Errorf("invalid plugin config: %v", diags.Error())
+
+	body, err := cfg.Config.DecodeBody()
+	if err != nil {
+		return info, err
 	}
 
-	for name, attr := range attrs {
-		value, diags := attr.Expr.Value(&hcl.EvalContext{})
-		if diags.HasErrors() {
-			return info, fmt.Errorf("invalid plugin config: %v", diags.Error())
-		}
-
-		info.Config[name] = ctyValueToGo(value)
-	}
-
+	info.Config = body
 	return info, nil
-}
-
-// ctyValueToGo converts a cty.Value to a plain Go value suitable for mapstructure decoding.
-func ctyValueToGo(value cty.Value) any {
-	ty := value.Type()
-
-	switch {
-	case ty == cty.String:
-		return value.AsString()
-	case ty == cty.Number:
-		f, _ := value.AsBigFloat().Float64()
-		return f
-	case ty == cty.Bool:
-		return value.True()
-	case ty.IsListType() || ty.IsTupleType() || ty.IsSetType():
-		var result []any
-		for it := value.ElementIterator(); it.Next(); {
-			_, v := it.Element()
-			result = append(result, ctyValueToGo(v))
-		}
-		return result
-	case ty.IsObjectType() || ty.IsMapType():
-		result := make(map[string]any)
-		for it := value.ElementIterator(); it.Next(); {
-			k, v := it.Element()
-			result[k.AsString()] = ctyValueToGo(v)
-		}
-		return result
-	default:
-		return value.GoString()
-	}
 }

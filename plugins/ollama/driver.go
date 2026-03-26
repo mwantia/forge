@@ -29,11 +29,10 @@ type OllamaDriver struct {
 // NewOllamaDriver creates a new Ollama driver that supports provider plugin type.
 func NewOllamaDriver(log hclog.Logger) plugins.Driver {
 	cfg := DefaultConfig()
-	timeout := time.Duration(cfg.Timeout) * time.Second
 	return &OllamaDriver{
 		log:          log.Named(PluginName),
 		config:       cfg,
-		client:       &http.Client{Timeout: timeout},
+		client:       &http.Client{},
 		streamClient: &http.Client{},
 	}
 }
@@ -93,18 +92,23 @@ func (d *OllamaDriver) ConfigDriver(ctx context.Context, config plugins.PluginCo
 
 	d.config = cfg
 
-	timeout := time.Duration(cfg.Timeout) * time.Second
-	if timeout <= 0 {
-		timeout = 60 * time.Second
-	}
+	timeout := parseDuration(cfg.Timeout, 60*time.Second)
 	d.client = &http.Client{Timeout: timeout}
 	d.streamClient = &http.Client{}
 
 	d.log.Info("Configured Ollama driver",
 		"address", cfg.Address,
-		"model", cfg.Model,
 		"timeout", timeout,
 	)
+
+	for name, m := range cfg.Models {
+		d.log.Debug("Registered model aliases",
+			"alias", name,
+			"base_model", m.BaseModel,
+			"reasoning", m.Reasoning,
+			"system", fmt.Sprintf("len:%d", len(m.System)),
+		)
+	}
 
 	return nil
 }
@@ -123,4 +127,15 @@ func (d *OllamaDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPlu
 
 func (d *OllamaDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
 	return nil, errors.ErrPluginNotSupported
+}
+
+func parseDuration(s string, fallback time.Duration) time.Duration {
+	if s == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d <= 0 {
+		return fallback
+	}
+	return d
 }

@@ -62,7 +62,7 @@ tasks:
         desc: Run the agent with the test configuration
         cmds:
         - task: setup
-        - go run ${MAIN_PATH} agent --config ${TEST_CONFIG_PATH} --log-level DEBUG
+        - go run ${MAIN_PATH} agent --config ${TEST_CONFIG_PATH} --log-level INFO
         ignore_error: true
 
     release:

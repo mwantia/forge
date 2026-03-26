@@ -11,7 +11,7 @@
             "mode": "debug",
             "program": "./cmd/forge",
             "internalConsoleOptions": "neverOpen",
-            "args": ["agent", "--config", "./tests/config.hcl"],
+            "args": ["agent", "--config", "./tests/config.hcl", "--log-level", "TRACE"],
             "env": {},
             "cwd": "${workspaceFolder}"
         },
@@ -22,7 +22,7 @@
             "mode": "debug",
             "program": "./cmd/forge",
             "internalConsoleOptions": "neverOpen",
-            "args": ["sandbox", "--path", "./tests/config.hcl", "--model", "ollama/glm-5:cloud", "\"List out the files of the current directory\""],
+            "args": ["sandbox", "--path", "./tests/config.hcl", "--log-level", "TRACE", "--model", "ollama/glm-5:cloud", "\"List out the files of the current directory\""],
             "env": {},
             "cwd": "${workspaceFolder}"
         }

@@ -28,21 +28,53 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 		return nil, fmt.Errorf("driver not configured")
 	}
 
-	modelName := p.driver.config.Model
-	temperature := 0.0
-	if model != nil {
-		if model.ModelName != "" {
-			modelName = model.ModelName
-		}
-		temperature = model.Temperature
+	if model == nil || model.ModelName == "" {
+		return nil, fmt.Errorf("'model' is undefined or invalid")
 	}
 
-	req := OllamaRequest{
-		Model:  modelName,
-		Stream: true,
-		Options: OllamaOptions{
-			Temperature: temperature,
-		},
+	req := OllamaChatRequest{
+		Model:   model.ModelName,
+		Stream:  true,
+		Options: OllamaChatOptions{},
+	}
+
+	alias, ok := p.driver.config.Models[model.ModelName]
+	if ok && alias.Options != nil {
+		// Overwrite model with base from alias
+		req.Model = alias.BaseModel
+		// Overwrite model options with alias in request
+		if alias.Options.Temperature != nil {
+			req.Options.Temperature = *alias.Options.Temperature
+		}
+		if alias.Options.NumPredict != nil {
+			req.Options.NumPredict = *alias.Options.NumPredict
+		}
+		if alias.Options.TopP != nil {
+			req.Options.TopP = *alias.Options.TopP
+		}
+		if alias.Options.TopK != nil {
+			req.Options.TopK = *alias.Options.TopK
+		}
+
+		if alias.System != "" {
+			hasSystem := false
+			for _, m := range messages {
+				if m.Role == "system" {
+					hasSystem = true
+					break
+				}
+			}
+			if !hasSystem {
+				req.Messages = append(req.Messages, OllamaMessage{
+					Role:    "system",
+					Content: alias.System,
+				})
+			}
+		}
+	}
+	// A direct temperature override from the caller still wins.
+	if model.Temperature != 0 {
+		req.Options.Temperature = model.Temperature
 	}
 
 	for _, msg := range messages {
@@ -109,13 +141,12 @@ func (p *OllamaProviderPlugin) Embed(ctx context.Context, content string, model 
 		return nil, fmt.Errorf("driver not configured")
 	}
 
-	modelName := p.driver.config.Model
-	if model != nil && model.ModelName != "" {
-		modelName = model.ModelName
+	if model == nil || model.ModelName == "" {
+		return nil, fmt.Errorf("'model' is undefined or invalid")
 	}
 
 	req := OllamaEmbedRequest{
-		Model: modelName,
+		Model: model.ModelName,
 		Input: content,
 	}
 

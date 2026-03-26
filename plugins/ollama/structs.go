@@ -2,27 +2,59 @@ package ollama
 
 // OllamaConfig holds the configuration for the Ollama driver.
 type OllamaConfig struct {
-	Address string `mapstructure:"address"`
-	Model   string `mapstructure:"model"`
-	Timeout int    `mapstructure:"timeout"` // Timeout in seconds
+	Address string                          `mapstructure:"address"`
+	Timeout string                          `mapstructure:"timeout"` // Timeout in seconds
+	Models  map[string]*OllamaModelTemplate `mapstructure:"model"`
+}
+
+// OllamaModelTemplate defines a named model alias within forge.
+//
+// When `create = false` (default), the model is resolved entirely in memory:
+// forge sets `base_model` as the Ollama model, prepends `system` as a system
+// message, and merges `options` into every chat request for this alias.
+//
+// When `create = true`, forge additionally provisions the model in Ollama via
+// /api/create on startup, comparing the generated Modelfile hash against the
+type OllamaModelTemplate struct {
+	// BaseModel is the underlying Ollama model to use (e.g. "llama3.2", "glm-4:9b").
+	BaseModel string `mapstructure:"base_model"`
+
+	// Reasoning controls whether thinking/reasoning tokens are included in the
+	// response stream. When false, <think>...</think> blocks are stripped.
+	Reasoning bool `mapstructure:"reasoning"`
+
+	// System is prepended as a system message on every request using this alias.
+	System string `mapstructure:"system"`
+
+	// Options overrides generation parameters for this model alias.
+	Options *OllamaModelOptions `mapstructure:"options"`
+}
+
+// OllamaModelOptions maps to Ollama generation parameters.
+// All fields are pointers so that zero values (e.g. temperature=0) can be
+// distinguished from "not set".
+type OllamaModelOptions struct {
+	Temperature *float64 `mapstructure:"temperature"`
+	NumPredict  *int     `mapstructure:"num_predict"`
+	TopP        *float64 `mapstructure:"top_p"`
+	TopK        *int     `mapstructure:"top_k"`
 }
 
 // DefaultConfig returns the default configuration for Ollama.
 func DefaultConfig() *OllamaConfig {
 	return &OllamaConfig{
 		Address: "http://localhost:11434",
-		Model:   "llama2",
-		Timeout: 60,
+		Timeout: "60s",
 	}
 }
 
-// OllamaRequest represents a request to the Ollama /api/chat endpoint.
-type OllamaRequest struct {
-	Model    string          `json:"model"`
-	Messages []OllamaMessage `json:"messages,omitempty"`
-	Stream   bool            `json:"stream"`
-	Options  OllamaOptions   `json:"options,omitempty"`
-	Tools    []OllamaTool    `json:"tools,omitempty"`
+// OllamaChatRequest represents a request to the Ollama /api/chat endpoint.
+type OllamaChatRequest struct {
+	Model    string            `json:"model"`
+	Messages []OllamaMessage   `json:"messages,omitempty"`
+	Stream   bool              `json:"stream"`
+	Options  OllamaChatOptions `json:"options,omitempty"`
+	Tools    []OllamaTool      `json:"tools,omitempty"`
 }
 
 // OllamaMessage represents a message in the chat API.
@@ -32,8 +64,8 @@ type OllamaMessage struct {
 	ToolCalls []OllamaToolCall `json:"tool_calls,omitempty"`
 }
 
-// OllamaOptions represents additional options for generation.
-type OllamaOptions struct {
+// OllamaChatOptions represents additional options for generation.
+type OllamaChatOptions struct {
 	Temperature float64 `json:"temperature,omitempty"`
 	NumPredict  int     `json:"num_predict,omitempty"`
 	TopP        float64 `json:"top_p,omitempty"`
@@ -74,8 +106,8 @@ type OllamaToolCallFunction struct {
 
 // OllamaEmbedRequest is the request body for /api/embed.
 type OllamaEmbedRequest struct {
-	Model  string `json:"model"`
-	Input  string `json:"input"`
+	Model string `json:"model"`
+	Input string `json:"input"`
 }
 
 // OllamaEmbedResponse is the response from /api/embed.
