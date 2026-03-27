@@ -11,6 +11,7 @@ import (
 	"github.com/mwantia/forge/cmd/forge/server"
 	wlog "github.com/mwantia/forge/pkg/log"
 	_ "github.com/mwantia/forge/plugins/filesystem" // Import to register filesystem plugin
+	_ "github.com/mwantia/forge/plugins/mcp"        // Import to register mcp plugin
 	_ "github.com/mwantia/forge/plugins/ollama"     // Import to register ollama plugin
 	_ "github.com/mwantia/forge/plugins/searxng"    // Import to register searxng plugin
 	_ "github.com/mwantia/forge/plugins/skills"     // Import to register skills plugin

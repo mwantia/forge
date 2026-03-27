@@ -114,10 +114,10 @@ func (m *Manager) executeToolCall(ctx context.Context, toolsMap map[string]plugi
 		return fmt.Sprintf("error: tool '%s' not found", tc.Name), true
 	}
 
-	// Strip the "pluginName/" prefix to get the bare tool name.
+	// Strip the "pluginName__" prefix to get the bare tool name.
 	realName := tc.Name
-	if idx := strings.Index(tc.Name, "/"); idx >= 0 {
-		realName = tc.Name[idx+1:]
+	if idx := strings.Index(tc.Name, "__"); idx >= 0 {
+		realName = tc.Name[idx+2:]
 	}
 
 	resp, err := tp.Execute(ctx, plugins.ExecuteRequest{

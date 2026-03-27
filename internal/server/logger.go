@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -17,7 +18,7 @@ func (s *Server) LoggerHandler() gin.HandlerFunc {
 		duration := time.Since(start)
 		status := c.Writer.Status()
 
-		s.logger.Debug("| %-5s %s | %-3d | %v", c.Request.Method, c.Request.URL.Path, status, duration)
+		s.logger.Debug(fmt.Sprintf("| %-5s %s | %-3d | %v", c.Request.Method, c.Request.URL.Path, status, duration))
 
 		labels := []string{
 			c.Request.Method,

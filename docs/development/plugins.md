@@ -101,8 +101,8 @@ type Driver interface {
 
 **Lifecycle order** for each plugin instance:
 
-1. `OpenDriver` — establish connections, allocate resources
-2. `ConfigDriver` — receive HCL config decoded as `map[string]any`
+1. `ConfigDriver` — receive HCL config decoded as `map[string]any`
+2. `OpenDriver` — establish connections, allocate resources
 3. `GetCapabilities` — forge reads which types are supported
 4. *(plugin serves requests)*
 5. `CloseDriver` — release all resources
@@ -309,15 +309,6 @@ func (d *MyDriver) Execute(_ context.Context, req plugins.ExecuteRequest) (*plug
         Result: map[string]any{"message": "Hello, " + name + "!"},
     }, nil
 }
-```
-
-#### 4. Import in main.go
-
-```go
-// cmd/forge/main.go
-import (
-    _ "github.com/mwantia/forge/plugins/myplugin"
-)
 ```
 
 ### External Binary Plugin

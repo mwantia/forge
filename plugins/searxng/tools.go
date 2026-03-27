@@ -197,12 +197,7 @@ func (d *SearXNGDriver) execSearch(ctx context.Context, args map[string]any) (*p
 	}
 	entries := make([]resultEntry, 0, len(results))
 	for _, r := range results {
-		entries = append(entries, resultEntry{
-			Title:   r.Title,
-			URL:     r.URL,
-			Content: r.Content,
-			Engine:  r.Engine,
-		})
+		entries = append(entries, resultEntry(r))
 	}
 
 	d.log.Debug("web_search completed", "query", query, "results", len(entries))

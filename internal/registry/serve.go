@@ -116,16 +116,16 @@ func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, inf
 		return nil, client, fmt.Errorf("failed to cast grpc interface as driver")
 	}
 
-	if err := driver.OpenDriver(ctx); err != nil {
-		client.Kill()
-		return nil, client, fmt.Errorf("failed to open driver connections: %w", err)
-	}
-
 	if len(info.Config) > 0 {
 		if err := driver.ConfigDriver(ctx, plugins.PluginConfig{ConfigMap: info.Config}); err != nil {
 			client.Kill()
 			return nil, client, fmt.Errorf("failed to configure driver: %w", err)
 		}
+	}
+
+	if err := driver.OpenDriver(ctx); err != nil {
+		client.Kill()
+		return nil, client, fmt.Errorf("failed to open driver connections: %w", err)
 	}
 
 	return driver, client, nil

@@ -39,21 +39,25 @@ func (p *OllamaProviderPlugin) Chat(ctx context.Context, messages []plugins.Chat
 	}
 
 	alias, ok := p.driver.config.Models[model.ModelName]
-	if ok && alias.Options != nil {
+	if ok {
 		// Overwrite model with base from alias
-		req.Model = alias.BaseModel
-		// Overwrite model options with alias in request
-		if alias.Options.Temperature != nil {
-			req.Options.Temperature = *alias.Options.Temperature
+		if alias.BaseModel != "" {
+			req.Model = alias.BaseModel
 		}
-		if alias.Options.NumPredict != nil {
-			req.Options.NumPredict = *alias.Options.NumPredict
-		}
-		if alias.Options.TopP != nil {
-			req.Options.TopP = *alias.Options.TopP
-		}
-		if alias.Options.TopK != nil {
-			req.Options.TopK = *alias.Options.TopK
+
+		if alias.Options != nil {
+			if alias.Options.Temperature != nil {
+				req.Options.Temperature = *alias.Options.Temperature
+			}
+			if alias.Options.NumPredict != nil {
+				req.Options.NumPredict = *alias.Options.NumPredict
+			}
+			if alias.Options.TopP != nil {
+				req.Options.TopP = *alias.Options.TopP
+			}
+			if alias.Options.TopK != nil {
+				req.Options.TopK = *alias.Options.TopK
+			}
 		}
 
 		if alias.System != "" {

@@ -131,7 +131,7 @@ func (m *Manager) resolveTools(ctx context.Context, names []string) (map[string]
 			continue
 		}
 		for _, def := range resp.Tools {
-			prefixed := name + "/" + def.Name
+			prefixed := name + "__" + def.Name
 			toolDefs = append(toolDefs, plugins.ToolCall{
 				Name:        prefixed,
 				Description: def.Description,
