@@ -65,6 +65,7 @@ func (s *Server) Setup() (func() error, error) {
 	authed.POST("sessions", api.CreateSession(mgr))
 	authed.GET("sessions/:id", api.GetSession(mgr))
 	authed.DELETE("sessions/:id", api.DeleteSession(mgr))
+	authed.GET("sessions/:id/tools", api.ListSessionTools(mgr))
 	authed.GET("sessions/:id/messages", api.ListMessages(mgr))
 	authed.POST("sessions/:id/messages", api.AddMessage(mgr))
 

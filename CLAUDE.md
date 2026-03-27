@@ -164,6 +164,7 @@ GET    /v1/sessions
 POST   /v1/sessions
 GET    /v1/sessions/:id
 DELETE /v1/sessions/:id
+GET    /v1/sessions/:id/tools
 GET    /v1/sessions/:id/messages
 POST   /v1/sessions/:id/messages
 ```

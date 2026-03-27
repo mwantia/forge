@@ -99,6 +99,18 @@ func AddMessage(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
+func ListSessionTools(mgr *session.Manager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		tools, err := mgr.ListTools(c.Request.Context(), id)
+		if err != nil {
+			respondError(c, http.StatusNotFound, "not_found", err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"tools": tools})
+	}
+}
+
 func ListMessages(mgr *session.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")

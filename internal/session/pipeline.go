@@ -55,6 +55,8 @@ func (m *Manager) runPipeline(
 ) {
 	defer close(out)
 
+	emittedContent := false
+
 	for i := range sess.MaxToolIterations {
 		stream, err := m.registry.Provider().Chat(ctx, sess.Model, messages, toolDefs)
 		if err != nil {
@@ -72,6 +74,9 @@ func (m *Manager) runPipeline(
 			// Final text response — persist and emit to the client.
 			m.persistAssistantMessage(sessionID, result.Content, nil)
 			m.refreshMessageCount(sess, sessionID)
+			if emittedContent && result.Content != "" {
+				emitSeparator(out, result)
+			}
 			replayAsStream(out, result)
 			return
 		}
@@ -82,7 +87,11 @@ func (m *Manager) runPipeline(
 		// Stream the intermediate assistant text to the client now, before tool execution.
 		// The client sees this content while tools run in the background.
 		if result.Content != "" {
+			if emittedContent {
+				emitSeparator(out, result)
+			}
 			emitContent(out, result)
+			emittedContent = true
 		}
 
 		assistantMsg := plugins.ChatMessage{
@@ -182,6 +191,15 @@ func (m *Manager) refreshMessageCount(_ *Session, sessionID string) {
 	if err := m.store.SaveSession(stored); err != nil {
 		m.log.Error("Failed to update session metadata", "error", err)
 	}
+}
+
+// emitSeparator sends a "\n\n" chunk to visually separate consecutive assistant messages.
+func emitSeparator(out chan<- pipelineItem, result *plugins.ChatResult) {
+	out <- pipelineItem{chunk: &plugins.ChatChunk{
+		ID:    result.ID,
+		Role:  result.Role,
+		Delta: "\n\n",
+	}}
 }
 
 // emitContent splits result content into small chunks and sends them to out

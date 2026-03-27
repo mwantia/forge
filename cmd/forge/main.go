@@ -10,6 +10,7 @@ import (
 	"github.com/mwantia/forge/cmd/forge/client"
 	"github.com/mwantia/forge/cmd/forge/server"
 	wlog "github.com/mwantia/forge/pkg/log"
+	_ "github.com/mwantia/forge/plugins/consul"     // Import to register consul plugin
 	_ "github.com/mwantia/forge/plugins/filesystem" // Import to register filesystem plugin
 	_ "github.com/mwantia/forge/plugins/mcp"        // Import to register mcp plugin
 	_ "github.com/mwantia/forge/plugins/ollama"     // Import to register ollama plugin

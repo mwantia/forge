@@ -32,6 +32,7 @@ func NewSessionsCommand() *cobra.Command {
 	cmd.AddCommand(newSessionsCreateCmd(client))
 	cmd.AddCommand(newSessionsGetCmd(client))
 	cmd.AddCommand(newSessionsDeleteCmd(client))
+	cmd.AddCommand(newSessionsToolsCmd(client))
 	cmd.AddCommand(newSessionsMessagesCmd(client))
 	cmd.AddCommand(newSessionsSendCmd(client))
 
@@ -223,6 +224,38 @@ func newSessionsSendCmd(client func() *ForgeClient) *cobra.Command {
 	cmd.Flags().BoolVar(&stream, "stream", false, "Stream the response as it arrives")
 
 	return cmd
+}
+
+func newSessionsToolsCmd(client func() *ForgeClient) *cobra.Command {
+	return &cobra.Command{
+		Use:   "tools <id>",
+		Short: "List all tools available to a session",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var resp struct {
+				Tools []plugins.ToolCall `json:"tools"`
+			}
+			if err := client().get("/v1/sessions/"+args[0]+"/tools", &resp); err != nil {
+				return err
+			}
+
+			if len(resp.Tools) == 0 {
+				fmt.Println("No tools found.")
+				return nil
+			}
+
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+			fmt.Fprintln(w, "TOOL\tDESCRIPTION")
+			for _, t := range resp.Tools {
+				desc := t.Description
+				if len(desc) > 70 {
+					desc = desc[:67] + "..."
+				}
+				fmt.Fprintf(w, "%s\t%s\n", t.Name, desc)
+			}
+			return w.Flush()
+		},
+	}
 }
 
 func streamMessage(c *ForgeClient, id string, body map[string]any) error {

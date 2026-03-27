@@ -74,6 +74,19 @@ func (m *Manager) Delete(id string) error {
 	return m.store.DeleteSession(id)
 }
 
+// ListTools returns all tools available to a session, namespaced as "plugin__tool".
+func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall, error) {
+	sess, err := m.store.LoadSession(id)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+	_, toolDefs, err := m.resolveTools(ctx, sess.Tools)
+	if err != nil {
+		return nil, err
+	}
+	return toolDefs, nil
+}
+
 func (m *Manager) GetMessages(id string, limit, offset int) ([]*Message, error) {
 	if _, err := m.store.LoadSession(id); err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
