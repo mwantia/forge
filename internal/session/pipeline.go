@@ -79,6 +79,12 @@ func (m *Manager) runPipeline(
 		// Intermediate turn: the model wants to call tools.
 		m.persistAssistantMessage(sessionID, result.Content, result.ToolCalls)
 
+		// Stream the intermediate assistant text to the client now, before tool execution.
+		// The client sees this content while tools run in the background.
+		if result.Content != "" {
+			emitContent(out, result)
+		}
+
 		assistantMsg := plugins.ChatMessage{
 			Role:    result.Role,
 			Content: result.Content,
@@ -178,29 +184,30 @@ func (m *Manager) refreshMessageCount(_ *Session, sessionID string) {
 	}
 }
 
-// replayAsStream splits the collected result content into small chunks and
-// emits them to the channel, ending with a done chunk. This preserves the
-// SSE streaming contract for callers even though the content was buffered
-// during tool iterations.
-func replayAsStream(out chan<- pipelineItem, result *plugins.ChatResult) {
+// emitContent splits result content into small chunks and sends them to out
+// without a Done marker. Used for intermediate assistant messages during tool
+// iterations so the client sees them before tool execution completes.
+func emitContent(out chan<- pipelineItem, result *plugins.ChatResult) {
 	const chunkSize = 64
 	content := []rune(result.Content)
-
 	for len(content) > 0 {
 		n := min(chunkSize, len(content))
 		out <- pipelineItem{chunk: &plugins.ChatChunk{
 			ID:    result.ID,
 			Role:  result.Role,
 			Delta: string(content[:n]),
-			Done:  false,
 		}}
 		content = content[n:]
 	}
+}
 
+// replayAsStream emits the result content as chunks followed by a Done chunk.
+// Used for the final assistant response after all tool iterations complete.
+func replayAsStream(out chan<- pipelineItem, result *plugins.ChatResult) {
+	emitContent(out, result)
 	out <- pipelineItem{chunk: &plugins.ChatChunk{
 		ID:       result.ID,
 		Role:     result.Role,
-		Delta:    "",
 		Done:     true,
 		Metadata: result.Metadata,
 	}}

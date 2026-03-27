@@ -8,6 +8,7 @@ import (
 	"os/signal"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge/cmd/forge/client"
 	"github.com/mwantia/forge/cmd/forge/server"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/sandbox"
@@ -53,6 +54,7 @@ func main() {
 	cmd.AddCommand(server.NewAgentCommand())
 	cmd.AddCommand(server.NewPluginCommand())
 	cmd.AddCommand(newSandboxCommand())
+	cmd.AddCommand(client.NewSessionsCommand())
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)

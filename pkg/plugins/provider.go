@@ -84,8 +84,8 @@ func CollectStream(stream ChatStream) (*ChatResult, error) {
 			result.Role = chunk.Role
 		}
 		result.Content += chunk.Delta
+		result.ToolCalls = append(result.ToolCalls, chunk.ToolCalls...)
 		if chunk.Done {
-			result.ToolCalls = chunk.ToolCalls
 			result.Metadata = chunk.Metadata
 			return result, nil
 		}
