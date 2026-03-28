@@ -18,8 +18,10 @@ import (
 
 const PluginName = "consul"
 
+const PluginDescription = "HashiCorp Consul service mesh and key-value store tools"
+
 func init() {
-	plugins.Register(PluginName, NewConsulDriver)
+	plugins.Register(PluginName, PluginDescription, NewConsulDriver)
 }
 
 type ConsulDriver struct {
@@ -54,9 +56,10 @@ func NewConsulDriver(log hclog.Logger) plugins.Driver {
 
 func (d *ConsulDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

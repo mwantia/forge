@@ -14,8 +14,10 @@ import (
 
 const PluginName = "ollama"
 
+const PluginDescription = "Ollama LLM provider for running local language models"
+
 func init() {
-	plugins.Register(PluginName, NewOllamaDriver)
+	plugins.Register(PluginName, PluginDescription, NewOllamaDriver)
 }
 
 // OllamaDriver implements plugins.Driver for the Ollama LLM provider.
@@ -39,9 +41,10 @@ func NewOllamaDriver(log hclog.Logger) plugins.Driver {
 
 func (d *OllamaDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

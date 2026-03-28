@@ -13,8 +13,10 @@ import (
 
 const PluginName = "mcp"
 
+const PluginDescription = "Model Context Protocol (MCP) bridge for external tool servers"
+
 func init() {
-	plugins.Register(PluginName, NewMCPDriver)
+	plugins.Register(PluginName, PluginDescription, NewMCPDriver)
 }
 
 type MCPDriver struct {
@@ -33,9 +35,10 @@ func NewMCPDriver(log hclog.Logger) plugins.Driver {
 
 func (d *MCPDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

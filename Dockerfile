@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS gobuild
+FROM golang:1.25-alpine AS gobuild
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -19,10 +19,11 @@ ARG TARGETARCH
 # Install required packages and manually update the local certificates
 RUN apk add --no-cache tzdata bash ca-certificates && update-ca-certificates
 # Copy executable from build
-COPY --from=gobuild /build/forge /forge
+COPY --from=gobuild /build/forge /app/forge
 # Expose port 9280 and 9500 by default
 EXPOSE 9280/tcp
 EXPOSE 9500/tcp
 # Set entrypoint to run executable
-ENTRYPOINT [ "/forge" ]
+WORKDIR /app
+ENTRYPOINT [ "/app/forge" ]
 CMD [ "agent" ]

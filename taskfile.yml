@@ -3,7 +3,7 @@ version: '3'
 env:
     CGO_ENABLED: '0'
     GOOS: linux
-    MAIN_PATH: ./cmd/forge/main.go
+    MAIN_PATH: ./cmd/forge/
     BUILD_PATH: ./build/forge
     TEST_CONFIG_PATH: ./tests/config.hcl
 
@@ -56,13 +56,13 @@ tasks:
         desc: Compile the project into a static binary
         cmds:
         - task: setup
-        - go build -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
+        - go build -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
 
     run:
         desc: Run the agent with the test configuration
         cmds:
         - task: setup
-        - go run ${MAIN_PATH} agent --config ${TEST_CONFIG_PATH} --log-level INFO
+        - go run -tags all ${MAIN_PATH}... agent --config ${TEST_CONFIG_PATH} --log-level TRACE
         ignore_error: true
 
     release:

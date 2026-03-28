@@ -33,9 +33,10 @@ type ToolsCapabilities struct {
 
 // PluginInfo describes plugin metadata at the driver level.
 type PluginInfo struct {
-	Name    string `json:"name"`
-	Author  string `json:"author"`
-	Version string `json:"version"`
+	Name        string `json:"name"`
+	Author      string `json:"author"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
 }
 
 // PluginConfig holds driver configuration as a generic map.

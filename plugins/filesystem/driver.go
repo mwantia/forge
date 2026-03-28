@@ -15,8 +15,10 @@ import (
 
 const PluginName = "filesystem"
 
+const PluginDescription = "Filesystem tools for reading, writing, and managing files"
+
 func init() {
-	plugins.Register(PluginName, NewFileSystemDriver)
+	plugins.Register(PluginName, PluginDescription, NewFileSystemDriver)
 }
 
 // FileSystemDriver implements plugins.Driver for filesystem access.
@@ -40,9 +42,10 @@ func NewFileSystemDriver(log hclog.Logger) plugins.Driver {
 
 func (d *FileSystemDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

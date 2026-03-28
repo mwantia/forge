@@ -13,8 +13,10 @@ import (
 
 const PluginName = "skills"
 
+const PluginDescription = "Skills tools for executing predefined agent skill definitions"
+
 func init() {
-	plugins.Register(PluginName, NewSkillsDriver)
+	plugins.Register(PluginName, PluginDescription, NewSkillsDriver)
 }
 
 // SkillsDriver implements plugins.Driver for the skills plugin.
@@ -39,9 +41,10 @@ func NewSkillsDriver(log hclog.Logger) plugins.Driver {
 // Lifecycle methods
 func (d *SkillsToolsDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

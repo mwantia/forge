@@ -14,8 +14,10 @@ import (
 
 const PluginName = "searxng"
 
+const PluginDescription = "SearXNG metasearch engine for privacy-respecting web search"
+
 func init() {
-	plugins.Register(PluginName, NewSearXNGDriver)
+	plugins.Register(PluginName, PluginDescription, NewSearXNGDriver)
 }
 
 type SearXNGDriver struct {
@@ -40,9 +42,10 @@ func NewSearXNGDriver(log hclog.Logger) plugins.Driver {
 
 func (d *SearXNGDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
-		Name:    PluginName,
-		Author:  "forge",
-		Version: "0.1.0",
+		Name:        PluginName,
+		Author:      "forge",
+		Version:     "0.1.0",
+		Description: PluginDescription,
 	}
 }
 

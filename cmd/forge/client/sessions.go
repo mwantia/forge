@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"text/tabwriter"
 	"os"
 	"strconv"
+	"strings"
+	"text/tabwriter"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/mwantia/forge/internal/session"
 	"github.com/mwantia/forge/pkg/plugins"
 	"github.com/spf13/cobra"
@@ -195,7 +196,7 @@ func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
 }
 
 func newSessionsSendCmd(client func() *ForgeClient) *cobra.Command {
-	var stream bool
+	var stream, noRender bool
 
 	cmd := &cobra.Command{
 		Use:   "send <id> <content>",
@@ -209,19 +210,20 @@ func newSessionsSendCmd(client func() *ForgeClient) *cobra.Command {
 			}
 
 			if stream {
-				return streamMessage(client(), id, body)
+				return streamMessage(client(), id, body, noRender)
 			}
 
 			var result plugins.ChatResult
 			if err := client().post("/v1/sessions/"+id+"/messages", body, &result); err != nil {
 				return err
 			}
-			fmt.Println(result.Content)
+			fmt.Println(renderMarkdown(result.Content, noRender))
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&stream, "stream", false, "Stream the response as it arrives")
+	cmd.Flags().BoolVar(&noRender, "no-render", false, "Print raw output without markdown rendering")
 
 	return cmd
 }
@@ -258,13 +260,14 @@ func newSessionsToolsCmd(client func() *ForgeClient) *cobra.Command {
 	}
 }
 
-func streamMessage(c *ForgeClient, id string, body map[string]any) error {
+func streamMessage(c *ForgeClient, id string, body map[string]any, noRender bool) error {
 	resp, err := c.postRaw("/v1/sessions/"+id+"/messages", body)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
+	var buf strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -273,18 +276,30 @@ func streamMessage(c *ForgeClient, id string, body map[string]any) error {
 		}
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
-			fmt.Println()
-			return nil
+			break
 		}
 		var chunk plugins.ChatChunk
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			continue
 		}
-		if chunk.Delta != "" {
-			fmt.Print(chunk.Delta)
-		}
+		buf.WriteString(chunk.Delta)
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	fmt.Println(renderMarkdown(buf.String(), noRender))
+	return nil
+}
+
+func renderMarkdown(content string, noRender bool) string {
+	if noRender {
+		return content
+	}
+	out, err := glamour.Render(content, "auto")
+	if err != nil {
+		return content
+	}
+	return out
 }
 
 func printSession(s *session.Session) {
