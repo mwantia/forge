@@ -61,10 +61,11 @@ func newSessionsListCmd(client func() *ForgeClient) *cobra.Command {
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tMODEL\tMESSAGES\tCREATED")
+			fmt.Fprintln(w, "ID\tNAME\tMODEL\tMESSAGES\tCREATED")
 			for _, s := range resp.Sessions {
-				fmt.Fprintf(w, "%s\t%s\t%d\t%s\n",
+				fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
 					s.ID,
+					s.Name,
 					s.Model,
 					s.MessageCount,
 					s.CreatedAt.Format(time.DateTime),
@@ -82,6 +83,7 @@ func newSessionsListCmd(client func() *ForgeClient) *cobra.Command {
 
 func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
 	var (
+		name              string
 		model             string
 		memory            string
 		tools             []string
@@ -94,6 +96,7 @@ func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
 		Short: "Create a new session",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts := session.CreateOptions{
+				Name:              name,
 				Model:             model,
 				Memory:            memory,
 				Tools:             tools,
@@ -109,6 +112,7 @@ func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&name, "name", "", "Session name (auto-generated if not set)")
 	cmd.Flags().StringVar(&model, "model", "", "Model to use (format: provider/model, required)")
 	cmd.Flags().StringVar(&memory, "memory", "", "Memory plugin name")
 	cmd.Flags().StringSliceVar(&tools, "tools", nil, "Tool plugin names (comma-separated)")
@@ -305,6 +309,7 @@ func renderMarkdown(content string, noRender bool) string {
 func printSession(s *session.Session) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(w, "ID:\t%s\n", s.ID)
+	fmt.Fprintf(w, "Name:\t%s\n", s.Name)
 	fmt.Fprintf(w, "Model:\t%s\n", s.Model)
 	if s.Memory != "" {
 		fmt.Fprintf(w, "Memory:\t%s\n", s.Memory)

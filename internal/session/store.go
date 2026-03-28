@@ -55,6 +55,29 @@ func (s *FileStore) LoadSession(id string) (*Session, error) {
 	return &sess, nil
 }
 
+func (s *FileStore) FindByName(name string) (*Session, error) {
+	entries, err := os.ReadDir(s.dataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		sess, err := s.LoadSession(e.Name())
+		if err != nil {
+			continue
+		}
+		if sess.Name == name {
+			return sess, nil
+		}
+	}
+	return nil, nil
+}
+
 func (s *FileStore) DeleteSession(id string) error {
 	return os.RemoveAll(s.sessionDir(id))
 }

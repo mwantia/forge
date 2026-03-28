@@ -30,6 +30,7 @@ func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) 
 
 // CreateOptions is the request body for POST /v1/sessions.
 type CreateOptions struct {
+	Name              string   `json:"name,omitempty"`
 	Model             string   `json:"model"               binding:"required"`
 	Memory            string   `json:"memory,omitempty"`
 	Tools             []string `json:"tools,omitempty"`
@@ -41,9 +42,14 @@ func (m *Manager) Create(opts CreateOptions) (*Session, error) {
 	if opts.MaxToolIterations <= 0 {
 		opts.MaxToolIterations = defaultMaxToolIterations
 	}
+	name := opts.Name
+	if name == "" {
+		name = m.store.generateUniqueName()
+	}
 	now := time.Now()
 	sess := &Session{
 		ID:                uuid.New().String(),
+		Name:              name,
 		Model:             opts.Model,
 		Memory:            opts.Memory,
 		Tools:             opts.Tools,
@@ -60,8 +66,16 @@ func (m *Manager) Create(opts CreateOptions) (*Session, error) {
 
 func (m *Manager) Get(id string) (*Session, error) {
 	sess, err := m.store.LoadSession(id)
+	if err == nil {
+		return sess, nil
+	}
+	// Fall back to name lookup
+	sess, err = m.store.FindByName(id)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
+	}
+	if sess == nil {
+		return nil, fmt.Errorf("session not found: %s", id)
 	}
 	return sess, nil
 }
@@ -71,14 +85,18 @@ func (m *Manager) List(limit, offset int) ([]*Session, error) {
 }
 
 func (m *Manager) Delete(id string) error {
-	return m.store.DeleteSession(id)
+	sess, err := m.Get(id)
+	if err != nil {
+		return err
+	}
+	return m.store.DeleteSession(sess.ID)
 }
 
 // ListTools returns all tools available to a session, namespaced as "plugin__tool".
 func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall, error) {
-	sess, err := m.store.LoadSession(id)
+	sess, err := m.Get(id)
 	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
+		return nil, err
 	}
 	_, toolDefs, err := m.resolveTools(ctx, sess.Tools)
 	if err != nil {
@@ -88,21 +106,22 @@ func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall,
 }
 
 func (m *Manager) GetMessages(id string, limit, offset int) ([]*Message, error) {
-	if _, err := m.store.LoadSession(id); err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
+	sess, err := m.Get(id)
+	if err != nil {
+		return nil, err
 	}
-	return m.store.ListMessages(id, limit, offset)
+	return m.store.ListMessages(sess.ID, limit, offset)
 }
 
 // Dispatch saves the user message, runs the full pipeline, and returns a stream
 // of the final assistant response. The stream must always be closed by the caller.
 func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plugins.ChatStream, error) {
-	sess, err := m.store.LoadSession(sessionID)
+	sess, err := m.Get(sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("session not found: %w", err)
+		return nil, err
 	}
 
-	history, err := m.store.ListMessages(sessionID, 0, 0)
+	history, err := m.store.ListMessages(sess.ID, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load message history: %w", err)
 	}
@@ -120,12 +139,12 @@ func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plug
 		Content:   content,
 		CreatedAt: time.Now(),
 	}
-	if err := m.store.SaveMessage(sessionID, userMsg); err != nil {
+	if err := m.store.SaveMessage(sess.ID, userMsg); err != nil {
 		return nil, fmt.Errorf("failed to save user message: %w", err)
 	}
 
 	out := make(chan pipelineItem, 256)
-	go m.runPipeline(ctx, sess, sessionID, messages, toolDefs, toolsMap, out)
+	go m.runPipeline(ctx, sess, sess.ID, messages, toolDefs, toolsMap, out)
 	return &pipelineStream{ch: out}, nil
 }
 

@@ -4,6 +4,7 @@ import "time"
 
 type Session struct {
 	ID                string    `json:"id"`
+	Name              string    `json:"name"`
 	Model             string    `json:"model"`
 	Memory            string    `json:"memory,omitempty"`
 	Tools             []string  `json:"tools,omitempty"`
