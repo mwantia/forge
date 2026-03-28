@@ -155,10 +155,21 @@ func newSessionsDeleteCmd(client func() *ForgeClient) *cobra.Command {
 }
 
 func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "messages",
+		Short: "Manage messages in a session",
+	}
+	cmd.AddCommand(newSessionsMessagesListCmd(client))
+	cmd.AddCommand(newSessionsMessagesViewCmd(client))
+	cmd.AddCommand(newSessionsMessagesCompactCmd(client))
+	return cmd
+}
+
+func newSessionsMessagesListCmd(client func() *ForgeClient) *cobra.Command {
 	var limit, offset int
 
 	cmd := &cobra.Command{
-		Use:   "messages <id>",
+		Use:   "list <id>",
 		Short: "List messages in a session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -176,14 +187,15 @@ func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "CREATED\tROLE\tCONTENT")
+			fmt.Fprintln(w, "ID\tCREATED\tROLE\tCONTENT")
 			for _, m := range resp.Messages {
 				content := m.Content
 				if len(content) > 80 {
 					content = content[:77] + "..."
 				}
 				content = strings.ReplaceAll(content, "\n", " ")
-				fmt.Fprintf(w, "%s\t%s\t%s\n",
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+					m.ID,
 					m.CreatedAt.Format(time.DateTime),
 					m.Role,
 					content,
@@ -195,6 +207,72 @@ func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
 
 	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum number of messages to return")
 	cmd.Flags().IntVar(&offset, "offset", 0, "Number of messages to skip")
+
+	return cmd
+}
+
+func newSessionsMessagesViewCmd(client func() *ForgeClient) *cobra.Command {
+	var noRender bool
+
+	cmd := &cobra.Command{
+		Use:   "view <session-id> <message-id>",
+		Short: "View the content of a single message",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID, messageID := args[0], args[1]
+			var msg session.Message
+			if err := client().get("/v1/sessions/"+sessionID+"/messages/"+messageID, &msg); err != nil {
+				return err
+			}
+
+			var sb strings.Builder
+			sb.WriteString("---\n")
+			fmt.Fprintf(&sb, "ID:      %s\n", msg.ID)
+			fmt.Fprintf(&sb, "Role:    %s\n", msg.Role)
+			fmt.Fprintf(&sb, "Created: %s\n", msg.CreatedAt.Format(time.DateTime))
+			if len(msg.ToolCalls) > 0 {
+				fmt.Fprintf(&sb, "Tools:   %d\n", len(msg.ToolCalls))
+			}
+			sb.WriteString("---\n")
+			if msg.Content != "" {
+				sb.WriteString("\n")
+				sb.WriteString(msg.Content)
+			}
+			fmt.Println(renderMarkdown(sb.String(), noRender))
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&noRender, "no-render", false, "Print raw content without markdown rendering")
+	return cmd
+}
+
+func newSessionsMessagesCompactCmd(client func() *ForgeClient) *cobra.Command {
+	var stripTools bool
+
+	cmd := &cobra.Command{
+		Use:   "compact <id>",
+		Short: "Compact messages in a session by removing redundant entries",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !stripTools {
+				return fmt.Errorf("no compaction options specified (use --strip-tools)")
+			}
+
+			body := map[string]any{
+				"strip_tools": stripTools,
+			}
+			var result session.CompactResult
+			if err := client().post("/v1/sessions/"+args[0]+"/messages/compact", body, &result); err != nil {
+				return err
+			}
+
+			fmt.Printf("Compacted: %d → %d messages (%d deleted)\n", result.Before, result.After, result.Deleted)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&stripTools, "strip-tools", false, "Remove tool result messages and intermediate assistant tool-call turns")
 
 	return cmd
 }
@@ -299,7 +377,14 @@ func renderMarkdown(content string, noRender bool) string {
 	if noRender {
 		return content
 	}
-	out, err := glamour.Render(content, "auto")
+	r, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(0),
+	)
+	if err != nil {
+		return content
+	}
+	out, err := r.Render(content)
 	if err != nil {
 		return content
 	}

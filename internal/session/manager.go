@@ -105,6 +105,14 @@ func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall,
 	return toolDefs, nil
 }
 
+func (m *Manager) GetMessage(sessionID, messageID string) (*Message, error) {
+	sess, err := m.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	return m.store.GetMessage(sess.ID, messageID)
+}
+
 func (m *Manager) GetMessages(id string, limit, offset int) ([]*Message, error) {
 	sess, err := m.Get(id)
 	if err != nil {
@@ -146,6 +154,40 @@ func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plug
 	out := make(chan pipelineItem, 256)
 	go m.runPipeline(ctx, sess, sess.ID, messages, toolDefs, toolsMap, out)
 	return &pipelineStream{ch: out}, nil
+}
+
+type CompactOptions struct {
+	StripTools bool `json:"strip_tools"`
+}
+
+type CompactResult struct {
+	Before  int `json:"before"`
+	After   int `json:"after"`
+	Deleted int `json:"deleted"`
+}
+
+func (m *Manager) Compact(id string, opts CompactOptions) (*CompactResult, error) {
+	sess, err := m.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
+	before := m.store.CountMessages(sess.ID)
+
+	deleted, err := m.store.CompactMessages(sess.ID, opts.StripTools)
+	if err != nil {
+		return nil, fmt.Errorf("compaction failed: %w", err)
+	}
+
+	after := m.store.CountMessages(sess.ID)
+
+	sess.MessageCount = after
+	sess.UpdatedAt = time.Now()
+	if err := m.store.SaveSession(sess); err != nil {
+		m.log.Error("Failed to update session metadata after compact", "error", err)
+	}
+
+	return &CompactResult{Before: before, After: after, Deleted: deleted}, nil
 }
 
 func (m *Manager) resolveTools(ctx context.Context, names []string) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {

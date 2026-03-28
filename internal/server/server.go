@@ -68,6 +68,8 @@ func (s *Server) Setup() (func() error, error) {
 	authed.GET("sessions/:id/tools", api.ListSessionTools(mgr))
 	authed.GET("sessions/:id/messages", api.ListMessages(mgr))
 	authed.POST("sessions/:id/messages", api.AddMessage(mgr))
+	authed.GET("sessions/:id/messages/:message_id", api.GetMessage(mgr))
+	authed.POST("sessions/:id/messages/compact", api.CompactMessages(mgr))
 
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -160,6 +160,61 @@ func (s *FileStore) ListMessages(sessionID string, limit, offset int) ([]*Messag
 	return messages, nil
 }
 
+// GetMessage finds and returns a single message by ID within a session.
+// It scans for a file matching *_{messageID}.json in the messages directory.
+func (s *FileStore) GetMessage(sessionID, messageID string) (*Message, error) {
+	matches, err := filepath.Glob(filepath.Join(s.messagesDir(sessionID), "*_"+messageID+".json"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for message: %w", err)
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("message not found: %s", messageID)
+	}
+	var msg Message
+	if err := readJSON(matches[0], &msg); err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+// CompactMessages deletes message files matching the compaction criteria.
+// When stripTools is true, it removes all role=tool messages and all
+// role=assistant messages that contain tool_calls (intermediate turns).
+// Returns the number of files deleted.
+func (s *FileStore) CompactMessages(sessionID string, stripTools bool) (int, error) {
+	dir := s.messagesDir(sessionID)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to read messages directory: %w", err)
+	}
+
+	deleted := 0
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		var msg Message
+		if err := readJSON(path, &msg); err != nil {
+			continue
+		}
+		remove := false
+		if stripTools {
+			remove = msg.Role == "tool" || (msg.Role == "assistant" && len(msg.ToolCalls) > 0)
+		}
+		if remove {
+			if err := os.Remove(path); err != nil {
+				return deleted, fmt.Errorf("failed to delete message %s: %w", msg.ID, err)
+			}
+			deleted++
+		}
+	}
+	return deleted, nil
+}
+
 func (s *FileStore) CountMessages(sessionID string) int {
 	dir := s.messagesDir(sessionID)
 	entries, err := os.ReadDir(dir)

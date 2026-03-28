@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.33.7
 	github.com/hashicorp/go-hclog v1.6.3
+	github.com/hashicorp/nomad/api v0.0.0-20260325144059-0c3fa0187887
 	github.com/mark3labs/mcp-go v0.46.0
 	github.com/zclconf/go-cty v1.13.0
 	google.golang.org/grpc v1.79.3
@@ -48,7 +49,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/nomad/api v0.0.0-20260325144059-0c3fa0187887 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

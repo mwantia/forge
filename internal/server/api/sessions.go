@@ -111,6 +111,38 @@ func ListSessionTools(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
+func GetMessage(mgr *session.Manager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		msg, err := mgr.GetMessage(c.Param("id"), c.Param("message_id"))
+		if err != nil {
+			respondError(c, http.StatusNotFound, "not_found", err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, msg)
+	}
+}
+
+func CompactMessages(mgr *session.Manager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		var opts session.CompactOptions
+		if err := c.ShouldBindJSON(&opts); err != nil {
+			respondError(c, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+		if !opts.StripTools {
+			respondError(c, http.StatusBadRequest, "bad_request", "no compaction options specified")
+			return
+		}
+		result, err := mgr.Compact(id, opts)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	}
+}
+
 func ListMessages(mgr *session.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
