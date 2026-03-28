@@ -31,6 +31,9 @@ func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) 
 // CreateOptions is the request body for POST /v1/sessions.
 type CreateOptions struct {
 	Name              string   `json:"name,omitempty"`
+	Title             string   `json:"title,omitempty"`
+	Description       string   `json:"description,omitempty"`
+	Parent            string   `json:"parent,omitempty"`
 	Model             string   `json:"model"               binding:"required"`
 	Memory            string   `json:"memory,omitempty"`
 	Tools             []string `json:"tools,omitempty"`
@@ -50,6 +53,9 @@ func (m *Manager) Create(opts CreateOptions) (*Session, error) {
 	sess := &Session{
 		ID:                uuid.New().String(),
 		Name:              name,
+		Title:             opts.Title,
+		Description:       opts.Description,
+		Parent:            opts.Parent,
 		Model:             opts.Model,
 		Memory:            opts.Memory,
 		Tools:             opts.Tools,
@@ -80,8 +86,8 @@ func (m *Manager) Get(id string) (*Session, error) {
 	return sess, nil
 }
 
-func (m *Manager) List(limit, offset int) ([]*Session, error) {
-	return m.store.ListSessions(limit, offset)
+func (m *Manager) List(opts ListOptions) ([]*Session, error) {
+	return m.store.ListSessions(opts)
 }
 
 func (m *Manager) Delete(id string) error {
@@ -92,13 +98,37 @@ func (m *Manager) Delete(id string) error {
 	return m.store.DeleteSession(sess.ID)
 }
 
-// ListTools returns all tools available to a session, namespaced as "plugin__tool".
+// UpdateMetaOptions holds the fields that can be updated on an existing session.
+type UpdateMetaOptions struct {
+	Title       *string `json:"title,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
+func (m *Manager) UpdateMeta(id string, opts UpdateMetaOptions) (*Session, error) {
+	sess, err := m.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if opts.Title != nil {
+		sess.Title = *opts.Title
+	}
+	if opts.Description != nil {
+		sess.Description = *opts.Description
+	}
+	sess.UpdatedAt = time.Now()
+	if err := m.store.SaveSession(sess); err != nil {
+		return nil, fmt.Errorf("failed to save session: %w", err)
+	}
+	return sess, nil
+}
+
+// ListTools returns all tools available to a session, including built-in session tools.
 func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall, error) {
 	sess, err := m.Get(id)
 	if err != nil {
 		return nil, err
 	}
-	_, toolDefs, err := m.resolveTools(ctx, sess.Tools)
+	_, toolDefs, err := m.resolveAllTools(ctx, sess)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +166,7 @@ func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plug
 
 	messages := buildChatMessages(sess, history, content)
 
-	toolsMap, toolDefs, err := m.resolveTools(ctx, sess.Tools)
+	toolsMap, toolDefs, err := m.resolveAllTools(ctx, sess)
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +218,27 @@ func (m *Manager) Compact(id string, opts CompactOptions) (*CompactResult, error
 	}
 
 	return &CompactResult{Before: before, After: after, Deleted: deleted}, nil
+}
+
+// resolveAllTools resolves plugin tools for the session and appends the built-in
+// session management tools (agent__session_*).
+func (m *Manager) resolveAllTools(ctx context.Context, sess *Session) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
+	toolsMap, toolDefs, err := m.resolveTools(ctx, sess.Tools)
+	if err != nil {
+		return nil, nil, err
+	}
+	sp := &sessionToolsPlugin{manager: m, sessionID: sess.ID}
+	resp, _ := sp.ListTools(ctx, plugins.ListToolsFilter{})
+	for _, def := range resp.Tools {
+		prefixed := "agent__" + def.Name
+		toolDefs = append(toolDefs, plugins.ToolCall{
+			Name:        prefixed,
+			Description: def.Description,
+			Parameters:  def.Parameters,
+		})
+		toolsMap[prefixed] = sp
+	}
+	return toolsMap, toolDefs, nil
 }
 
 func (m *Manager) resolveTools(ctx context.Context, names []string) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {

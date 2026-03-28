@@ -82,7 +82,15 @@ func (s *FileStore) DeleteSession(id string) error {
 	return os.RemoveAll(s.sessionDir(id))
 }
 
-func (s *FileStore) ListSessions(limit, offset int) ([]*Session, error) {
+// ListOptions controls filtering and pagination for ListSessions.
+// ParentID nil = no filter; ptr to "" = root sessions only; ptr to an ID = children of that session.
+type ListOptions struct {
+	Limit    int
+	Offset   int
+	ParentID *string
+}
+
+func (s *FileStore) ListSessions(opts ListOptions) ([]*Session, error) {
 	entries, err := os.ReadDir(s.dataDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -100,6 +108,9 @@ func (s *FileStore) ListSessions(limit, offset int) ([]*Session, error) {
 		if err != nil {
 			continue
 		}
+		if opts.ParentID != nil && sess.Parent != *opts.ParentID {
+			continue
+		}
 		sessions = append(sessions, sess)
 	}
 
@@ -107,12 +118,12 @@ func (s *FileStore) ListSessions(limit, offset int) ([]*Session, error) {
 		return sessions[i].CreatedAt.After(sessions[j].CreatedAt)
 	})
 
-	if offset >= len(sessions) {
+	if opts.Offset >= len(sessions) {
 		return []*Session{}, nil
 	}
-	sessions = sessions[offset:]
-	if limit > 0 && len(sessions) > limit {
-		sessions = sessions[:limit]
+	sessions = sessions[opts.Offset:]
+	if opts.Limit > 0 && len(sessions) > opts.Limit {
+		sessions = sessions[:opts.Limit]
 	}
 	return sessions, nil
 }

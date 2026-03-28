@@ -48,7 +48,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Namespace the job belongs to",
 				},
 			},
-			"required": []string{"job_id"},
+			"required": []any{"job_id"},
 		},
 	},
 
@@ -73,7 +73,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Namespace the job belongs to",
 				},
 			},
-			"required": []string{"job_id"},
+			"required": []any{"job_id"},
 		},
 	},
 
@@ -95,7 +95,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "JSON-encoded Nomad job specification (api.Job struct)",
 				},
 			},
-			"required": []string{"job_spec"},
+			"required": []any{"job_spec"},
 		},
 	},
 
@@ -126,7 +126,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Namespace the job belongs to",
 				},
 			},
-			"required": []string{"job_id"},
+			"required": []any{"job_id"},
 		},
 	},
 
@@ -171,7 +171,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Allocation ID (full or prefix)",
 				},
 			},
-			"required": []string{"alloc_id"},
+			"required": []any{"alloc_id"},
 		},
 	},
 
@@ -212,7 +212,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Node ID to retrieve",
 				},
 			},
-			"required": []string{"node_id"},
+			"required": []any{"node_id"},
 		},
 	},
 

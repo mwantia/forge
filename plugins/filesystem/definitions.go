@@ -5,7 +5,7 @@ import "github.com/mwantia/forge/pkg/plugins"
 // toolDefinitions maps tool names to their JSON Schema definitions.
 var toolDefinitions = map[string]plugins.ToolDefinition{
 	"create": {
-		Name:        "create",
+		Name:        "workspace_create",
 		Description: "Create a new file with optional content",
 		Tags:        []string{"filesystem", "write"},
 		Annotations: plugins.ToolAnnotations{
@@ -24,11 +24,11 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Initial file content (optional, defaults to empty)",
 				},
 			},
-			"required": []string{"path"},
+			"required": []any{"path"},
 		},
 	},
 	"read": {
-		Name:        "read",
+		Name:        "workspace_read",
 		Description: "Read the contents of a file",
 		Tags:        []string{"filesystem", "read"},
 		Annotations: plugins.ToolAnnotations{
@@ -44,11 +44,11 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "File path relative to workspace home",
 				},
 			},
-			"required": []string{"path"},
+			"required": []any{"path"},
 		},
 	},
 	"write": {
-		Name:        "write",
+		Name:        "workspace_write",
 		Description: "Write content to a file, creating it if it does not exist",
 		Tags:        []string{"filesystem", "write"},
 		Annotations: plugins.ToolAnnotations{
@@ -67,11 +67,11 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Content to write to the file",
 				},
 			},
-			"required": []string{"path", "content"},
+			"required": []any{"path", "content"},
 		},
 	},
 	"delete": {
-		Name:        "delete",
+		Name:        "workspace_delete",
 		Description: "Delete a file or directory (recursive)",
 		Tags:        []string{"filesystem", "write"},
 		Annotations: plugins.ToolAnnotations{
@@ -87,11 +87,11 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "File or directory path relative to workspace home",
 				},
 			},
-			"required": []string{"path"},
+			"required": []any{"path"},
 		},
 	},
 	"list": {
-		Name:        "list",
+		Name:        "workspace_list",
 		Description: "List the contents of a directory",
 		Tags:        []string{"filesystem", "read"},
 		Annotations: plugins.ToolAnnotations{
@@ -110,7 +110,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		},
 	},
 	"exec": {
-		Name:        "exec",
+		Name:        "workspace_exec",
 		Description: "Execute a command in the workspace directory",
 		Tags:        []string{"system", "exec"},
 		Annotations: plugins.ToolAnnotations{
@@ -134,7 +134,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Working directory for the command (defaults to workspace home)",
 				},
 			},
-			"required": []string{"command"},
+			"required": []any{"command"},
 		},
 	},
 }

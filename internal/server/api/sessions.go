@@ -14,7 +14,12 @@ func ListSessions(mgr *session.Manager) gin.HandlerFunc {
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
-		sessions, err := mgr.List(limit, offset)
+		opts := session.ListOptions{Limit: limit, Offset: offset}
+		if p := c.Query("parent"); p != "" || c.Request.URL.Query().Has("parent") {
+			opts.ParentID = &p
+		}
+
+		sessions, err := mgr.List(opts)
 		if err != nil {
 			respondError(c, http.StatusInternalServerError, "internal_error", err.Error())
 			return
