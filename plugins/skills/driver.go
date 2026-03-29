@@ -11,9 +11,12 @@ import (
 	"github.com/mwantia/forge/pkg/plugins"
 )
 
-const PluginName = "skills"
-
-const PluginDescription = "Skills tools for executing predefined agent skill definitions"
+const (
+	PluginName        = "skills"
+	PluginAuthor      = "forge"
+	PluginVersion     = "0.1.0"
+	PluginDescription = "Skills tools for executing predefined agent skill definitions"
+)
 
 func init() {
 	plugins.Register(PluginName, PluginDescription, NewSkillsDriver)
@@ -24,6 +27,7 @@ type SkillsToolsDriver struct {
 	plugins.UnimplementedToolsPlugin
 	log    hclog.Logger
 	config *SkillsToolsConfig
+	path   string
 	skills map[string]*Skill
 }
 
@@ -42,13 +46,22 @@ func NewSkillsDriver(log hclog.Logger) plugins.Driver {
 func (d *SkillsToolsDriver) GetPluginInfo() plugins.PluginInfo {
 	return plugins.PluginInfo{
 		Name:        PluginName,
-		Author:      "forge",
-		Version:     "0.1.0",
+		Author:      PluginAuthor,
+		Version:     PluginVersion,
 		Description: PluginDescription,
 	}
 }
 
 func (d *SkillsToolsDriver) ProbePlugin(ctx context.Context) (bool, error) {
+	// Validate path exists
+	info, err := os.Stat(d.path)
+	if err != nil {
+		return false, fmt.Errorf("failed to access path '%s': %w", d.path, err)
+	}
+	if !info.IsDir() {
+		return false, fmt.Errorf("path '%s' is not a directory", d.path)
+	}
+
 	return true, nil
 }
 
@@ -62,7 +75,19 @@ func (d *SkillsToolsDriver) GetCapabilities(ctx context.Context) (*plugins.Drive
 }
 
 func (d *SkillsToolsDriver) OpenDriver(ctx context.Context) error {
+	d.log.Info("Searching SKILL tools", "path", d.path)
+	// Scan and load skills
+	skills, err := d.scanSkills(d.path)
+	if err != nil {
+		return fmt.Errorf("failed to scan skills: %w", err)
+	}
+	d.skills = skills
 
+	for _, skill := range skills {
+		d.log.Debug("Skill", "name", skill.Name, "desc", skill.Description, "path", skill.Path)
+	}
+
+	d.log.Info("Loaded skills", "count", len(skills), "path", d.path)
 	return nil
 }
 
@@ -75,32 +100,11 @@ func (d *SkillsToolsDriver) ConfigDriver(ctx context.Context, config plugins.Plu
 		return fmt.Errorf("failed to decode config: %v", err)
 	}
 
-	path := d.config.Path
-	if path == "" {
-		path = "./skills"
-	}
-	// Validate path exists
-	info, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("failed to access path '%s': %w", path, err)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("path '%s' is not a directory", path)
+	d.path = d.config.Path
+	if d.path == "" {
+		d.path = "./skills"
 	}
 
-	d.log.Info("Searching SKILL tools", "path", path)
-	// Scan and load skills
-	skills, err := d.scanSkills(path)
-	if err != nil {
-		return fmt.Errorf("failed to scan skills: %w", err)
-	}
-	d.skills = skills
-
-	for _, skill := range skills {
-		d.log.Debug("Skill", "name", skill.Name, "desc", skill.Description, "path", skill.Path)
-	}
-
-	d.log.Info("Loaded skills", "count", len(skills), "path", path)
 	return nil
 }
 

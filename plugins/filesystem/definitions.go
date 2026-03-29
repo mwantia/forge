@@ -10,7 +10,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Tags:        []string{"filesystem", "write"},
 		Annotations: plugins.ToolAnnotations{
 			Idempotent: false,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -34,7 +34,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -53,7 +53,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Tags:        []string{"filesystem", "write"},
 		Annotations: plugins.ToolAnnotations{
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -77,7 +77,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			Destructive:          true,
 			RequiresConfirmation: true,
-			CostHint:             "cheap",
+			CostHint:             plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -115,7 +115,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Tags:        []string{"system", "exec"},
 		Annotations: plugins.ToolAnnotations{
 			RequiresConfirmation: true,
-			CostHint:             "expensive",
+			CostHint:             plugins.ToolCostExpensive,
 		},
 		Parameters: map[string]any{
 			"type": "object",

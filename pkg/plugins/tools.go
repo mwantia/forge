@@ -6,6 +6,15 @@ import (
 	"github.com/mwantia/forge/pkg/errors"
 )
 
+type ToolCostHint string
+
+var (
+	ToolCostFree      ToolCostHint = "free"
+	ToolCostCheap     ToolCostHint = "cheap"
+	ToolCostModerate  ToolCostHint = "moderate"
+	ToolCostExpensive ToolCostHint = "expensive"
+)
+
 // ToolsPlugin acts as bridge (or summary of embedded tools) for tool calling.
 type ToolsPlugin interface {
 	BasePlugin
@@ -32,11 +41,11 @@ type ListToolsResponse struct {
 // --- Tool definition ---
 
 type ToolAnnotations struct {
-	ReadOnly             bool   `json:"read_only,omitempty"`
-	Destructive          bool   `json:"destructive,omitempty"`
-	Idempotent           bool   `json:"idempotent,omitempty"`
-	RequiresConfirmation bool   `json:"requires_confirmation,omitempty"`
-	CostHint             string `json:"cost_hint,omitempty"`
+	ReadOnly             bool         `json:"read_only,omitempty"`
+	Destructive          bool         `json:"destructive,omitempty"`
+	Idempotent           bool         `json:"idempotent,omitempty"`
+	RequiresConfirmation bool         `json:"requires_confirmation,omitempty"`
+	CostHint             ToolCostHint `json:"cost_hint,omitempty"`
 }
 
 type ToolDefinition struct {
@@ -44,7 +53,7 @@ type ToolDefinition struct {
 	Description        string          `json:"description"`
 	Parameters         map[string]any  `json:"parameters"`
 	Tags               []string        `json:"tags,omitempty"`
-	Annotations        ToolAnnotations `json:"annotations,omitempty"`
+	Annotations        ToolAnnotations `json:"annotations"`
 	Version            string          `json:"version,omitempty"`
 	Deprecated         bool            `json:"deprecated,omitempty"`
 	DeprecationMessage string          `json:"deprecation_message,omitempty"`

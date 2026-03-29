@@ -10,7 +10,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -42,7 +42,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",

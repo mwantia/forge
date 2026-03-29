@@ -3,6 +3,7 @@ package skills
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,15 +19,14 @@ func (p *SkillsToolsDriver) GetLifecycle() plugins.Lifecycle {
 // scanSkills scans the directory for SKILL.md files and parses them.
 func (p *SkillsToolsDriver) scanSkills(root string) (map[string]*Skill, error) {
 	skills := make(map[string]*Skill)
-
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
-		if info.Name() != "SKILL.md" {
+		if d.Name() != "SKILL.md" {
 			return nil
 		}
 
@@ -37,12 +37,12 @@ func (p *SkillsToolsDriver) scanSkills(root string) (map[string]*Skill, error) {
 		}
 
 		skills[skill.Name] = skill
-		p.log.Debug("Loaded skill", "name", skill.Name, "path", path)
+		p.log.Trace("Loaded skill", "name", skill.Name, "path", path)
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to walk root directory: %w", err)
 	}
 
 	return skills, nil
@@ -57,14 +57,13 @@ func (p *SkillsToolsDriver) parseSkillFile(path string) (*Skill, error) {
 
 	skill := &Skill{
 		Path:       path,
-		Parameters: make(map[string]Parameter),
 		Content:    string(content),
+		Parameters: make(map[string]Parameter),
 	}
 
 	// Extract skill name from parent directory
 	dir := filepath.Dir(path)
 	skill.Name = filepath.Base(dir)
-
 	// Parse frontmatter and content
 	frontmatter, body, err := parseFrontmatter(string(content))
 	if err == nil && frontmatter != nil {
@@ -75,17 +74,26 @@ func (p *SkillsToolsDriver) parseSkillFile(path string) (*Skill, error) {
 		if desc, ok := frontmatter["description"].(string); ok {
 			skill.Description = desc
 		}
+		if readonly, ok := frontmatter["readonly"].(string); ok {
+			skill.Readonly = strings.ToLower(readonly) == "true"
+		}
+		if destructive, ok := frontmatter["destructive"].(string); ok {
+			skill.Destructive = strings.ToLower(destructive) == "true"
+		}
+		if idempotent, ok := frontmatter["idempotent"].(string); ok {
+			skill.Idempotent = strings.ToLower(idempotent) == "true"
+		}
 		if version, ok := frontmatter["version"].(string); ok {
 			skill.Version = version
 		}
 		if deprecated, ok := frontmatter["deprecated"].(string); ok {
-			skill.Deprecated = deprecated == "true"
+			skill.Deprecated = strings.ToLower(deprecated) == "true"
 		}
 		if msg, ok := frontmatter["deprecation_message"].(string); ok {
 			skill.DeprecationMessage = msg
 		}
 		if tagsRaw, ok := frontmatter["tags"].(string); ok && tagsRaw != "" {
-			for _, tag := range strings.Split(tagsRaw, ",") {
+			for tag := range strings.SplitSeq(tagsRaw, ",") {
 				if t := strings.TrimSpace(tag); t != "" {
 					skill.Tags = append(skill.Tags, t)
 				}
@@ -115,6 +123,10 @@ func (p *SkillsToolsDriver) parseSkillFile(path string) (*Skill, error) {
 		}
 	}
 
+	if skill.Name == "" {
+		return nil, fmt.Errorf("skill name is required")
+	}
+
 	// Use body as description if not set in frontmatter
 	if skill.Description == "" {
 		// Use first paragraph or line
@@ -131,10 +143,6 @@ func (p *SkillsToolsDriver) parseSkillFile(path string) (*Skill, error) {
 		}
 	}
 
-	if skill.Name == "" {
-		return nil, fmt.Errorf("skill name is required")
-	}
-
 	return skill, nil
 }
 
@@ -146,12 +154,12 @@ func parseFrontmatter(content string) (map[string]any, string, error) {
 	}
 
 	// Find closing delimiter
-	delimStart := strings.Index(content, "---")
-	if delimStart == -1 {
+	_, after, ok := strings.Cut(content, "---")
+	if !ok {
 		return nil, content, fmt.Errorf("no opening delimiter")
 	}
 
-	remaining := content[delimStart+3:] // skip opening ---
+	remaining := after // skip opening ---
 	if strings.HasPrefix(remaining, "\r\n") {
 		remaining = remaining[2:]
 	} else if strings.HasPrefix(remaining, "\n") {

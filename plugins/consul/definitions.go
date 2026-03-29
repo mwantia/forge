@@ -10,7 +10,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type":       "object",
@@ -25,7 +25,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -49,7 +49,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -69,7 +69,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -98,7 +98,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -123,7 +123,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -156,7 +156,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -181,7 +181,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -207,7 +207,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -232,7 +232,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -258,7 +258,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 			ReadOnly:    false,
 			Destructive: false,
 			Idempotent:  true,
-			CostHint:    "cheap",
+			CostHint:    plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -289,7 +289,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 			Destructive:          true,
 			Idempotent:           true,
 			RequiresConfirmation: true,
-			CostHint:             "cheap",
+			CostHint:             plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -318,7 +318,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type": "object",
@@ -338,7 +338,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   "cheap",
+			CostHint:   plugins.ToolCostCheap,
 		},
 		Parameters: map[string]any{
 			"type":       "object",

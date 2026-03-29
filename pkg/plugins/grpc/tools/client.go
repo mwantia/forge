@@ -178,7 +178,7 @@ func protoToToolDefinition(t *proto.ToolDefinitionProto) plugins.ToolDefinition 
 			Destructive:          t.Annotations.Destructive,
 			Idempotent:           t.Annotations.Idempotent,
 			RequiresConfirmation: t.Annotations.RequiresConfirmation,
-			CostHint:             t.Annotations.CostHint,
+			CostHint:             plugins.ToolCostHint(t.Annotations.CostHint),
 		}
 	}
 	return def

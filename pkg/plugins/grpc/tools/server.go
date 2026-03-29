@@ -209,7 +209,7 @@ func toolDefinitionToProto(t plugins.ToolDefinition) (*proto.ToolDefinitionProto
 			Destructive:          t.Annotations.Destructive,
 			Idempotent:           t.Annotations.Idempotent,
 			RequiresConfirmation: t.Annotations.RequiresConfirmation,
-			CostHint:             t.Annotations.CostHint,
+			CostHint:             string(t.Annotations.CostHint),
 		},
 	}
 	return p, nil
