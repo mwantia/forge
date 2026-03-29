@@ -98,6 +98,14 @@ func (s *Server) GetToolsPlugin(ctx context.Context, req *proto.GetPluginRequest
 	return &proto.GetPluginResponse{Available: p != nil}, nil
 }
 
+func (s *Server) GetSandboxPlugin(ctx context.Context, req *proto.GetPluginRequest) (*proto.GetPluginResponse, error) {
+	p, err := s.impl.GetSandboxPlugin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.GetPluginResponse{Available: p != nil}, nil
+}
+
 // capsToProto converts a Go DriverCapabilities to its proto representation.
 func capsToProto(caps *plugins.DriverCapabilities) *proto.DriverCapabilities {
 	if caps == nil {
@@ -125,6 +133,13 @@ func capsToProto(caps *plugins.DriverCapabilities) *proto.DriverCapabilities {
 	if caps.Tools != nil {
 		p.Tools = &proto.ToolsCapabilities{
 			SupportsAsyncExecution: caps.Tools.SupportsAsyncExecution,
+		}
+	}
+	if caps.Sandbox != nil {
+		p.Sandbox = &proto.SandboxCapabilities{
+			IsolationMode:      caps.Sandbox.IsolationMode,
+			SupportsStreaming:   caps.Sandbox.SupportsStreaming,
+			SupportsFilesystem: caps.Sandbox.SupportsFilesystem,
 		}
 	}
 	return p
@@ -157,6 +172,13 @@ func capsFromProto(p *proto.DriverCapabilities) *plugins.DriverCapabilities {
 	if p.Tools != nil {
 		caps.Tools = &plugins.ToolsCapabilities{
 			SupportsAsyncExecution: p.Tools.SupportsAsyncExecution,
+		}
+	}
+	if p.Sandbox != nil {
+		caps.Sandbox = &plugins.SandboxCapabilities{
+			IsolationMode:      p.Sandbox.IsolationMode,
+			SupportsStreaming:   p.Sandbox.SupportsStreaming,
+			SupportsFilesystem: p.Sandbox.SupportsFilesystem,
 		}
 	}
 	return caps

@@ -132,6 +132,10 @@ func (d *OllamaDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin,
 	return nil, errors.ErrPluginNotSupported
 }
 
+func (d *OllamaDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}
+
 func parseDuration(s string, fallback time.Duration) time.Duration {
 	if s == "" {
 		return fallback

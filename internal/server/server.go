@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/registry"
+	"github.com/mwantia/forge/internal/sandbox"
 	"github.com/mwantia/forge/internal/server/api"
 	"github.com/mwantia/forge/internal/session"
 )
@@ -30,7 +31,10 @@ func (s *Server) Setup() (func() error, error) {
 		Handler: s.engine,
 	}
 
+	sbMgr := sandbox.NewManager(s.logger, s.config.DataDir, s.registry)
+
 	mgr := session.NewManager(s.logger, s.config.DataDir, s.registry)
+	mgr.SetSandboxManager(sbMgr)
 
 	s.engine.Use(s.LoggerHandler(), s.Recovery())
 
@@ -70,6 +74,18 @@ func (s *Server) Setup() (func() error, error) {
 	authed.POST("sessions/:id/messages", api.AddMessage(mgr))
 	authed.GET("sessions/:id/messages/:message_id", api.GetMessage(mgr))
 	authed.POST("sessions/:id/messages/compact", api.CompactMessages(mgr))
+	authed.GET("sessions/:id/sandboxes", api.ListSessionSandboxes(sbMgr))
+
+	// Sandboxes
+	authed.GET("sandboxes", api.ListSandboxes(sbMgr))
+	authed.POST("sandboxes", api.CreateSandbox(sbMgr))
+	authed.GET("sandboxes/:id", api.GetSandbox(sbMgr))
+	authed.DELETE("sandboxes/:id", api.DeleteSandbox(sbMgr))
+	authed.POST("sandboxes/:id/exec", api.ExecSandbox(sbMgr))
+	authed.POST("sandboxes/:id/copy-in", api.CopyInSandbox(sbMgr))
+	authed.POST("sandboxes/:id/copy-out", api.CopyOutSandbox(sbMgr))
+	authed.GET("sandboxes/:id/stat", api.StatSandbox(sbMgr))
+	authed.GET("sandboxes/:id/read", api.ReadFileSandbox(sbMgr))
 
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

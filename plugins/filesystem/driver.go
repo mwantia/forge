@@ -122,3 +122,7 @@ func (d *FileSystemDriver) GetChannelPlugin(ctx context.Context) (plugins.Channe
 func (d *FileSystemDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
 	return d, nil
 }
+
+func (d *FileSystemDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}

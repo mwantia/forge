@@ -29,6 +29,7 @@ const (
 	DriverService_GetMemoryPlugin_FullMethodName   = "/driver.DriverService/GetMemoryPlugin"
 	DriverService_GetChannelPlugin_FullMethodName  = "/driver.DriverService/GetChannelPlugin"
 	DriverService_GetToolsPlugin_FullMethodName    = "/driver.DriverService/GetToolsPlugin"
+	DriverService_GetSandboxPlugin_FullMethodName  = "/driver.DriverService/GetSandboxPlugin"
 )
 
 // DriverServiceClient is the client API for DriverService service.
@@ -47,6 +48,7 @@ type DriverServiceClient interface {
 	GetMemoryPlugin(ctx context.Context, in *GetPluginRequest, opts ...grpc.CallOption) (*GetPluginResponse, error)
 	GetChannelPlugin(ctx context.Context, in *GetPluginRequest, opts ...grpc.CallOption) (*GetPluginResponse, error)
 	GetToolsPlugin(ctx context.Context, in *GetPluginRequest, opts ...grpc.CallOption) (*GetPluginResponse, error)
+	GetSandboxPlugin(ctx context.Context, in *GetPluginRequest, opts ...grpc.CallOption) (*GetPluginResponse, error)
 }
 
 type driverServiceClient struct {
@@ -157,6 +159,16 @@ func (c *driverServiceClient) GetToolsPlugin(ctx context.Context, in *GetPluginR
 	return out, nil
 }
 
+func (c *driverServiceClient) GetSandboxPlugin(ctx context.Context, in *GetPluginRequest, opts ...grpc.CallOption) (*GetPluginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPluginResponse)
+	err := c.cc.Invoke(ctx, DriverService_GetSandboxPlugin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriverServiceServer is the server API for DriverService service.
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility.
@@ -173,6 +185,7 @@ type DriverServiceServer interface {
 	GetMemoryPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error)
 	GetChannelPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error)
 	GetToolsPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error)
+	GetSandboxPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -212,6 +225,9 @@ func (UnimplementedDriverServiceServer) GetChannelPlugin(context.Context, *GetPl
 }
 func (UnimplementedDriverServiceServer) GetToolsPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetToolsPlugin not implemented")
+}
+func (UnimplementedDriverServiceServer) GetSandboxPlugin(context.Context, *GetPluginRequest) (*GetPluginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSandboxPlugin not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
 func (UnimplementedDriverServiceServer) testEmbeddedByValue()                       {}
@@ -414,6 +430,24 @@ func _DriverService_GetToolsPlugin_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DriverService_GetSandboxPlugin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPluginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).GetSandboxPlugin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DriverService_GetSandboxPlugin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).GetSandboxPlugin(ctx, req.(*GetPluginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DriverService_ServiceDesc is the grpc.ServiceDesc for DriverService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -460,6 +494,10 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetToolsPlugin",
 			Handler:    _DriverService_GetToolsPlugin_Handler,
+		},
+		{
+			MethodName: "GetSandboxPlugin",
+			Handler:    _DriverService_GetSandboxPlugin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -152,6 +152,10 @@ func (d *NomadDriver) GetToolsPlugin(_ context.Context) (plugins.ToolsPlugin, er
 	return d, nil
 }
 
+func (d *NomadDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}
+
 func buildTLSConfig(cfg *TLSConfig) (*tls.Config, error) {
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: cfg.InsecureSkipVerify, //nolint:gosec

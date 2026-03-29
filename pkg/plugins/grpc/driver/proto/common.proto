@@ -13,11 +13,12 @@ message PluginInfo {
 
 // DriverCapabilities describes what a driver supports.
 message DriverCapabilities {
-    repeated string      types = 1;
+    repeated string      types   = 1;
     ProviderCapabilities provider = 2;
     MemoryCapabilities   memory   = 3;
     ChannelCapabilities  channel  = 4;
     ToolsCapabilities    tools    = 5;
+    SandboxCapabilities  sandbox  = 6;
 }
 
 message ProviderCapabilities {
@@ -37,4 +38,10 @@ message ChannelCapabilities {
 
 message ToolsCapabilities {
     bool supports_async_execution = 1;
+}
+
+message SandboxCapabilities {
+    string isolation_mode        = 1;
+    bool   supports_streaming    = 2;
+    bool   supports_filesystem   = 3;
 }

@@ -36,6 +36,7 @@ func NewSessionsCommand() *cobra.Command {
 	cmd.AddCommand(newSessionsToolsCmd(client))
 	cmd.AddCommand(newSessionsMessagesCmd(client))
 	cmd.AddCommand(newSessionsSendCmd(client))
+	cmd.AddCommand(NewSessionsSandboxCommand(client))
 
 	return cmd
 }

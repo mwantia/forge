@@ -9,6 +9,7 @@ type DriverCapabilities struct {
 	Memory   *MemoryCapabilities
 	Channel  *ChannelCapabilities
 	Tools    *ToolsCapabilities
+	Sandbox  *SandboxCapabilities
 }
 
 type ProviderCapabilities struct {
@@ -69,4 +70,5 @@ type Driver interface {
 	GetMemoryPlugin(ctx context.Context) (MemoryPlugin, error)
 	GetChannelPlugin(ctx context.Context) (ChannelPlugin, error)
 	GetToolsPlugin(ctx context.Context) (ToolsPlugin, error)
+	GetSandboxPlugin(ctx context.Context) (SandboxPlugin, error)
 }

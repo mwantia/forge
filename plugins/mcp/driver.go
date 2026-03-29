@@ -116,3 +116,7 @@ func (d *MCPDriver) GetChannelPlugin(_ context.Context) (plugins.ChannelPlugin, 
 func (d *MCPDriver) GetToolsPlugin(_ context.Context) (plugins.ToolsPlugin, error) {
 	return d, nil
 }
+
+func (d *MCPDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}

@@ -47,6 +47,15 @@ func (r *PluginRegistry) GetToolsPlugin(ctx context.Context, name string) (plugi
 	return nil, fmt.Errorf("unknown tools plugin name defined")
 }
 
+func (r *PluginRegistry) GetSandboxPlugin(ctx context.Context, name string) (plugins.SandboxPlugin, error) {
+	driver, ok := r.drivers[strings.ToLower(name)]
+	if ok {
+		return driver.Driver.GetSandboxPlugin(ctx)
+	}
+
+	return nil, fmt.Errorf("unknown sandbox plugin name defined")
+}
+
 // GetAllToolsPlugins returns a map of driver name → ToolsPlugin for every loaded
 // driver that advertises tools capability.
 func (r *PluginRegistry) ListDrivers() []*PluginDriver {

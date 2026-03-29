@@ -9,4 +9,6 @@ const (
 	PluginTypeChannel string = "channel"
 	// A tools plugin acts as bridge (or summary of embedded tools) for tool calling.
 	PluginTypeTools string = "tools"
+	// A sandbox plugin provides an isolated execution environment for running scripts and tools.
+	PluginTypeSandbox string = "sandbox"
 )

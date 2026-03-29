@@ -154,6 +154,10 @@ func (d *ConsulDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin,
 	return d, nil
 }
 
+func (d *ConsulDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}
+
 func buildTLSConfig(cfg *TLSConfig) (*tls.Config, error) {
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: cfg.InsecureSkipVerify, //nolint:gosec

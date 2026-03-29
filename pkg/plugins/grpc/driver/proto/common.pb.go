@@ -90,6 +90,7 @@ type DriverCapabilities struct {
 	Memory        *MemoryCapabilities    `protobuf:"bytes,3,opt,name=memory,proto3" json:"memory,omitempty"`
 	Channel       *ChannelCapabilities   `protobuf:"bytes,4,opt,name=channel,proto3" json:"channel,omitempty"`
 	Tools         *ToolsCapabilities     `protobuf:"bytes,5,opt,name=tools,proto3" json:"tools,omitempty"`
+	Sandbox       *SandboxCapabilities   `protobuf:"bytes,6,opt,name=sandbox,proto3" json:"sandbox,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -155,6 +156,13 @@ func (x *DriverCapabilities) GetChannel() *ChannelCapabilities {
 func (x *DriverCapabilities) GetTools() *ToolsCapabilities {
 	if x != nil {
 		return x.Tools
+	}
+	return nil
+}
+
+func (x *DriverCapabilities) GetSandbox() *SandboxCapabilities {
+	if x != nil {
+		return x.Sandbox
 	}
 	return nil
 }
@@ -359,6 +367,66 @@ func (x *ToolsCapabilities) GetSupportsAsyncExecution() bool {
 	return false
 }
 
+type SandboxCapabilities struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	IsolationMode      string                 `protobuf:"bytes,1,opt,name=isolation_mode,json=isolationMode,proto3" json:"isolation_mode,omitempty"`
+	SupportsStreaming  bool                   `protobuf:"varint,2,opt,name=supports_streaming,json=supportsStreaming,proto3" json:"supports_streaming,omitempty"`
+	SupportsFilesystem bool                   `protobuf:"varint,3,opt,name=supports_filesystem,json=supportsFilesystem,proto3" json:"supports_filesystem,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SandboxCapabilities) Reset() {
+	*x = SandboxCapabilities{}
+	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SandboxCapabilities) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SandboxCapabilities) ProtoMessage() {}
+
+func (x *SandboxCapabilities) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SandboxCapabilities.ProtoReflect.Descriptor instead.
+func (*SandboxCapabilities) Descriptor() ([]byte, []int) {
+	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SandboxCapabilities) GetIsolationMode() string {
+	if x != nil {
+		return x.IsolationMode
+	}
+	return ""
+}
+
+func (x *SandboxCapabilities) GetSupportsStreaming() bool {
+	if x != nil {
+		return x.SupportsStreaming
+	}
+	return false
+}
+
+func (x *SandboxCapabilities) GetSupportsFilesystem() bool {
+	if x != nil {
+		return x.SupportsFilesystem
+	}
+	return false
+}
+
 var File_pkg_plugins_grpc_driver_proto_common_proto protoreflect.FileDescriptor
 
 const file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc = "" +
@@ -368,13 +436,14 @@ const file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc = "" +
 	"PluginInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06author\x18\x02 \x01(\tR\x06author\x12\x18\n" +
-	"\aversion\x18\x03 \x01(\tR\aversion\"\x80\x02\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"\xb7\x02\n" +
 	"\x12DriverCapabilities\x12\x14\n" +
 	"\x05types\x18\x01 \x03(\tR\x05types\x128\n" +
 	"\bprovider\x18\x02 \x01(\v2\x1c.driver.ProviderCapabilitiesR\bprovider\x122\n" +
 	"\x06memory\x18\x03 \x01(\v2\x1a.driver.MemoryCapabilitiesR\x06memory\x125\n" +
 	"\achannel\x18\x04 \x01(\v2\x1b.driver.ChannelCapabilitiesR\achannel\x12/\n" +
-	"\x05tools\x18\x05 \x01(\v2\x19.driver.ToolsCapabilitiesR\x05tools\"n\n" +
+	"\x05tools\x18\x05 \x01(\v2\x19.driver.ToolsCapabilitiesR\x05tools\x125\n" +
+	"\asandbox\x18\x06 \x01(\v2\x1b.driver.SandboxCapabilitiesR\asandbox\"n\n" +
 	"\x14ProviderCapabilities\x12-\n" +
 	"\x12supports_streaming\x18\x01 \x01(\bR\x11supportsStreaming\x12'\n" +
 	"\x0fsupports_vision\x18\x02 \x01(\bR\x0esupportsVision\"t\n" +
@@ -385,7 +454,11 @@ const file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc = "" +
 	"\x18supports_direct_messages\x18\x01 \x01(\bR\x16supportsDirectMessages\x12)\n" +
 	"\x10supports_threads\x18\x02 \x01(\bR\x0fsupportsThreads\"M\n" +
 	"\x11ToolsCapabilities\x128\n" +
-	"\x18supports_async_execution\x18\x01 \x01(\bR\x16supportsAsyncExecutionB8Z6github.com/mwantia/forge/pkg/plugins/grpc/driver/protob\x06proto3"
+	"\x18supports_async_execution\x18\x01 \x01(\bR\x16supportsAsyncExecution\"\x9c\x01\n" +
+	"\x13SandboxCapabilities\x12%\n" +
+	"\x0eisolation_mode\x18\x01 \x01(\tR\risolationMode\x12-\n" +
+	"\x12supports_streaming\x18\x02 \x01(\bR\x11supportsStreaming\x12/\n" +
+	"\x13supports_filesystem\x18\x03 \x01(\bR\x12supportsFilesystemB8Z6github.com/mwantia/forge/pkg/plugins/grpc/driver/protob\x06proto3"
 
 var (
 	file_pkg_plugins_grpc_driver_proto_common_proto_rawDescOnce sync.Once
@@ -399,7 +472,7 @@ func file_pkg_plugins_grpc_driver_proto_common_proto_rawDescGZIP() []byte {
 	return file_pkg_plugins_grpc_driver_proto_common_proto_rawDescData
 }
 
-var file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_pkg_plugins_grpc_driver_proto_common_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_pkg_plugins_grpc_driver_proto_common_proto_goTypes = []any{
 	(*PluginInfo)(nil),           // 0: driver.PluginInfo
 	(*DriverCapabilities)(nil),   // 1: driver.DriverCapabilities
@@ -407,17 +480,19 @@ var file_pkg_plugins_grpc_driver_proto_common_proto_goTypes = []any{
 	(*MemoryCapabilities)(nil),   // 3: driver.MemoryCapabilities
 	(*ChannelCapabilities)(nil),  // 4: driver.ChannelCapabilities
 	(*ToolsCapabilities)(nil),    // 5: driver.ToolsCapabilities
+	(*SandboxCapabilities)(nil),  // 6: driver.SandboxCapabilities
 }
 var file_pkg_plugins_grpc_driver_proto_common_proto_depIdxs = []int32{
 	2, // 0: driver.DriverCapabilities.provider:type_name -> driver.ProviderCapabilities
 	3, // 1: driver.DriverCapabilities.memory:type_name -> driver.MemoryCapabilities
 	4, // 2: driver.DriverCapabilities.channel:type_name -> driver.ChannelCapabilities
 	5, // 3: driver.DriverCapabilities.tools:type_name -> driver.ToolsCapabilities
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	6, // 4: driver.DriverCapabilities.sandbox:type_name -> driver.SandboxCapabilities
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_pkg_plugins_grpc_driver_proto_common_proto_init() }
@@ -431,7 +506,7 @@ func file_pkg_plugins_grpc_driver_proto_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc), len(file_pkg_plugins_grpc_driver_proto_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -9,6 +9,7 @@ import (
 	proto "github.com/mwantia/forge/pkg/plugins/grpc/driver/proto"
 	memorygrpc "github.com/mwantia/forge/pkg/plugins/grpc/memory"
 	providergrpc "github.com/mwantia/forge/pkg/plugins/grpc/provider"
+	sandboxgrpc "github.com/mwantia/forge/pkg/plugins/grpc/sandbox"
 	toolsgrpc "github.com/mwantia/forge/pkg/plugins/grpc/tools"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -122,4 +123,15 @@ func (c *Client) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error
 		return nil, nil
 	}
 	return toolsgrpc.NewClient(c.conn), nil
+}
+
+func (c *Client) GetSandboxPlugin(ctx context.Context) (plugins.SandboxPlugin, error) {
+	resp, err := c.client.GetSandboxPlugin(ctx, &proto.GetPluginRequest{})
+	if err != nil {
+		return nil, err
+	}
+	if !resp.Available {
+		return nil, nil
+	}
+	return sandboxgrpc.NewClient(c.conn), nil
 }

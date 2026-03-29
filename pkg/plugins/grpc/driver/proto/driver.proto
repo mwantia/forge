@@ -19,6 +19,7 @@ service DriverService {
     rpc GetMemoryPlugin(GetPluginRequest)          returns (GetPluginResponse);
     rpc GetChannelPlugin(GetPluginRequest)         returns (GetPluginResponse);
     rpc GetToolsPlugin(GetPluginRequest)           returns (GetPluginResponse);
+    rpc GetSandboxPlugin(GetPluginRequest)         returns (GetPluginResponse);
 }
 
 message GetPluginInfoRequest {}

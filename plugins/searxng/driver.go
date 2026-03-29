@@ -114,3 +114,7 @@ func (d *SearXNGDriver) GetChannelPlugin(ctx context.Context) (plugins.ChannelPl
 func (d *SearXNGDriver) GetToolsPlugin(ctx context.Context) (plugins.ToolsPlugin, error) {
 	return d, nil
 }
+
+func (d *SearXNGDriver) GetSandboxPlugin(_ context.Context) (plugins.SandboxPlugin, error) {
+	return nil, errors.ErrPluginNotSupported
+}

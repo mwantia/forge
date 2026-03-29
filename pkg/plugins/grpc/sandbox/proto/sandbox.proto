@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package sandbox;
+
+option go_package = "github.com/mwantia/forge/pkg/plugins/grpc/sandbox/proto";
+
+service SandboxService {
+    rpc CreateSandbox(CreateSandboxRequest)    returns (CreateSandboxResponse);
+    rpc DestroySandbox(DestroySandboxRequest)  returns (DestroySandboxResponse);
+    rpc CopyIn(CopyInRequest)                  returns (CopyInResponse);
+    rpc CopyOut(CopyOutRequest)                returns (CopyOutResponse);
+    rpc Execute(ExecuteRequest)                returns (stream ExecuteChunk);
+    rpc Stat(StatRequest)                      returns (StatResponse);
+    rpc ReadFile(ReadFileRequest)              returns (ReadFileResponse);
+}
+
+// --- CreateSandbox ---
+
+message SandboxPathRule {
+    string path     = 1;
+    bool   writable = 2;
+}
+
+message SandboxSpec {
+    string                   name               = 1;
+    repeated SandboxPathRule allowed_host_paths = 2;
+    string                   work_dir           = 3;
+    map<string, string>      env                = 4;
+    map<string, string>      metadata           = 5;
+}
+
+message CreateSandboxRequest {
+    SandboxSpec spec = 1;
+}
+
+message CreateSandboxResponse {
+    string id     = 1;
+    string driver = 2;
+}
+
+// --- DestroySandbox ---
+
+message DestroySandboxRequest { string id = 1; }
+message DestroySandboxResponse {}
+
+// --- CopyIn ---
+
+message CopyInRequest {
+    string id          = 1;
+    string host_src    = 2;
+    string sandbox_dst = 3;
+}
+message CopyInResponse {}
+
+// --- CopyOut ---
+
+message CopyOutRequest {
+    string id          = 1;
+    string sandbox_src = 2;
+    string host_dst    = 3;
+}
+message CopyOutResponse {}
+
+// --- Execute ---
+
+message ExecuteRequest {
+    string              sandbox_id      = 1;
+    string              command         = 2;
+    repeated string     args            = 3;
+    map<string, string> env             = 4;
+    int32               timeout_seconds = 5;
+}
+
+message ExecuteChunk {
+    string stream    = 1; // "stdout" or "stderr"
+    string data      = 2;
+    int32  exit_code = 3; // set on final chunk
+    bool   done      = 4;
+    bool   is_error  = 5;
+}
+
+// --- Stat ---
+
+message StatRequest {
+    string id   = 1;
+    string path = 2;
+}
+
+message StatResponse {
+    string path     = 1;
+    bool   exists   = 2;
+    bool   is_dir   = 3;
+    int64  size     = 4;
+    string mode     = 5;
+    string mod_time = 6;
+}
+
+// --- ReadFile ---
+
+message ReadFileRequest {
+    string id   = 1;
+    string path = 2;
+}
+
+message ReadFileResponse {
+    bytes data = 1;
+}

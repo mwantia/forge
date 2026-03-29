@@ -13,11 +13,19 @@ import (
 
 const defaultMaxToolIterations = 10
 
+// SandboxManagerIface is the minimal interface the session manager needs
+// to inject sandbox tools. Using an interface avoids an import cycle between
+// internal/session and internal/sandbox.
+type SandboxManagerIface interface {
+	NewToolsPlugin(sessionID string) plugins.ToolsPlugin
+}
+
 // Manager handles session lifecycle and message dispatch.
 type Manager struct {
-	log      hclog.Logger
-	store    *FileStore
-	registry *registry.PluginRegistry
+	log            hclog.Logger
+	store          *FileStore
+	registry       *registry.PluginRegistry
+	sandboxManager SandboxManagerIface
 }
 
 func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) *Manager {
@@ -26,6 +34,11 @@ func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) 
 		store:    NewFileStore(dataDir),
 		registry: reg,
 	}
+}
+
+// SetSandboxManager wires in an optional sandbox manager for tool injection.
+func (m *Manager) SetSandboxManager(sm SandboxManagerIface) {
+	m.sandboxManager = sm
 }
 
 // CreateOptions is the request body for POST /v1/sessions.
@@ -221,12 +234,14 @@ func (m *Manager) Compact(id string, opts CompactOptions) (*CompactResult, error
 }
 
 // resolveAllTools resolves plugin tools for the session and appends the built-in
-// session management tools (agent__session_*).
+// session management tools (agent__session_*) and sandbox tools (agent__sandbox_*)
+// when a sandbox manager is wired in.
 func (m *Manager) resolveAllTools(ctx context.Context, sess *Session) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
 	toolsMap, toolDefs, err := m.resolveTools(ctx, sess.Tools)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	sp := &sessionToolsPlugin{manager: m, sessionID: sess.ID}
 	resp, _ := sp.ListTools(ctx, plugins.ListToolsFilter{})
 	for _, def := range resp.Tools {
@@ -238,6 +253,21 @@ func (m *Manager) resolveAllTools(ctx context.Context, sess *Session) (map[strin
 		})
 		toolsMap[prefixed] = sp
 	}
+
+	if m.sandboxManager != nil {
+		sbp := m.sandboxManager.NewToolsPlugin(sess.ID)
+		sbResp, _ := sbp.ListTools(ctx, plugins.ListToolsFilter{})
+		for _, def := range sbResp.Tools {
+			prefixed := "agent__" + def.Name
+			toolDefs = append(toolDefs, plugins.ToolCall{
+				Name:        prefixed,
+				Description: def.Description,
+				Parameters:  def.Parameters,
+			})
+			toolsMap[prefixed] = sbp
+		}
+	}
+
 	return toolsMap, toolDefs, nil
 }
 
