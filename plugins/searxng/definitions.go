@@ -32,7 +32,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Language code for results (e.g. 'en', 'de'). Defaults to 'en'.",
 				},
 			},
-			"required": []string{"query"},
+			"required": []any{"query"},
 		},
 	},
 	"web_fetch": {
@@ -52,7 +52,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "The URL to fetch",
 				},
 			},
-			"required": []string{"url"},
+			"required": []any{"url"},
 		},
 	},
 }

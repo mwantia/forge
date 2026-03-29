@@ -87,7 +87,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"service"},
+			"required": []any{"service"},
 		},
 	},
 
@@ -112,7 +112,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"node"},
+			"required": []any{"node"},
 		},
 	},
 
@@ -145,7 +145,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"service"},
+			"required": []any{"service"},
 		},
 	},
 
@@ -170,7 +170,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"node"},
+			"required": []any{"node"},
 		},
 	},
 
@@ -189,14 +189,14 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 				"state": map[string]any{
 					"type":        "string",
 					"description": "Health check state: 'passing', 'warning', 'critical', or 'any'",
-					"enum":        []string{"passing", "warning", "critical", "any"},
+					"enum":        []any{"passing", "warning", "critical", "any"},
 				},
 				"datacenter": map[string]any{
 					"type":        "string",
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"state"},
+			"required": []any{"state"},
 		},
 	},
 
@@ -221,7 +221,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"key"},
+			"required": []any{"key"},
 		},
 	},
 
@@ -246,7 +246,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to query",
 				},
 			},
-			"required": []string{"prefix"},
+			"required": []any{"prefix"},
 		},
 	},
 
@@ -276,7 +276,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to write to",
 				},
 			},
-			"required": []string{"key", "value"},
+			"required": []any{"key", "value"},
 		},
 	},
 
@@ -307,7 +307,7 @@ var toolDefinitions = map[string]plugins.ToolDefinition{
 					"description": "Datacenter to target",
 				},
 			},
-			"required": []string{"key"},
+			"required": []any{"key"},
 		},
 	},
 
