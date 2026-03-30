@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/session"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 func ListSessions(mgr *session.Manager) gin.HandlerFunc {

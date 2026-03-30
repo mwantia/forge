@@ -10,8 +10,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/sandbox"
-	"github.com/mwantia/forge/pkg/plugins"
 	"github.com/spf13/cobra"
 )
 

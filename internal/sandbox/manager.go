@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 const defaultIsolationDriver = "builtin"
@@ -41,9 +41,9 @@ func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) 
 
 // CreateOptions is the request body for creating a sandbox.
 type CreateOptions struct {
-	Name            string             `json:"name,omitempty"`
-	SessionID       string             `json:"session_id"`
-	IsolationDriver string             `json:"isolation_driver,omitempty"`
+	Name            string              `json:"name,omitempty"`
+	SessionID       string              `json:"session_id"`
+	IsolationDriver string              `json:"isolation_driver,omitempty"`
 	Spec            plugins.SandboxSpec `json:"spec,omitempty"`
 }
 

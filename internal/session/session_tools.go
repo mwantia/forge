@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 // sessionToolsPlugin is a built-in ToolsPlugin that exposes session management

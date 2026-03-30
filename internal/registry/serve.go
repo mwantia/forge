@@ -9,10 +9,10 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
+	"github.com/mwantia/forge-sdk/pkg/errors"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
+	pluginsgrpc "github.com/mwantia/forge-sdk/pkg/plugins/grpc"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/pkg/errors"
-	"github.com/mwantia/forge/pkg/plugins"
-	pluginsgrpc "github.com/mwantia/forge/pkg/plugins/grpc"
 )
 
 func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*config.PluginConfig) error {

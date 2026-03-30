@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge-sdk/pkg/metrics"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

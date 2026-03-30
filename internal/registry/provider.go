@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 type PluginProviderNamespace struct {

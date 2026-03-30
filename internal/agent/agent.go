@@ -8,11 +8,11 @@ import (
 	"github.com/mwantia/fabric/pkg/container"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge-sdk/pkg/errors"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/metrics"
 	"github.com/mwantia/forge/internal/registry"
 	"github.com/mwantia/forge/internal/server"
-	"github.com/mwantia/forge/pkg/errors"
 )
 
 type Agent struct {

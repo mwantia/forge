@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 const defaultMaxToolIterations = 10

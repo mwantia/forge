@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/sandbox"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 func ListSandboxes(mgr *sandbox.Manager) gin.HandlerFunc {

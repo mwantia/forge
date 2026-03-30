@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 // SandboxToolsPlugin is a built-in ToolsPlugin that exposes sandbox management
@@ -89,8 +89,8 @@ var sandboxToolDefs = []plugins.ToolDefinition{
 					"description": "Command to execute",
 				},
 				"args": map[string]any{
-					"type":  "array",
-					"items": map[string]any{"type": "string"},
+					"type":        "array",
+					"items":       map[string]any{"type": "string"},
 					"description": "Command arguments",
 				},
 				"timeout_seconds": map[string]any{

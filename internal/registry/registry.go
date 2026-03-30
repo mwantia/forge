@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 type PluginRegistry struct {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 // streamChat streams a ChatStream to the client using Server-Sent Events.

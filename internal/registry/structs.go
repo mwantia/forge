@@ -1,6 +1,6 @@
 package registry
 
-import "github.com/mwantia/forge/pkg/plugins"
+import "github.com/mwantia/forge-sdk/pkg/plugins"
 
 type PluginDriver struct {
 	Name         string

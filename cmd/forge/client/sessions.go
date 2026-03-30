@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/session"
-	"github.com/mwantia/forge/pkg/plugins"
 	"github.com/spf13/cobra"
 )
 

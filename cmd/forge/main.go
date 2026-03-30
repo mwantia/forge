@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-hclog"
+	wlog "github.com/mwantia/forge-sdk/pkg/log"
 	"github.com/mwantia/forge/cmd/forge/client"
 	"github.com/mwantia/forge/cmd/forge/server"
-	wlog "github.com/mwantia/forge/pkg/log"
 	"github.com/spf13/cobra"
 )
 

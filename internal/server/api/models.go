@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 type modelResponse struct {
@@ -58,7 +58,7 @@ func ListProviderModels(reg *registry.PluginRegistry) gin.HandlerFunc {
 }
 
 type createModelRequest struct {
-	ModelName string               `json:"model_name" binding:"required"`
+	ModelName string                 `json:"model_name" binding:"required"`
 	Template  *plugins.ModelTemplate `json:"template"`
 }
 

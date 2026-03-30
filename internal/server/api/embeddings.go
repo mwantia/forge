@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/pkg/plugins"
 )
 
 type embedRequest struct {

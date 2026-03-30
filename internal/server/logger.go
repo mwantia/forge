@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mwantia/forge/pkg/metrics"
+	"github.com/mwantia/forge-sdk/pkg/metrics"
 )
 
 func (s *Server) LoggerHandler() gin.HandlerFunc {
