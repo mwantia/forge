@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/mwantia/forge/plugins/searxng"
+import _ "github.com/mwantia/forge-plugin-searxng/plugin"

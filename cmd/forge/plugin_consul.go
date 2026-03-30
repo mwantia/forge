@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/mwantia/forge/plugins/consul"
+import _ "github.com/mwantia/forge-plugin-consul/plugin"

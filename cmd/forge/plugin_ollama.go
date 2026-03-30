@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/mwantia/forge/plugins/ollama"
+import _ "github.com/mwantia/forge-plugin-ollama/plugin"

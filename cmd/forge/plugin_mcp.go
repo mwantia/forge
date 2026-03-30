@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/mwantia/forge/plugins/mcp"
+import _ "github.com/mwantia/forge-plugin-mcp/plugin"

@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/mwantia/forge/plugins/nomad"
+import _ "github.com/mwantia/forge-plugin-nomad/plugin"
