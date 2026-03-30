@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mwantia/forge/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 type pipelineItem struct {
@@ -72,8 +72,8 @@ func (m *Manager) runPipeline(
 
 		if len(result.ToolCalls) == 0 {
 			// Final text response — persist and emit to the client.
-			m.persistAssistantMessage(sessionID, result.Content, nil)
-			m.refreshMessageCount(sess, sessionID)
+			m.persistAssistantMessage(sessionID, result.Content, nil, result.Usage)
+			m.accumulateUsage(sess, sessionID, result.Usage)
 			if emittedContent && result.Content != "" {
 				emitSeparator(out, result)
 			}
@@ -82,7 +82,7 @@ func (m *Manager) runPipeline(
 		}
 
 		// Intermediate turn: the model wants to call tools.
-		m.persistAssistantMessage(sessionID, result.Content, result.ToolCalls)
+		m.persistAssistantMessage(sessionID, result.Content, result.ToolCalls, result.Usage)
 
 		// Stream the intermediate assistant text to the client now, before tool execution.
 		// The client sees this content while tools run in the background.
@@ -143,12 +143,13 @@ func (m *Manager) executeToolCall(ctx context.Context, toolsMap map[string]plugi
 	return string(b), resp.IsError
 }
 
-func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls []plugins.ChatToolCall) {
+func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls []plugins.ChatToolCall, usage *plugins.TokenUsage) {
 	msg := &Message{
 		ID:        uuid.New().String(),
 		Role:      "assistant",
 		Content:   content,
 		CreatedAt: time.Now(),
+		Usage:     usage,
 	}
 	for _, tc := range toolCalls {
 		msg.ToolCalls = append(msg.ToolCalls, ToolCallEntry{
@@ -180,14 +181,20 @@ func (m *Manager) persistToolMessage(sessionID string, tc plugins.ChatToolCall, 
 	}
 }
 
-// refreshMessageCount reloads and updates the session's message count and UpdatedAt.
-func (m *Manager) refreshMessageCount(_ *Session, sessionID string) {
+// accumulateUsage adds the given usage to the session's TotalUsage and persists the session.
+func (m *Manager) accumulateUsage(sess *Session, sessionID string, usage *plugins.TokenUsage) {
 	stored, err := m.store.LoadSession(sessionID)
 	if err != nil {
 		return
 	}
 	stored.MessageCount = m.store.CountMessages(sessionID)
 	stored.UpdatedAt = time.Now()
+	if usage != nil {
+		if stored.TotalUsage == nil {
+			stored.TotalUsage = &plugins.TokenUsage{}
+		}
+		stored.TotalUsage.Add(usage)
+	}
 	if err := m.store.SaveSession(stored); err != nil {
 		m.log.Error("Failed to update session metadata", "error", err)
 	}
@@ -228,5 +235,6 @@ func replayAsStream(out chan<- pipelineItem, result *plugins.ChatResult) {
 		Role:     result.Role,
 		Done:     true,
 		Metadata: result.Metadata,
+		Usage:    result.Usage,
 	}}
 }
