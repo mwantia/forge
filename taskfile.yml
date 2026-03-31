@@ -22,45 +22,16 @@ tasks:
         - go mod download
         - go mod tidy
 
-    proto:
-        desc: Generate gRPC code from all proto definitions
+    generate:
+        desc: Generate plugin_*.go files from plugins.yaml
         cmds:
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/driver/proto/common.proto \
-                pkg/plugins/grpc/driver/proto/driver.proto
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/provider/proto/provider.proto
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/memory/proto/memory.proto
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/channel/proto/channel.proto
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/tools/proto/tools.proto
-        - |
-            protoc --go_out=. --go-grpc_out=. \
-                --go_opt=paths=source_relative \
-                --go-grpc_opt=paths=source_relative \
-                pkg/plugins/grpc/sandbox/proto/sandbox.proto
+        - task: setup
+        - go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
 
     build:
         desc: Compile the project into a static binary
         cmds:
-        - task: setup
+        - task: generate
         - go build -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
 
     run:

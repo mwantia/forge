@@ -14,6 +14,7 @@ require (
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-sdk v0.0.0-20260330200809-ad49c3efa981
 	github.com/zclconf/go-cty v1.13.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -126,7 +127,7 @@ require (
 // replace github.com/mwantia/fabric => ../fabric
 replace github.com/mwantia/forge-sdk => ../shared
 
-replace github.com/mwantia/forge-plugin-ollama => ../plugins/ollama
+replace github.com/mwantia/forge-plugin-ollama => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/ollama
 
 replace github.com/mwantia/forge-plugin-mcp => ../plugins/mcp
 
@@ -134,6 +135,6 @@ replace github.com/mwantia/forge-plugin-nomad => ../plugins/nomad
 
 replace github.com/mwantia/forge-plugin-searxng => ../plugins/searxng
 
-replace github.com/mwantia/forge-plugin-skills => ../plugins/skills
+replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills
 
 replace github.com/mwantia/forge-plugin-consul => ../plugins/consul
