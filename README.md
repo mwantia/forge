@@ -24,18 +24,32 @@ A pluggable AI agent framework built in Go. Forge provides a plugin-based archit
 
 ### Build
 
-Using Go directly:
+Forge uses a code generation step to produce the plugin import file (`cmd/forge/plugins.go`) from a `plugins.yaml` manifest. Copy the example manifest before building:
 
 ```bash
-go mod download && go mod tidy
-go build -o ./build/forge ./cmd/forge/main.go
+cp plugins.example.yaml plugins.yaml
 ```
 
 Using Task:
 
 ```bash
-task setup    # Download and tidy dependencies
-task build    # Build static binary to ./build/forge
+task setup      # Download and tidy dependencies
+task generate   # Generate cmd/forge/plugins.go from plugins.yaml
+task build      # generate + compile static binary to ./build/forge
+```
+
+Using Go directly:
+
+```bash
+go mod download && go mod tidy
+go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
+go build -tags all -a -ldflags '-s -w -extldflags "-static"' -o ./build/forge ./cmd/forge/main.go
+```
+
+You can also trigger generation via the `go:generate` directive in `cmd/forge/generate.go`:
+
+```bash
+go generate ./cmd/forge/...
 ```
 
 ## Usage
@@ -201,12 +215,16 @@ When `stream: true`, the response is Server-Sent Events with `data: {json}` line
 ```
 cmd/forge/
   main.go              # Entry point (Cobra CLI)
+  generate.go          # go:generate directive for plugin code generation
+  plugins.go           # Generated blank imports (do not edit manually)
   client/              # CLI client commands
     client.go          # ForgeClient HTTP wrapper
     sessions.go        # forge sessions subcommands
   server/              # Server-side CLI commands
     agent.go           # forge agent command
     plugin.go          # forge plugin command
+tools/
+  plugins/             # Code generator: reads plugins.yaml, writes cmd/forge/plugins.go
 internal/
   agent/               # Core agent orchestration
   config/              # HCL configuration parsing
@@ -239,28 +257,34 @@ Forge supports multiple plugin types:
 - **Memory**: Conversation memory and RAG (interface defined, optional)
 - **Channel**: Communication channels (interface defined, future)
 
+### Registering Plugins via plugins.yaml
+
+The `plugins.yaml` manifest controls which plugins are compiled into the binary. `plugins.yaml` is gitignored; copy `plugins.example.yaml` as a starting point.
+
+```yaml
+plugins:
+  - name: ollama
+    module: github.com/mwantia/forge-plugin-ollama
+    import: github.com/mwantia/forge-plugin-ollama/plugin
+
+  - name: skills
+    module: github.com/mwantia/forge-plugin-skills
+    import: github.com/mwantia/forge-plugin-skills/plugin
+    local: ../plugins/skills   # optional: use a local path instead of the module registry
+```
+
+| Field | Description |
+|-------|-------------|
+| `name` | Plugin identifier (used in log output) |
+| `module` | Go module path (used for `go mod edit -replace` when `local` is set) |
+| `import` | Package import path that registers the plugin via its `init()` |
+| `local` | Optional relative path to a local checkout; triggers a `go mod edit -replace` or `go work use` automatically |
+
+Running `task generate` (or `go run ./tools/plugins`) reads this manifest and writes `cmd/forge/plugins.go` with the appropriate blank imports. The file is built with the `all` build tag.
+
 ### Creating a Plugin
 
-1. Implement the `Driver` interface from `pkg/plugins/driver.go`
-2. Register your plugin using `plugins.Register(name, factory)`
-3. Build as a separate binary and configure in `config.hcl`
-
-```go
-package myplugin
-
-import (
-    "github.com/hashicorp/go-hclog"
-    "github.com/mwantia/forge/pkg/plugins"
-)
-
-func init() {
-    plugins.Register("myplugin", NewMyDriver)
-}
-
-func NewMyDriver(log hclog.Logger) plugins.Driver {
-    return &MyDriver{log: log.Named("myplugin")}
-}
-```
+See the [shared SDK README](../shared/README.md) and the `plugins/skills/` or `plugins/filesystem/` directories for minimal reference implementations.
 
 ## License
 

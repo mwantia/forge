@@ -29,14 +29,14 @@ Forge's plugin system lets you extend the agent with new capabilities — tools,
 Every plugin is a **driver** — a subprocess that implements the `Driver` gRPC interface. A single driver can expose multiple plugin type capabilities simultaneously (e.g., both tools and a provider).
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  forge agent                                        │
-│                                                     │
-│  PluginRegistry                                     │
-│    ├─ driver "ollama"  ──gRPC──► ollama subprocess  │
-│    ├─ driver "skills"  ──gRPC──► forge plugin skills│
-│    └─ driver "search"  ──gRPC──► forge plugin searxng
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  forge agent                                            │
+│                                                         │
+│  PluginRegistry                                         │
+│    ├─ driver "ollama"  ──gRPC──► ollama subprocess      │
+│    ├─ driver "skills"  ──gRPC──► forge plugin skills    │
+│    └─ driver "search"  ──gRPC──► forge plugin searxng   │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### Embedded vs External
