@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/random"
 )
 
 type pipelineItem struct {
@@ -145,7 +145,7 @@ func (m *Manager) executeToolCall(ctx context.Context, toolsMap map[string]plugi
 
 func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls []plugins.ChatToolCall, usage *plugins.TokenUsage) {
 	msg := &Message{
-		ID:        uuid.New().String(),
+		ID:        random.GenerateNewID(),
 		Role:      "assistant",
 		Content:   content,
 		CreatedAt: time.Now(),
@@ -165,7 +165,7 @@ func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls [
 
 func (m *Manager) persistToolMessage(sessionID string, tc plugins.ChatToolCall, result string, isError bool) {
 	msg := &Message{
-		ID:      uuid.New().String(),
+		ID:      random.GenerateNewID(),
 		Role:    "tool",
 		Content: result,
 		ToolCalls: []ToolCallEntry{{

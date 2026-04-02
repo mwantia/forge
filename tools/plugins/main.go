@@ -1,24 +1,37 @@
-// tools/gen-plugins/main.go
 package main
 
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"go/format"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Plugin struct {
-	Name   string `yaml:"name"`
-	Module string `yaml:"module"`
-	Import string `yaml:"import"`
-	Local  string `yaml:"local,omitempty"`
+	Name    string `yaml:"name"`
+	Module  string `yaml:"module"`
+	Import  string `yaml:"import,omitempty"`
+	Local   string `yaml:"local,omitempty"`
+	Version string `yaml:"version,omitempty"`
+}
+
+func (p Plugin) ResolvedImport() string {
+	if p.Import == "" {
+		return p.Module
+	}
+	if strings.HasPrefix(p.Import, "./") {
+		sub := strings.TrimPrefix(p.Import, "./")
+		return p.Module + "/" + sub
+	}
+	return p.Import
 }
 
 type Manifest struct {
@@ -33,7 +46,7 @@ package main
 
 import (
 {{- range .}}
-	_ "{{.Import}}"
+	_ "{{.ResolvedImport}}"
 {{- end}}
 )
 `))
@@ -53,6 +66,10 @@ func main() {
 		log.Fatalf("parse manifest: %v", err)
 	}
 
+	if len(m.Plugins) == 0 {
+		log.Fatal("manifest contains no plugins")
+	}
+
 	manifestAbs, err := filepath.Abs(*manifest)
 	if err != nil {
 		log.Fatalf("resolve manifest path: %v", err)
@@ -60,29 +77,18 @@ func main() {
 	manifestDir := filepath.Dir(manifestAbs)
 	workFile := findGoWork(manifestDir)
 
-	// Handle local replacements
 	for _, p := range m.Plugins {
-		if p.Local == "" {
-			continue
+		if p.Name == "" {
+			log.Fatalf("plugin entry missing required field: name")
 		}
-		localAbs, err := filepath.Abs(filepath.Join(manifestDir, p.Local))
-		if err != nil {
-			log.Fatalf("resolve local path for %s: %v", p.Name, err)
+		if p.Module == "" {
+			log.Fatalf("plugin %q missing required field: module", p.Name)
 		}
-		if workFile != "" {
-			if err := goWorkUse(filepath.Dir(workFile), localAbs); err != nil {
-				log.Fatalf("go work use %s: %v", p.Name, err)
-			}
-			log.Printf("  go work use %s", localAbs)
-		} else {
-			if err := goModReplace(manifestDir, p.Module, localAbs); err != nil {
-				log.Fatalf("go mod edit -replace %s: %v", p.Name, err)
-			}
-			log.Printf("  go mod edit -replace %s=%s", p.Module, localAbs)
+		if err := resolveModule(manifestDir, workFile, p); err != nil {
+			log.Fatalf("resolve %s: %v", p.Name, err)
 		}
 	}
 
-	// Generate single plugins.go
 	var buf bytes.Buffer
 	if err := fileTmpl.Execute(&buf, m.Plugins); err != nil {
 		log.Fatalf("template: %v", err)
@@ -98,22 +104,56 @@ func main() {
 	log.Printf("wrote %s (%d plugins)", out, len(m.Plugins))
 }
 
+func resolveModule(manifestDir, workFile string, p Plugin) error {
+	if p.Local != "" && p.Version != "" {
+		log.Printf("warning: %q has both local and version set — local takes precedence", p.Name)
+	}
+
+	if p.Local != "" {
+		localAbs, err := filepath.Abs(filepath.Join(manifestDir, p.Local))
+		if err != nil {
+			return fmt.Errorf("resolve local path: %w", err)
+		}
+		if _, err := os.Stat(localAbs); err != nil {
+			return fmt.Errorf("local path %q does not exist: %w", localAbs, err)
+		}
+		if workFile != "" {
+			log.Printf("  go work use %s", localAbs)
+			return goWorkUse(filepath.Dir(workFile), localAbs)
+		}
+		log.Printf("  go mod edit -replace %s=%s", p.Module, localAbs)
+		return goModReplace(manifestDir, p.Module, localAbs)
+	}
+
+	if p.Version != "" {
+		log.Printf("  go get %s@%s", p.Module, p.Version)
+		return goGet(manifestDir, p.Module+"@"+p.Version)
+	}
+
+	return nil
+}
+
 func goWorkUse(workDir, localAbs string) error {
-	cmd := exec.Command("go", "work", "use", localAbs)
-	cmd.Dir = workDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return run(workDir, "go", "work", "use", localAbs)
 }
 
 func goModReplace(moduleDir, module, localAbs string) error {
-	cmd := exec.Command("go", "mod", "edit", "-replace="+module+"="+localAbs)
-	cmd.Dir = moduleDir
+	return run(moduleDir, "go", "mod", "edit", "-replace="+module+"="+localAbs)
+}
+
+func goGet(moduleDir, pkg string) error {
+	return run(moduleDir, "go", "get", pkg)
+}
+
+func run(dir string, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
+// findGoWork walks up from dir looking for a go.work file.
 func findGoWork(dir string) string {
 	for {
 		candidate := filepath.Join(dir, "go.work")

@@ -248,18 +248,21 @@ plugins/
   skills/              # Skills/tools plugin
 ```
 
-## Plugin Development
+## Plugins
 
-Forge supports multiple plugin types:
+All plugins — regardless of how they are loaded — run as isolated subprocesses and communicate with the main agent over gRPC using the [go-plugin](https://github.com/hashicorp/go-plugin) protocol. Forge supports two ways to load plugins:
 
-- **Provider**: LLM providers (Ollama, etc.)
-- **Tools**: Skills and tools for agentic capabilities
-- **Memory**: Conversation memory and RAG (interface defined, optional)
-- **Channel**: Communication channels (interface defined, future)
+### 1. Built-in (compile-time)
 
-### Registering Plugins via plugins.yaml
+Plugin code is compiled into the `forge` binary. At runtime, forge spawns the plugin as a subprocess from the same binary and communicates with it over gRPC.
 
-The `plugins.yaml` manifest controls which plugins are compiled into the binary. `plugins.yaml` is gitignored; copy `plugins.example.yaml` as a starting point.
+The `plugins.yaml` manifest controls which plugins are included. `task generate` reads the manifest and writes `cmd/forge/plugins.go`; `task build` runs this automatically.
+
+Copy the example manifest and edit it:
+
+```bash
+cp plugins.example.yaml plugins.yaml
+```
 
 ```yaml
 plugins:
@@ -270,21 +273,44 @@ plugins:
   - name: skills
     module: github.com/mwantia/forge-plugin-skills
     import: github.com/mwantia/forge-plugin-skills/plugin
-    local: ../plugins/skills   # optional: use a local path instead of the module registry
+    local: ../plugins/skills   # optional: redirect to a local checkout
 ```
 
 | Field | Description |
 |-------|-------------|
 | `name` | Plugin identifier (used in log output) |
 | `module` | Go module path (used for `go mod edit -replace` when `local` is set) |
-| `import` | Package import path that registers the plugin via its `init()` |
-| `local` | Optional relative path to a local checkout; triggers a `go mod edit -replace` or `go work use` automatically |
+| `import` | Package import path whose `init()` registers the plugin |
+| `local` | Optional relative path; triggers `go mod edit -replace` or `go work use` automatically |
 
-Running `task generate` (or `go run ./tools/plugins`) reads this manifest and writes `cmd/forge/plugins.go` with the appropriate blank imports. The file is built with the `all` build tag.
+### 2. External gRPC plugins (runtime)
 
-### Creating a Plugin
+Pre-built plugin binaries placed in `plugin_dir` (default: `./plugins`) are discovered and launched at startup. Forge spawns each binary as a subprocess and connects over gRPC.
 
-See the [shared SDK README](../shared/README.md) and the `plugins/skills/` or `plugins/filesystem/` directories for minimal reference implementations.
+Declare external plugins in `config.hcl`:
+
+```hcl
+plugin_dir = "./plugins"
+
+plugin "ollama" "my-ollama" {
+  config {
+    address = "http://127.0.0.1:11434"
+  }
+}
+```
+
+This approach requires no recompilation — drop a new binary into `plugin_dir` and restart the agent.
+
+### Plugin Types
+
+| Type | Description |
+|------|-------------|
+| `Provider` | LLM providers (chat completion, embeddings, model management) |
+| `Tools` | Tool discovery and execution for agentic workflows |
+| `Memory` | Session storage and RAG (interface defined, optional) |
+| `Channel` | Communication gateways (interface defined, future) |
+
+See the [shared SDK README](../shared/README.md) and `plugins/skills/` or `plugins/filesystem/` for reference implementations.
 
 ## License
 

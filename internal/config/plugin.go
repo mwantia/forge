@@ -18,14 +18,14 @@ type PluginConfigBody struct {
 	Body hcl.Body `hcl:",remain"`
 }
 
-func (b *PluginConfigBody) DecodeBody() (map[string]any, error) {
+func (b *PluginConfigBody) DecodeBody(ctx *hcl.EvalContext) (map[string]any, error) {
 	// Return empty map if undefined config
 	if b.Body == nil {
 		return make(map[string]any), nil
 	}
 	// Native HCL syntax files expose the full AST via hclsyntax.Body.
 	if synBody, ok := b.Body.(*hclsyntax.Body); ok {
-		return decodeSyntaxBody(synBody)
+		return decodeSyntaxBody(ctx, synBody)
 	}
 	// Fallback for non-native bodies (e.g. JSON-based HCL): attributes only.
 	attrs, diags := b.Body.JustAttributes()
@@ -34,7 +34,7 @@ func (b *PluginConfigBody) DecodeBody() (map[string]any, error) {
 	}
 	result := make(map[string]any)
 	for name, attr := range attrs {
-		val, diags := attr.Expr.Value(&hcl.EvalContext{})
+		val, diags := attr.Expr.Value(ctx)
 		if diags.HasErrors() {
 			return nil, fmt.Errorf("attribute %q: %s", name, diags.Error())
 		}
@@ -43,11 +43,11 @@ func (b *PluginConfigBody) DecodeBody() (map[string]any, error) {
 	return result, nil
 }
 
-func decodeSyntaxBody(body *hclsyntax.Body) (map[string]any, error) {
+func decodeSyntaxBody(ctx *hcl.EvalContext, body *hclsyntax.Body) (map[string]any, error) {
 	result := make(map[string]any)
 
 	for name, attr := range body.Attributes {
-		val, diags := attr.Expr.Value(&hcl.EvalContext{})
+		val, diags := attr.Expr.Value(ctx)
 		if diags.HasErrors() {
 			return nil, fmt.Errorf("attribute %q: %s", name, diags.Error())
 		}
@@ -55,7 +55,7 @@ func decodeSyntaxBody(body *hclsyntax.Body) (map[string]any, error) {
 	}
 
 	for _, block := range body.Blocks {
-		blockMap, err := decodeSyntaxBody(block.Body)
+		blockMap, err := decodeSyntaxBody(ctx, block.Body)
 		if err != nil {
 			return nil, fmt.Errorf("block %q: %w", block.Type, err)
 		}

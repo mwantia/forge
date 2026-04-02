@@ -3,10 +3,13 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/mwantia/forge-sdk/pkg/random"
 )
 
 const defaultDataDir = "./data"
@@ -26,6 +29,19 @@ func NewFileStore(dataDir string) *FileStore {
 		dataDir = defaultDataDir
 	}
 	return &FileStore{dataDir: dataDir}
+}
+
+// generateUniqueName generates a name that does not collide with existing sessions.
+// It tries up to 10 random combinations before appending a numeric suffix.
+func (s *FileStore) generateUniqueName() string {
+	for range 10 {
+		name := random.GenerateRandomName()
+		if existing, _ := s.FindByName(name); existing == nil {
+			return name
+		}
+	}
+	// Fallback: append a random 4-digit suffix
+	return fmt.Sprintf("%s_%04d", random.GenerateRandomName(), rand.Intn(10000))
 }
 
 func (s *FileStore) sessionDir(id string) string {

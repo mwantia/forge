@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/random"
 	"github.com/mwantia/forge/internal/registry"
 )
 
@@ -64,7 +64,7 @@ func (m *Manager) Create(opts CreateOptions) (*Session, error) {
 	}
 	now := time.Now()
 	sess := &Session{
-		ID:                uuid.New().String(),
+		ID:                random.GenerateNewID(),
 		Name:              name,
 		Title:             opts.Title,
 		Description:       opts.Description,
@@ -185,7 +185,7 @@ func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plug
 	}
 
 	userMsg := &Message{
-		ID:        uuid.New().String(),
+		ID:        random.GenerateNewID(),
 		Role:      "user",
 		Content:   content,
 		CreatedAt: time.Now(),

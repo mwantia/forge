@@ -5,13 +5,7 @@ go 1.25.8
 require (
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/gin-gonic/gin v1.11.0
-	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/mwantia/forge-plugin-consul v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-mcp v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-nomad v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-ollama v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-sdk v0.0.0-20260330200809-ad49c3efa981
 	github.com/zclconf/go-cty v1.13.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -22,7 +16,6 @@ require (
 	github.com/alecthomas/chroma/v2 v2.20.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -36,48 +29,34 @@ require (
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/hashicorp/consul/api v1.33.7 // indirect
-	github.com/hashicorp/cronexpr v1.1.3 // indirect
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/nomad/api v0.0.0-20260325144059-0c3fa0187887 // indirect
-	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
-	github.com/mark3labs/mcp-go v0.46.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.17 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oklog/run v1.1.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/mock v0.6.0 // indirect
@@ -105,11 +84,9 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mwantia/fabric v1.0.1
-	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/cobra v1.9.1
@@ -131,10 +108,12 @@ replace github.com/mwantia/forge-plugin-ollama => /home/mwantia/Repositories/02-
 
 replace github.com/mwantia/forge-plugin-mcp => ../plugins/mcp
 
-replace github.com/mwantia/forge-plugin-nomad => ../plugins/nomad
+replace github.com/mwantia/forge-plugin-nomad => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/nomad
 
-replace github.com/mwantia/forge-plugin-searxng => ../plugins/searxng
+replace github.com/mwantia/forge-plugin-searxng => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/searxng
 
 replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills
 
-replace github.com/mwantia/forge-plugin-consul => ../plugins/consul
+replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
+
+replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane

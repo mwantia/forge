@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/random"
 	"github.com/mwantia/forge/internal/registry"
 )
 
@@ -63,7 +63,7 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Sandbox, err
 		return nil, fmt.Errorf("isolation driver %q not available: %w", driver, err)
 	}
 
-	id := uuid.New().String()
+	id := random.GenerateNewID()
 	name := opts.Name
 	if name == "" {
 		name = id[:8]

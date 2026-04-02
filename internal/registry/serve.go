@@ -13,6 +13,7 @@ import (
 	"github.com/mwantia/forge-sdk/pkg/plugins"
 	pluginsgrpc "github.com/mwantia/forge-sdk/pkg/plugins/grpc"
 	"github.com/mwantia/forge/internal/config"
+	"github.com/mwantia/forge/internal/config/eval"
 )
 
 func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*config.PluginConfig) error {
@@ -141,7 +142,8 @@ func (r *PluginRegistry) GetPluginDriverInfo(cfg *config.PluginConfig) (PluginDr
 		info.Name = info.Type
 	}
 
-	body, err := cfg.Config.DecodeBody()
+	ctx := eval.NewEvalContext(nil)
+	body, err := cfg.Config.DecodeBody(ctx)
 	if err != nil {
 		return info, err
 	}
