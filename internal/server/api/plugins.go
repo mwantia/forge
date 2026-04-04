@@ -25,7 +25,7 @@ func ListPlugins(reg *registry.PluginRegistry) gin.HandlerFunc {
 		}
 		for _, d := range drivers {
 			resp.Plugins = append(resp.Plugins, pluginResponse{
-				Name:         d.Name,
+				Name:         d.Info.Name,
 				Capabilities: d.Capabilities,
 			})
 		}
@@ -42,7 +42,7 @@ func GetPlugin(reg *registry.PluginRegistry) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, pluginResponse{
-			Name:         d.Name,
+			Name:         d.Info.Name,
 			Capabilities: d.Capabilities,
 		})
 	}

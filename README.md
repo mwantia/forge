@@ -60,8 +60,11 @@ go generate ./cmd/forge/...
 # Run with default configuration
 ./build/forge agent
 
-# Run with custom configuration
+# Run with a single config file
 ./build/forge agent --config config.hcl
+
+# Run with a config directory (all *.hcl files merged alphabetically)
+./build/forge agent --config ./config/
 
 # Run once and exit (for testing)
 ./build/forge agent --once
@@ -111,7 +114,17 @@ forge sessions delete <id>
 
 ## Configuration
 
-Forge uses HCL (HashiCorp Configuration Language) for configuration. Create a `config.hcl` file:
+Forge uses HCL (HashiCorp Configuration Language) for configuration. Pass either a single file or a directory to `--config`:
+
+```bash
+# Single file
+./build/forge agent --config config.hcl
+
+# Directory — all *.hcl files are merged alphabetically
+./build/forge agent --config ./config/
+```
+
+### Single file example
 
 ```hcl
 log_level = "DEBUG"
@@ -128,14 +141,30 @@ metrics {
 
 plugin_dir = "./plugins"
 
-plugin "ollama" {
-  address = "http://localhost:11434"
+plugin "ollama" "ollama" {
+  config {
+    address = "http://localhost:11434"
+  }
 }
 
-plugin "skills" {}
+plugin "skills" "skills" {}
 
-plugin "filesystem" {}
+plugin "filesystem" "filesystem" {}
 ```
+
+### Split directory example
+
+As the number of plugins grows it can be useful to split configuration across multiple files:
+
+```
+config/
+  00_base.hcl       # log_level, data_dir, server {}, metrics {}
+  10_ollama.hcl     # plugin "ollama" ...
+  10_skills.hcl     # plugin "skills" ...
+  10_filesystem.hcl # plugin "filesystem" ...
+```
+
+Files are merged in alphabetical order. Scalar attributes follow last-writer-wins; blocks (like `plugin`) are appended from all files. Numeric prefixes (`00_`, `10_`) are a convenient way to control ordering and group related config.
 
 ### Configuration Options
 

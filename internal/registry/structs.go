@@ -1,9 +1,13 @@
 package registry
 
-import "github.com/mwantia/forge-sdk/pkg/plugins"
+import (
+	"time"
+
+	"github.com/mwantia/forge-sdk/pkg/plugins"
+)
 
 type PluginDriver struct {
-	Name         string
+	Info         PluginDriverInfo
 	Capabilities *plugins.DriverCapabilities
 	Driver       plugins.Driver
 	Cleanup      PluginDriverCleanup
@@ -12,7 +16,14 @@ type PluginDriver struct {
 type PluginDriverCleanup func()
 
 type PluginDriverInfo struct {
-	Name   string
-	Type   string
-	Config map[string]any
+	Name    string         `json:"name"`
+	Type    string         `json:"type"`
+	Enabled bool           `json:"enabled"`
+	Path    string         `json:"path"`
+	Args    []string       `json:"args"`
+	Timeout time.Duration  `json:"timeout"`
+	MinPort uint           `json:"min_port"`
+	MaxPort uint           `json:"max_port"`
+	Env     map[string]any `json:"env"`
+	Config  map[string]any `json:"config"`
 }

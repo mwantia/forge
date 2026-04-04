@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -34,9 +36,12 @@ func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*c
 			continue
 		}
 
-		if err := r.servePlugin(ctx, dir, info); err != nil {
-			errs.Add(err)
-			continue
+		// Allow plugins to be disabled via config
+		if info.Enabled {
+			if err := r.servePlugin(ctx, dir, info); err != nil {
+				errs.Add(err)
+				continue
+			}
 		}
 	}
 
@@ -44,22 +49,24 @@ func (r *PluginRegistry) ServePlugins(ctx context.Context, dir string, cfgs []*c
 }
 
 func (r *PluginRegistry) servePlugin(ctx context.Context, dir string, info PluginDriverInfo) error {
-	path := filepath.Join(dir, info.Type)
-	args := make([]string, 0)
-	if _, err := os.Stat(path); err != nil {
-		path, err = os.Executable()
-		if err != nil {
-			return fmt.Errorf("failed to execute embedded plugin: %w", err)
+	if info.Path == "" {
+		path := filepath.Join(dir, info.Type)
+		if _, err := os.Stat(path); err != nil {
+			path, err = os.Executable()
+			if err != nil {
+				return fmt.Errorf("failed to execute embedded plugin: %w", err)
+			}
+			info.Args = []string{"plugin", info.Type}
 		}
-		args = []string{"plugin", info.Type}
+		info.Path = path
 	}
 
-	r.logger.Debug("Executing plugin", "path", path, "args", args)
+	r.logger.Debug("Executing plugin", "path", info.Path, "args", info.Args, "env", len(info.Env))
 	name := info.Type
 	if info.Name != info.Type {
 		name += "." + info.Name
 	}
-	driver, client, err := r.runPlugin(ctx, r.logger.Named(name), info, path, args...)
+	driver, client, err := r.runPlugin(ctx, r.logger.Named(name), info)
 	if err != nil {
 		return fmt.Errorf("failed to run plugin: %w", err)
 	}
@@ -70,7 +77,7 @@ func (r *PluginRegistry) servePlugin(ctx context.Context, dir string, info Plugi
 	}
 
 	r.drivers[info.Name] = &PluginDriver{
-		Name:         info.Name,
+		Info:         info,
 		Capabilities: caps,
 		Driver:       driver,
 		Cleanup:      func() { client.Kill() },
@@ -78,16 +85,29 @@ func (r *PluginRegistry) servePlugin(ctx context.Context, dir string, info Plugi
 	return nil
 }
 
-func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, info PluginDriverInfo, path string, args ...string) (plugins.Driver, *goplugin.Client, error) {
-	client := goplugin.NewClient(&goplugin.ClientConfig{
+func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, info PluginDriverInfo) (plugins.Driver, *goplugin.Client, error) {
+	config := &goplugin.ClientConfig{
 		HandshakeConfig: pluginsgrpc.Handshake,
 		Plugins:         pluginsgrpc.Plugins,
 		AllowedProtocols: []goplugin.Protocol{
 			goplugin.ProtocolGRPC,
 		},
-		Cmd:    exec.Command(path, args...),
-		Logger: logger,
-	})
+		StartTimeout: info.Timeout,
+		MinPort:      info.MinPort,
+		MaxPort:      info.MaxPort,
+		Cmd:          exec.Command(info.Path, info.Args...),
+		Logger:       logger,
+		SkipHostEnv:  true,
+	}
+	if len(info.Env) > 0 {
+		env := make([]string, 0)
+		for k, v := range info.Env {
+			env = append(env, strings.ToUpper(k)+"="+fmt.Sprintf("%s", v))
+		}
+		config.Cmd.Env = env
+	}
+
+	client := goplugin.NewClient(config)
 
 	grpc, err := client.Client()
 	if err != nil {
@@ -134,20 +154,54 @@ func (r *PluginRegistry) runPlugin(ctx context.Context, logger hclog.Logger, inf
 
 func (r *PluginRegistry) GetPluginDriverInfo(cfg *config.PluginConfig) (PluginDriverInfo, error) {
 	info := PluginDriverInfo{
-		Name: cfg.Name,
-		Type: cfg.Type,
+		Name:    cfg.Name,
+		Type:    cfg.Type,
+		Enabled: !cfg.Disabled,
+		Timeout: time.Minute * 1, // See goplugin.ClientConfig.StartTimeout
+		MinPort: 10000,           // See goplugin.ClientConfig.MinPort
+		MaxPort: 25000,           // See goplugin.ClientConfig.MaxPort
+		Env:     make(map[string]any),
+		Config:  make(map[string]any),
 	}
 	// Overwrite empty name with type
 	if info.Name == "" {
 		info.Name = info.Type
 	}
 
-	ctx := eval.NewEvalContext(nil)
-	body, err := cfg.Config.DecodeBody(ctx)
-	if err != nil {
-		return info, err
+	eval := eval.NewEvalContext(nil)
+
+	if cfg.Runtime != nil {
+		info.Path = cfg.Runtime.Path
+		info.Args = cfg.Runtime.Args
+
+		if cfg.Runtime.Timeout != "" {
+			timeout, err := time.ParseDuration(cfg.Runtime.Timeout)
+			if err == nil || timeout > 0 {
+				info.Timeout = timeout
+			}
+		}
+
+		if cfg.Runtime.Port != nil {
+			info.MinPort = cfg.Runtime.Port.Min
+			info.MaxPort = cfg.Runtime.Port.Max
+		}
+
+		if cfg.Runtime.Env != nil {
+			env, err := config.DecodeBody(eval, cfg.Runtime.Env.Body)
+			if err != nil {
+				return info, err
+			}
+			info.Env = env
+		}
 	}
 
-	info.Config = body
+	if cfg.Config != nil {
+		config, err := config.DecodeBody(eval, cfg.Config.Body)
+		if err != nil {
+			return info, err
+		}
+		info.Config = config
+	}
+
 	return info, nil
 }
