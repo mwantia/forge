@@ -1,0 +1,42 @@
+# Version control
+.git/
+.gitignore
+
+# Build artifacts
+build/
+vendor/
+tmp/
+
+# Runtime data
+.env
+data/
+
+# Test configs and fixtures
+test/
+tests/
+
+# Documentation and examples
+docs/
+examples/
+*.md
+LICENSE
+
+# Build tooling (not needed inside Docker)
+taskfile.yml
+plugins.example.yaml
+
+# Generated files (recreated during Docker build)
+cmd/forge/plugins.go
+
+# Go workspace
+go.work
+go.work.sum
+
+# Platform-specific artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out

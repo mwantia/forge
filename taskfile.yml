@@ -5,7 +5,7 @@ env:
     GOOS: linux
     MAIN_PATH: ./cmd/forge/
     BUILD_PATH: ./build/forge
-    TEST_CONFIG_PATH: ./tests/config.hcl
+    TEST_CONFIG_PATH: ./tests/config/
 
 dotenv: ['.env']
 
@@ -25,8 +25,8 @@ tasks:
     generate:
         desc: Generate plugin_*.go files from plugins.yaml
         cmds:
-        - task: setup
         - go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
+        - task: setup
 
     build:
         desc: Compile the project into a static binary

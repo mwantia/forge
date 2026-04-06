@@ -6,6 +6,12 @@ require (
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/hashicorp/go-hclog v1.6.3
+	github.com/mwantia/forge-plugin-discord v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-ollama v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-plane v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-unifi v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-sdk v0.0.0-20260330200809-ad49c3efa981
 	github.com/zclconf/go-cty v1.13.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -19,6 +25,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -37,6 +44,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
@@ -44,6 +52,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.17 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -117,3 +126,9 @@ replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-
 replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
 
 replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane
+
+replace github.com/mwantia/forge-plugin-discord => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/discord
+
+replace github.com/mwantia/forge-plugin-unifi => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
+
+replace github.com/mwantia/forge-plugin-unifiYX => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi

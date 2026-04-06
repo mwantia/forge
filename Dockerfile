@@ -7,8 +7,9 @@ WORKDIR /build
 ADD . /build
 
 RUN go get -d -v ./...
+RUN go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-s -w -extldflags "-static"' -o ./forge ./cmd/forge/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -tags all -a -ldflags '-s -w -extldflags "-static"' -o ./forge ./cmd/forge/main.go
 
 RUN chmod +x ./forge
 
@@ -26,4 +27,4 @@ EXPOSE 9500/tcp
 # Set entrypoint to run executable
 WORKDIR /app
 ENTRYPOINT [ "/app/forge" ]
-CMD [ "agent" ]
+CMD [ "agent", "--log-level DEBUG" ]
