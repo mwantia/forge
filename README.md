@@ -1,5 +1,11 @@
 # Forge
 
+> [!WARNING]
+> This project is currently in **early development** and is **not ready for production use**. \
+> Do NOT expect a clonable repository that can be build, run or tested on other system out of the box. \
+> Many core components are still incomplete and being worked on and tested. \
+> Do not attempt to use this in any production- or critical-environments.
+
 A pluggable AI agent framework built in Go. Forge provides a plugin-based architecture for integrating LLM providers (like Ollama) and tools/skills, exposed through a REST API with persistent session management.
 
 ## Features
