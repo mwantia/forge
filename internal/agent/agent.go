@@ -43,12 +43,12 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 
 	if a.config.Server != nil {
 		a.logger.Debug("Server config set - Starting server runner...")
-		server, err := container.Resolve[*server.Server](ctx, a.container)
+		srv, err := container.Resolve[*server.Server](ctx, a.container)
 		if err != nil {
 			return fmt.Errorf("failed to create http server: %w", err)
 		}
 
-		if err := a.serveRunner(ctx, server); err != nil {
+		if err := a.serveRunner(ctx, srv); err != nil {
 			return err
 		}
 	}

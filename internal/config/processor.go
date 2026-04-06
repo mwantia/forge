@@ -64,6 +64,8 @@ func (p *ConfigTagProcessor) Process(ctx context.Context, sc *container.ServiceC
 		return p.cfg.Server, nil
 	case "metrics":
 		return p.cfg.Metrics, nil
+	case "storage":
+		return p.cfg.Storage, nil
 	default:
 		return p.cfg, nil
 	}

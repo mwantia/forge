@@ -95,6 +95,25 @@ func (r *PluginRegistry) GetAllProviders(ctx context.Context) map[string]plugins
 	return result
 }
 
+func (r *PluginRegistry) GetAllChannelPlugins(ctx context.Context) map[string]plugins.ChannelPlugin {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	result := make(map[string]plugins.ChannelPlugin)
+	for name, driver := range r.drivers {
+		if driver.Capabilities == nil || driver.Capabilities.Channel == nil {
+			continue
+		}
+		cp, err := driver.Driver.GetChannelPlugin(ctx)
+		if err != nil {
+			r.logger.Warn("Failed to get channel plugin", "driver", name, "error", err)
+			continue
+		}
+		result[name] = cp
+	}
+	return result
+}
+
 func (r *PluginRegistry) GetAllToolsPlugins(ctx context.Context) map[string]plugins.ToolsPlugin {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()

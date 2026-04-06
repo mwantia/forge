@@ -48,6 +48,7 @@ func main() {
 	cmd.AddCommand(server.NewAgentCommand())
 	cmd.AddCommand(server.NewPluginCommand())
 	cmd.AddCommand(client.NewSessionsCommand())
+	cmd.AddCommand(client.NewChannelsCommand())
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)

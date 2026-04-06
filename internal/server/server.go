@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/forge/internal/channel"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/registry"
 	"github.com/mwantia/forge/internal/sandbox"
@@ -18,9 +19,12 @@ type Server struct {
 	engine *gin.Engine
 	srv    *http.Server
 
-	logger   hclog.Logger             `fabric:"logger:server"`
-	config   *config.AgentConfig      `fabric:"config"`
-	registry *registry.PluginRegistry `fabric:"inject"`
+	logger     hclog.Logger               `fabric:"logger:server"`
+	config     *config.AgentConfig        `fabric:"config"`
+	registry   *registry.PluginRegistry   `fabric:"inject"`
+	dispatcher *channel.ChannelDispatcher `fabric:"inject"`
+	sessions   *session.SessionManager    `fabric:"inject"`
+	sandboxes  *sandbox.SandboxManager    `fabric:"inject"`
 }
 
 func (s *Server) Setup() (func() error, error) {
@@ -31,10 +35,12 @@ func (s *Server) Setup() (func() error, error) {
 		Handler: s.engine,
 	}
 
-	sbMgr := sandbox.NewManager(s.logger, s.config.DataDir, s.registry)
-
-	mgr := session.NewManager(s.logger, s.config.DataDir, s.registry)
-	mgr.SetSandboxManager(sbMgr)
+	// Initialise channel binding stores before registering routes.
+	if s.dispatcher != nil {
+		if _, err := s.dispatcher.Setup(); err != nil {
+			return nil, err
+		}
+	}
 
 	s.engine.Use(s.LoggerHandler(), s.Recovery())
 
@@ -64,28 +70,35 @@ func (s *Server) Setup() (func() error, error) {
 	authed.POST("tools/:driver/:tool/execute", api.ExecuteTool(s.registry))
 	authed.DELETE("tools/:driver/cancel/:call_id", api.CancelTool(s.registry))
 
+	// Channel bindings
+	if s.dispatcher != nil {
+		authed.GET("channels/:plugin/bindings", api.ListChannelBindings(s.dispatcher))
+		authed.POST("channels/:plugin/bind", api.BindChannel(s.dispatcher, s.sessions))
+		authed.DELETE("channels/:plugin/bind/:channel_id", api.UnbindChannel(s.dispatcher))
+	}
+
 	// Sessions
-	authed.GET("sessions", api.ListSessions(mgr))
-	authed.POST("sessions", api.CreateSession(mgr))
-	authed.GET("sessions/:id", api.GetSession(mgr))
-	authed.DELETE("sessions/:id", api.DeleteSession(mgr))
-	authed.GET("sessions/:id/tools", api.ListSessionTools(mgr))
-	authed.GET("sessions/:id/messages", api.ListMessages(mgr))
-	authed.POST("sessions/:id/messages", api.AddMessage(mgr))
-	authed.GET("sessions/:id/messages/:message_id", api.GetMessage(mgr))
-	authed.POST("sessions/:id/messages/compact", api.CompactMessages(mgr))
-	authed.GET("sessions/:id/sandboxes", api.ListSessionSandboxes(sbMgr))
+	authed.GET("sessions", api.ListSessions(s.sessions))
+	authed.POST("sessions", api.CreateSession(s.sessions))
+	authed.GET("sessions/:id", api.GetSession(s.sessions))
+	authed.DELETE("sessions/:id", api.DeleteSession(s.sessions))
+	authed.GET("sessions/:id/tools", api.ListSessionTools(s.sessions))
+	authed.GET("sessions/:id/messages", api.ListMessages(s.sessions))
+	authed.POST("sessions/:id/messages", api.AddMessage(s.sessions))
+	authed.GET("sessions/:id/messages/:message_id", api.GetMessage(s.sessions))
+	authed.POST("sessions/:id/messages/compact", api.CompactMessages(s.sessions))
+	authed.GET("sessions/:id/sandboxes", api.ListSessionSandboxes(s.sandboxes))
 
 	// Sandboxes
-	authed.GET("sandboxes", api.ListSandboxes(sbMgr))
-	authed.POST("sandboxes", api.CreateSandbox(sbMgr))
-	authed.GET("sandboxes/:id", api.GetSandbox(sbMgr))
-	authed.DELETE("sandboxes/:id", api.DeleteSandbox(sbMgr))
-	authed.POST("sandboxes/:id/exec", api.ExecSandbox(sbMgr))
-	authed.POST("sandboxes/:id/copy-in", api.CopyInSandbox(sbMgr))
-	authed.POST("sandboxes/:id/copy-out", api.CopyOutSandbox(sbMgr))
-	authed.GET("sandboxes/:id/stat", api.StatSandbox(sbMgr))
-	authed.GET("sandboxes/:id/read", api.ReadFileSandbox(sbMgr))
+	authed.GET("sandboxes", api.ListSandboxes(s.sandboxes))
+	authed.POST("sandboxes", api.CreateSandbox(s.sandboxes))
+	authed.GET("sandboxes/:id", api.GetSandbox(s.sandboxes))
+	authed.DELETE("sandboxes/:id", api.DeleteSandbox(s.sandboxes))
+	authed.POST("sandboxes/:id/exec", api.ExecSandbox(s.sandboxes))
+	authed.POST("sandboxes/:id/copy-in", api.CopyInSandbox(s.sandboxes))
+	authed.POST("sandboxes/:id/copy-out", api.CopyOutSandbox(s.sandboxes))
+	authed.GET("sandboxes/:id/stat", api.StatSandbox(s.sandboxes))
+	authed.GET("sandboxes/:id/read", api.ReadFileSandbox(s.sandboxes))
 
 	return func() error {
 		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)

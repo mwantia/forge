@@ -9,10 +9,14 @@ import (
 	"github.com/mwantia/forge-sdk/pkg/errors"
 	"github.com/mwantia/forge-sdk/pkg/log"
 	"github.com/mwantia/forge/internal/agent"
+	"github.com/mwantia/forge/internal/channel"
 	"github.com/mwantia/forge/internal/config"
 	"github.com/mwantia/forge/internal/metrics"
 	"github.com/mwantia/forge/internal/registry"
+	"github.com/mwantia/forge/internal/sandbox"
 	"github.com/mwantia/forge/internal/server"
+	"github.com/mwantia/forge/internal/session"
+	"github.com/mwantia/forge/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +50,12 @@ func NewAgentCommand() *cobra.Command {
 
 			errs.Add(container.Register[*registry.PluginRegistry](sc,
 				container.AsSingleton()))
+			errs.Add(container.Register[*channel.ChannelDispatcher](sc,
+				container.AsSingleton()))
+			errs.Add(container.Register[*sandbox.SandboxManager](sc,
+				container.AsSingleton()))
+			errs.Add(container.Register[*session.SessionManager](sc,
+				container.AsSingleton()))
 			errs.Add(container.Register[*server.Server](sc,
 				container.AsSingleton()))
 			errs.Add(container.Register[*metrics.Metrics](sc,
@@ -53,12 +63,23 @@ func NewAgentCommand() *cobra.Command {
 			errs.Add(container.Register[*agent.Agent](sc,
 				container.AsSingleton()))
 
+			errs.Add(container.Register[*storage.StorageBackendInjector](sc,
+				container.AsSingleton(),
+				container.With[storage.Backend]()))
+
+			// No idea why we have to manually resolve it here
+			container.Resolve[storage.Backend](ctx, sc)
+
 			agent, err := container.Resolve[*agent.Agent](ctx, sc)
 			if err != nil {
 				return fmt.Errorf("failed to create agent: %w", err)
 			}
 
-			return agent.Serve(OnceFlag, ctx)
+			if err := agent.Serve(OnceFlag, ctx); err != nil {
+				return err
+			}
+
+			return sc.Cleanup(ctx)
 		},
 	}
 
