@@ -9,36 +9,18 @@ import (
 	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge-sdk/pkg/random"
 	"github.com/mwantia/forge/internal/registry"
+	"github.com/mwantia/forge/internal/sandbox"
+	"github.com/mwantia/forge/internal/storage"
 )
 
 const defaultMaxToolIterations = 10
 
-// SandboxManagerIface is the minimal interface the session manager needs
-// to inject sandbox tools. Using an interface avoids an import cycle between
-// internal/session and internal/sandbox.
-type SandboxManagerIface interface {
-	NewToolsPlugin(sessionID string) plugins.ToolsPlugin
-}
-
 // Manager handles session lifecycle and message dispatch.
-type Manager struct {
-	log            hclog.Logger
-	store          *FileStore
-	registry       *registry.PluginRegistry
-	sandboxManager SandboxManagerIface
-}
-
-func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) *Manager {
-	return &Manager{
-		log:      log.Named("session"),
-		store:    NewFileStore(dataDir),
-		registry: reg,
-	}
-}
-
-// SetSandboxManager wires in an optional sandbox manager for tool injection.
-func (m *Manager) SetSandboxManager(sm SandboxManagerIface) {
-	m.sandboxManager = sm
+type SessionManager struct {
+	log            hclog.Logger             `fabric:"logger:session"`
+	registry       *registry.PluginRegistry `fabric:"inject"`
+	sandboxManager *sandbox.SandboxManager  `fabric:"inject"`
+	backend        storage.Backend          `fabric:"inject"`
 }
 
 // CreateOptions is the request body for POST /v1/sessions.
@@ -54,13 +36,13 @@ type CreateOptions struct {
 	SystemPrompt      string   `json:"system_prompt,omitempty"`
 }
 
-func (m *Manager) Create(opts CreateOptions) (*Session, error) {
+func (m *SessionManager) Create(opts CreateOptions) (*Session, error) {
 	if opts.MaxToolIterations <= 0 {
 		opts.MaxToolIterations = defaultMaxToolIterations
 	}
 	name := opts.Name
 	if name == "" {
-		name = m.store.generateUniqueName()
+		name = m.generateUniqueName()
 	}
 	now := time.Now()
 	sess := &Session{
@@ -77,19 +59,19 @@ func (m *Manager) Create(opts CreateOptions) (*Session, error) {
 		CreatedAt:         now,
 		UpdatedAt:         now,
 	}
-	if err := m.store.SaveSession(sess); err != nil {
+	if err := m.saveSession(sess); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 	return sess, nil
 }
 
-func (m *Manager) Get(id string) (*Session, error) {
-	sess, err := m.store.LoadSession(id)
+func (m *SessionManager) Get(id string) (*Session, error) {
+	sess, err := m.loadSession(id)
 	if err == nil {
 		return sess, nil
 	}
 	// Fall back to name lookup
-	sess, err = m.store.FindByName(id)
+	sess, err = m.findByName(id)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %w", err)
 	}
@@ -99,16 +81,16 @@ func (m *Manager) Get(id string) (*Session, error) {
 	return sess, nil
 }
 
-func (m *Manager) List(opts ListOptions) ([]*Session, error) {
-	return m.store.ListSessions(opts)
+func (m *SessionManager) List(opts ListOptions) ([]*Session, error) {
+	return m.listSessions(opts)
 }
 
-func (m *Manager) Delete(id string) error {
+func (m *SessionManager) Delete(id string) error {
 	sess, err := m.Get(id)
 	if err != nil {
 		return err
 	}
-	return m.store.DeleteSession(sess.ID)
+	return m.deleteSession(sess.ID)
 }
 
 // UpdateMetaOptions holds the fields that can be updated on an existing session.
@@ -117,7 +99,7 @@ type UpdateMetaOptions struct {
 	Description *string `json:"description,omitempty"`
 }
 
-func (m *Manager) UpdateMeta(id string, opts UpdateMetaOptions) (*Session, error) {
+func (m *SessionManager) UpdateMeta(id string, opts UpdateMetaOptions) (*Session, error) {
 	sess, err := m.Get(id)
 	if err != nil {
 		return nil, err
@@ -129,14 +111,14 @@ func (m *Manager) UpdateMeta(id string, opts UpdateMetaOptions) (*Session, error
 		sess.Description = *opts.Description
 	}
 	sess.UpdatedAt = time.Now()
-	if err := m.store.SaveSession(sess); err != nil {
+	if err := m.saveSession(sess); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 	return sess, nil
 }
 
 // ListTools returns all tools available to a session, including built-in session tools.
-func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall, error) {
+func (m *SessionManager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall, error) {
 	sess, err := m.Get(id)
 	if err != nil {
 		return nil, err
@@ -148,31 +130,31 @@ func (m *Manager) ListTools(ctx context.Context, id string) ([]plugins.ToolCall,
 	return toolDefs, nil
 }
 
-func (m *Manager) GetMessage(sessionID, messageID string) (*Message, error) {
+func (m *SessionManager) GetMessage(sessionID, messageID string) (*Message, error) {
 	sess, err := m.Get(sessionID)
 	if err != nil {
 		return nil, err
 	}
-	return m.store.GetMessage(sess.ID, messageID)
+	return m.getMessage(sess.ID, messageID)
 }
 
-func (m *Manager) GetMessages(id string, limit, offset int) ([]*Message, error) {
+func (m *SessionManager) GetMessages(id string, limit, offset int) ([]*Message, error) {
 	sess, err := m.Get(id)
 	if err != nil {
 		return nil, err
 	}
-	return m.store.ListMessages(sess.ID, limit, offset)
+	return m.listMessages(sess.ID, limit, offset)
 }
 
 // Dispatch saves the user message, runs the full pipeline, and returns a stream
 // of the final assistant response. The stream must always be closed by the caller.
-func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plugins.ChatStream, error) {
+func (m *SessionManager) Dispatch(ctx context.Context, sessionID, content string) (plugins.ChatStream, error) {
 	sess, err := m.Get(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	history, err := m.store.ListMessages(sess.ID, 0, 0)
+	history, err := m.listMessages(sess.ID, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load message history: %w", err)
 	}
@@ -190,7 +172,7 @@ func (m *Manager) Dispatch(ctx context.Context, sessionID, content string) (plug
 		Content:   content,
 		CreatedAt: time.Now(),
 	}
-	if err := m.store.SaveMessage(sess.ID, userMsg); err != nil {
+	if err := m.saveMessage(sess.ID, userMsg); err != nil {
 		return nil, fmt.Errorf("failed to save user message: %w", err)
 	}
 
@@ -209,24 +191,24 @@ type CompactResult struct {
 	Deleted int `json:"deleted"`
 }
 
-func (m *Manager) Compact(id string, opts CompactOptions) (*CompactResult, error) {
+func (m *SessionManager) Compact(id string, opts CompactOptions) (*CompactResult, error) {
 	sess, err := m.Get(id)
 	if err != nil {
 		return nil, err
 	}
 
-	before := m.store.CountMessages(sess.ID)
+	before := m.countMessages(sess.ID)
 
-	deleted, err := m.store.CompactMessages(sess.ID, opts.StripTools)
+	deleted, err := m.compactMessages(sess.ID, opts.StripTools)
 	if err != nil {
 		return nil, fmt.Errorf("compaction failed: %w", err)
 	}
 
-	after := m.store.CountMessages(sess.ID)
+	after := m.countMessages(sess.ID)
 
 	sess.MessageCount = after
 	sess.UpdatedAt = time.Now()
-	if err := m.store.SaveSession(sess); err != nil {
+	if err := m.saveSession(sess); err != nil {
 		m.log.Error("Failed to update session metadata after compact", "error", err)
 	}
 
@@ -236,13 +218,16 @@ func (m *Manager) Compact(id string, opts CompactOptions) (*CompactResult, error
 // resolveAllTools resolves plugin tools for the session and appends the built-in
 // session management tools (agent__session_*) and sandbox tools (agent__sandbox_*)
 // when a sandbox manager is wired in.
-func (m *Manager) resolveAllTools(ctx context.Context, sess *Session) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
+func (m *SessionManager) resolveAllTools(ctx context.Context, sess *Session) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
 	toolsMap, toolDefs, err := m.resolveTools(ctx, sess.Tools)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	sp := &sessionToolsPlugin{manager: m, sessionID: sess.ID}
+	sp := &SessionToolsPlugin{
+		manager:   m,
+		sessionID: sess.ID,
+	}
 	resp, _ := sp.ListTools(ctx, plugins.ListToolsFilter{})
 	for _, def := range resp.Tools {
 		prefixed := "agent__" + def.Name
@@ -271,7 +256,7 @@ func (m *Manager) resolveAllTools(ctx context.Context, sess *Session) (map[strin
 	return toolsMap, toolDefs, nil
 }
 
-func (m *Manager) resolveTools(ctx context.Context, names []string) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
+func (m *SessionManager) resolveTools(ctx context.Context, names []string) (map[string]plugins.ToolsPlugin, []plugins.ToolCall, error) {
 	toolsMap := make(map[string]plugins.ToolsPlugin)
 	var toolDefs []plugins.ToolCall
 

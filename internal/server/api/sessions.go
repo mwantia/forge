@@ -9,7 +9,7 @@ import (
 	"github.com/mwantia/forge/internal/session"
 )
 
-func ListSessions(mgr *session.Manager) gin.HandlerFunc {
+func ListSessions(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -28,7 +28,7 @@ func ListSessions(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func CreateSession(mgr *session.Manager) gin.HandlerFunc {
+func CreateSession(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var opts session.CreateOptions
 		if err := c.ShouldBindJSON(&opts); err != nil {
@@ -44,7 +44,7 @@ func CreateSession(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func GetSession(mgr *session.Manager) gin.HandlerFunc {
+func GetSession(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sess, err := mgr.Get(c.Param("id"))
 		if err != nil {
@@ -55,7 +55,7 @@ func GetSession(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func DeleteSession(mgr *session.Manager) gin.HandlerFunc {
+func DeleteSession(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		if _, err := mgr.Get(id); err != nil {
@@ -75,7 +75,7 @@ type addMessageRequest struct {
 	Stream  bool   `json:"stream"`
 }
 
-func AddMessage(mgr *session.Manager) gin.HandlerFunc {
+func AddMessage(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		var req addMessageRequest
@@ -104,7 +104,7 @@ func AddMessage(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func ListSessionTools(mgr *session.Manager) gin.HandlerFunc {
+func ListSessionTools(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		tools, err := mgr.ListTools(c.Request.Context(), id)
@@ -116,7 +116,7 @@ func ListSessionTools(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func GetMessage(mgr *session.Manager) gin.HandlerFunc {
+func GetMessage(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		msg, err := mgr.GetMessage(c.Param("id"), c.Param("message_id"))
 		if err != nil {
@@ -127,7 +127,7 @@ func GetMessage(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func CompactMessages(mgr *session.Manager) gin.HandlerFunc {
+func CompactMessages(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		var opts session.CompactOptions
@@ -148,7 +148,7 @@ func CompactMessages(mgr *session.Manager) gin.HandlerFunc {
 	}
 }
 
-func ListMessages(mgr *session.Manager) gin.HandlerFunc {
+func ListMessages(mgr *session.SessionManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))

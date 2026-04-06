@@ -10,33 +10,25 @@ import (
 	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge-sdk/pkg/random"
 	"github.com/mwantia/forge/internal/registry"
+	"github.com/mwantia/forge/internal/storage"
 )
 
 const defaultIsolationDriver = "builtin"
 
-// activeHandle pairs a live plugin with the handle it returned for a sandbox.
-type activeHandle struct {
-	plugin plugins.SandboxPlugin
-	handle plugins.SandboxHandle
-}
-
 // Manager handles sandbox lifecycle: creation, persistence, and dispatch to plugins.
-type Manager struct {
-	log      hclog.Logger
-	store    *FileStore
-	registry *registry.PluginRegistry
+type SandboxManager struct {
+	log      hclog.Logger             `fabric:"logger:sandbox"`
+	registry *registry.PluginRegistry `fabric:"inject"`
+	backend  storage.Backend          `fabric:"inject"`
 
 	mu      sync.RWMutex
 	handles map[string]*activeHandle // sandboxID → active handle
 }
 
-func NewManager(log hclog.Logger, dataDir string, reg *registry.PluginRegistry) *Manager {
-	return &Manager{
-		log:      log.Named("sandbox"),
-		store:    NewFileStore(dataDir),
-		registry: reg,
-		handles:  make(map[string]*activeHandle),
-	}
+// activeHandle pairs a live plugin with the handle it returned for a sandbox.
+type activeHandle struct {
+	plugin plugins.SandboxPlugin
+	handle plugins.SandboxHandle
 }
 
 // CreateOptions is the request body for creating a sandbox.
@@ -48,7 +40,7 @@ type CreateOptions struct {
 }
 
 // Create creates a new sandbox, persists its record, and invokes the plugin.
-func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Sandbox, error) {
+func (m *SandboxManager) Create(ctx context.Context, opts CreateOptions) (*Sandbox, error) {
 	if opts.SessionID == "" {
 		return nil, fmt.Errorf("session_id is required")
 	}
@@ -83,20 +75,20 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Sandbox, err
 		UpdatedAt:       now,
 	}
 
-	if err := m.store.Save(sb); err != nil {
+	if err := m.saveSandbox(sb); err != nil {
 		return nil, fmt.Errorf("failed to persist sandbox record: %w", err)
 	}
 
 	handle, err := plugin.CreateSandbox(ctx, spec)
 	if err != nil {
 		sb.Status = StatusError
-		_ = m.store.Save(sb)
+		_ = m.saveSandbox(sb)
 		return nil, fmt.Errorf("failed to create sandbox via plugin: %w", err)
 	}
 
 	sb.Status = StatusReady
 	sb.UpdatedAt = time.Now()
-	if err := m.store.Save(sb); err != nil {
+	if err := m.saveSandbox(sb); err != nil {
 		m.log.Warn("Failed to update sandbox status after creation", "id", id, "error", err)
 	}
 
@@ -109,18 +101,18 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Sandbox, err
 }
 
 // Get returns the persisted sandbox record by ID.
-func (m *Manager) Get(id string) (*Sandbox, error) {
-	return m.store.LoadByID(id)
+func (m *SandboxManager) Get(id string) (*Sandbox, error) {
+	return m.loadSandboxByID(id)
 }
 
 // List returns sandboxes matching the given options.
-func (m *Manager) List(opts ListOptions) ([]*Sandbox, error) {
-	return m.store.List(opts)
+func (m *SandboxManager) List(opts ListOptions) ([]*Sandbox, error) {
+	return m.listSandboxes(opts)
 }
 
 // Delete destroys the sandbox via the plugin and removes its record.
-func (m *Manager) Delete(ctx context.Context, id string) error {
-	sb, err := m.store.LoadByID(id)
+func (m *SandboxManager) Delete(ctx context.Context, id string) error {
+	sb, err := m.loadSandboxByID(id)
 	if err != nil {
 		return err
 	}
@@ -138,19 +130,19 @@ func (m *Manager) Delete(ctx context.Context, id string) error {
 		}
 	}
 
-	return m.store.Delete(sb.SessionID, id)
+	return m.deleteSandbox(sb.SessionID, id)
 }
 
 // NewToolsPlugin returns a ToolsPlugin that exposes sandbox operations as agent tools
 // scoped to the given session. This satisfies the session.SandboxManagerIface.
-func (m *Manager) NewToolsPlugin(sessionID string) plugins.ToolsPlugin {
+func (m *SandboxManager) NewToolsPlugin(sessionID string) plugins.ToolsPlugin {
 	return &SandboxToolsPlugin{Manager: m, SessionID: sessionID}
 }
 
 // DeleteBySession destroys all sandboxes belonging to a session.
 // Called before deleting a session so OS-level resources are released.
-func (m *Manager) DeleteBySession(ctx context.Context, sessionID string) error {
-	sbs, err := m.store.List(ListOptions{SessionID: sessionID})
+func (m *SandboxManager) DeleteBySession(ctx context.Context, sessionID string) error {
+	sbs, err := m.listSandboxes(ListOptions{SessionID: sessionID})
 	if err != nil {
 		return err
 	}
@@ -163,19 +155,19 @@ func (m *Manager) DeleteBySession(ctx context.Context, sessionID string) error {
 }
 
 // UpdateStatus updates only the status field on disk.
-func (m *Manager) UpdateStatus(id string, status SandboxStatus) error {
-	sb, err := m.store.LoadByID(id)
+func (m *SandboxManager) UpdateStatus(id string, status SandboxStatus) error {
+	sb, err := m.loadSandboxByID(id)
 	if err != nil {
 		return err
 	}
 	sb.Status = status
 	sb.UpdatedAt = time.Now()
-	return m.store.Save(sb)
+	return m.saveSandbox(sb)
 }
 
 // --- Plugin operation dispatch ---
 
-func (m *Manager) getActiveHandle(id string) (*activeHandle, error) {
+func (m *SandboxManager) getActiveHandle(id string) (*activeHandle, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	ah, ok := m.handles[id]
@@ -185,7 +177,7 @@ func (m *Manager) getActiveHandle(id string) (*activeHandle, error) {
 	return ah, nil
 }
 
-func (m *Manager) CopyIn(ctx context.Context, id, hostSrc, sandboxDst string) error {
+func (m *SandboxManager) CopyIn(ctx context.Context, id, hostSrc, sandboxDst string) error {
 	ah, err := m.getActiveHandle(id)
 	if err != nil {
 		return err
@@ -193,7 +185,7 @@ func (m *Manager) CopyIn(ctx context.Context, id, hostSrc, sandboxDst string) er
 	return ah.plugin.CopyIn(ctx, ah.handle.ID, hostSrc, sandboxDst)
 }
 
-func (m *Manager) CopyOut(ctx context.Context, id, sandboxSrc, hostDst string) error {
+func (m *SandboxManager) CopyOut(ctx context.Context, id, sandboxSrc, hostDst string) error {
 	ah, err := m.getActiveHandle(id)
 	if err != nil {
 		return err
@@ -201,7 +193,7 @@ func (m *Manager) CopyOut(ctx context.Context, id, sandboxSrc, hostDst string) e
 	return ah.plugin.CopyOut(ctx, ah.handle.ID, sandboxSrc, hostDst)
 }
 
-func (m *Manager) Execute(ctx context.Context, id string, req plugins.SandboxExecRequest) (<-chan plugins.SandboxExecChunk, error) {
+func (m *SandboxManager) Execute(ctx context.Context, id string, req plugins.SandboxExecRequest) (<-chan plugins.SandboxExecChunk, error) {
 	ah, err := m.getActiveHandle(id)
 	if err != nil {
 		return nil, err
@@ -210,7 +202,7 @@ func (m *Manager) Execute(ctx context.Context, id string, req plugins.SandboxExe
 	return ah.plugin.Execute(ctx, req)
 }
 
-func (m *Manager) Stat(ctx context.Context, id, path string) (*plugins.SandboxStatResult, error) {
+func (m *SandboxManager) Stat(ctx context.Context, id, path string) (*plugins.SandboxStatResult, error) {
 	ah, err := m.getActiveHandle(id)
 	if err != nil {
 		return nil, err
@@ -218,7 +210,7 @@ func (m *Manager) Stat(ctx context.Context, id, path string) (*plugins.SandboxSt
 	return ah.plugin.Stat(ctx, ah.handle.ID, path)
 }
 
-func (m *Manager) ReadFile(ctx context.Context, id, path string) ([]byte, error) {
+func (m *SandboxManager) ReadFile(ctx context.Context, id, path string) ([]byte, error) {
 	ah, err := m.getActiveHandle(id)
 	if err != nil {
 		return nil, err

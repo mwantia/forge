@@ -11,7 +11,7 @@ import (
 	"github.com/mwantia/forge/internal/sandbox"
 )
 
-func ListSandboxes(mgr *sandbox.Manager) gin.HandlerFunc {
+func ListSandboxes(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -31,7 +31,7 @@ func ListSandboxes(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func ListSessionSandboxes(mgr *sandbox.Manager) gin.HandlerFunc {
+func ListSessionSandboxes(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sbs, err := mgr.List(sandbox.ListOptions{SessionID: c.Param("id")})
 		if err != nil {
@@ -42,7 +42,7 @@ func ListSessionSandboxes(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func CreateSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func CreateSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var opts sandbox.CreateOptions
 		if err := c.ShouldBindJSON(&opts); err != nil {
@@ -62,7 +62,7 @@ func CreateSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func GetSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func GetSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sb, err := mgr.Get(c.Param("id"))
 		if err != nil {
@@ -73,7 +73,7 @@ func GetSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func DeleteSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func DeleteSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := mgr.Delete(c.Request.Context(), c.Param("id")); err != nil {
 			respondError(c, http.StatusInternalServerError, "internal_error", err.Error())
@@ -83,7 +83,7 @@ func DeleteSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func ExecSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func ExecSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		stream := c.Query("stream") == "true"
@@ -130,7 +130,7 @@ func ExecSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func CopyInSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func CopyInSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		var body struct {
@@ -149,7 +149,7 @@ func CopyInSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func CopyOutSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func CopyOutSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		var body struct {
@@ -168,7 +168,7 @@ func CopyOutSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func StatSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func StatSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.Query("path")
 		if path == "" {
@@ -184,7 +184,7 @@ func StatSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
 	}
 }
 
-func ReadFileSandbox(mgr *sandbox.Manager) gin.HandlerFunc {
+func ReadFileSandbox(mgr *sandbox.SandboxManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.Query("path")
 		if path == "" {

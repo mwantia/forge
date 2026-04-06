@@ -44,7 +44,7 @@ func (s *pipelineStream) Close() error {
 //  2. If the response has tool calls, executes them and loops.
 //  3. When the final text response arrives (no tool calls), saves the assistant
 //     message and emits the content as chunks to out.
-func (m *Manager) runPipeline(
+func (m *SessionManager) runPipeline(
 	ctx context.Context,
 	sess *Session,
 	sessionID string,
@@ -116,7 +116,7 @@ func (m *Manager) runPipeline(
 	out <- pipelineItem{err: fmt.Errorf("max tool iterations (%d) reached without a final response", sess.MaxToolIterations)}
 }
 
-func (m *Manager) executeToolCall(ctx context.Context, toolsMap map[string]plugins.ToolsPlugin, tc plugins.ChatToolCall) (string, bool) {
+func (m *SessionManager) executeToolCall(ctx context.Context, toolsMap map[string]plugins.ToolsPlugin, tc plugins.ChatToolCall) (string, bool) {
 	tp, ok := toolsMap[tc.Name]
 	if !ok {
 		m.log.Warn("Tool not found during execution", "tool", tc.Name)
@@ -143,7 +143,7 @@ func (m *Manager) executeToolCall(ctx context.Context, toolsMap map[string]plugi
 	return string(b), resp.IsError
 }
 
-func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls []plugins.ChatToolCall, usage *plugins.TokenUsage) {
+func (m *SessionManager) persistAssistantMessage(sessionID, content string, toolCalls []plugins.ChatToolCall, usage *plugins.TokenUsage) {
 	msg := &Message{
 		ID:        random.GenerateNewID(),
 		Role:      "assistant",
@@ -158,12 +158,12 @@ func (m *Manager) persistAssistantMessage(sessionID, content string, toolCalls [
 			Arguments: tc.Arguments,
 		})
 	}
-	if err := m.store.SaveMessage(sessionID, msg); err != nil {
+	if err := m.saveMessage(sessionID, msg); err != nil {
 		m.log.Error("Failed to save assistant message", "error", err)
 	}
 }
 
-func (m *Manager) persistToolMessage(sessionID string, tc plugins.ChatToolCall, result string, isError bool) {
+func (m *SessionManager) persistToolMessage(sessionID string, tc plugins.ChatToolCall, result string, isError bool) {
 	msg := &Message{
 		ID:      random.GenerateNewID(),
 		Role:    "tool",
@@ -176,18 +176,18 @@ func (m *Manager) persistToolMessage(sessionID string, tc plugins.ChatToolCall, 
 		}},
 		CreatedAt: time.Now(),
 	}
-	if err := m.store.SaveMessage(sessionID, msg); err != nil {
+	if err := m.saveMessage(sessionID, msg); err != nil {
 		m.log.Error("Failed to save tool message", "error", err)
 	}
 }
 
 // accumulateUsage adds the given usage to the session's TotalUsage and persists the session.
-func (m *Manager) accumulateUsage(sess *Session, sessionID string, usage *plugins.TokenUsage) {
-	stored, err := m.store.LoadSession(sessionID)
+func (m *SessionManager) accumulateUsage(sess *Session, sessionID string, usage *plugins.TokenUsage) {
+	stored, err := m.loadSession(sessionID)
 	if err != nil {
 		return
 	}
-	stored.MessageCount = m.store.CountMessages(sessionID)
+	stored.MessageCount = m.countMessages(sessionID)
 	stored.UpdatedAt = time.Now()
 	if usage != nil {
 		if stored.TotalUsage == nil {
@@ -195,7 +195,7 @@ func (m *Manager) accumulateUsage(sess *Session, sessionID string, usage *plugin
 		}
 		stored.TotalUsage.Add(usage)
 	}
-	if err := m.store.SaveSession(stored); err != nil {
+	if err := m.saveSession(stored); err != nil {
 		m.log.Error("Failed to update session metadata", "error", err)
 	}
 }

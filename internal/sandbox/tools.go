@@ -14,207 +14,43 @@ import (
 // It is created per-dispatch and bound to the sandbox manager and session ID.
 type SandboxToolsPlugin struct {
 	plugins.UnimplementedToolsPlugin
-	Manager   *Manager
+	Manager   *SandboxManager
 	SessionID string
-}
-
-var sandboxToolDefs = []plugins.ToolDefinition{
-	{
-		Name:        "sandbox_create",
-		Description: "Create a new isolated sandbox for this session. Returns the sandbox ID.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"name": map[string]any{
-					"type":        "string",
-					"description": "Human-readable name for the sandbox (optional)",
-				},
-				"driver": map[string]any{
-					"type":        "string",
-					"description": "Isolation driver to use (default: \"builtin\")",
-				},
-				"work_dir": map[string]any{
-					"type":        "string",
-					"description": "Working directory inside the sandbox for command execution",
-				},
-			},
-		},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostCheap,
-		},
-	},
-	{
-		Name:        "sandbox_destroy",
-		Description: "Destroy a sandbox and release all its resources.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID to destroy",
-				},
-			},
-			"required": []any{"id"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			Destructive: true,
-			CostHint:    plugins.ToolCostCheap,
-		},
-	},
-	{
-		Name:        "sandbox_list",
-		Description: "List all sandboxes owned by the current session.",
-		Parameters: map[string]any{
-			"type":       "object",
-			"properties": map[string]any{},
-		},
-		Annotations: plugins.ToolAnnotations{
-			ReadOnly:   true,
-			Idempotent: true,
-			CostHint:   plugins.ToolCostFree,
-		},
-	},
-	{
-		Name:        "sandbox_exec",
-		Description: "Execute a command inside a sandbox. Returns combined stdout and stderr output.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID",
-				},
-				"command": map[string]any{
-					"type":        "string",
-					"description": "Command to execute",
-				},
-				"args": map[string]any{
-					"type":        "array",
-					"items":       map[string]any{"type": "string"},
-					"description": "Command arguments",
-				},
-				"timeout_seconds": map[string]any{
-					"type":        "integer",
-					"description": "Execution timeout in seconds (default: 30)",
-				},
-			},
-			"required": []any{"id", "command"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostModerate,
-		},
-	},
-	{
-		Name:        "sandbox_copy_in",
-		Description: "Copy a file from the host filesystem into a sandbox.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID",
-				},
-				"host_src": map[string]any{
-					"type":        "string",
-					"description": "Absolute path on the host to copy from",
-				},
-				"sandbox_dst": map[string]any{
-					"type":        "string",
-					"description": "Destination path inside the sandbox",
-				},
-			},
-			"required": []any{"id", "host_src", "sandbox_dst"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostCheap,
-		},
-	},
-	{
-		Name:        "sandbox_copy_out",
-		Description: "Copy a file from inside a sandbox to the host filesystem.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID",
-				},
-				"sandbox_src": map[string]any{
-					"type":        "string",
-					"description": "Path inside the sandbox to copy from",
-				},
-				"host_dst": map[string]any{
-					"type":        "string",
-					"description": "Destination path on the host",
-				},
-			},
-			"required": []any{"id", "sandbox_src", "host_dst"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostCheap,
-		},
-	},
-	{
-		Name:        "sandbox_stat",
-		Description: "Check whether a path exists inside a sandbox and return basic file info.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID",
-				},
-				"path": map[string]any{
-					"type":        "string",
-					"description": "Path inside the sandbox to stat",
-				},
-			},
-			"required": []any{"id", "path"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			ReadOnly:   true,
-			Idempotent: true,
-			CostHint:   plugins.ToolCostFree,
-		},
-	},
-	{
-		Name:        "sandbox_read",
-		Description: "Read the content of a file from inside a sandbox.",
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{
-					"type":        "string",
-					"description": "Sandbox ID",
-				},
-				"path": map[string]any{
-					"type":        "string",
-					"description": "Path inside the sandbox to read",
-				},
-			},
-			"required": []any{"id", "path"},
-		},
-		Annotations: plugins.ToolAnnotations{
-			ReadOnly:   true,
-			Idempotent: true,
-			CostHint:   plugins.ToolCostCheap,
-		},
-	},
 }
 
 func (p *SandboxToolsPlugin) GetLifecycle() plugins.Lifecycle { return nil }
 
-func (p *SandboxToolsPlugin) ListTools(_ context.Context, _ plugins.ListToolsFilter) (*plugins.ListToolsResponse, error) {
-	return &plugins.ListToolsResponse{Tools: sandboxToolDefs}, nil
+func (p *SandboxToolsPlugin) ListTools(_ context.Context, filter plugins.ListToolsFilter) (*plugins.ListToolsResponse, error) {
+	tools := make([]plugins.ToolDefinition, 0)
+	for _, def := range toolDefinitions {
+		if plugins.MatchesToolsFilter(def, filter) {
+			tools = append(tools, def)
+		}
+	}
+
+	return &plugins.ListToolsResponse{
+		Tools: tools,
+	}, nil
 }
 
 func (p *SandboxToolsPlugin) GetTool(_ context.Context, name string) (*plugins.ToolDefinition, error) {
-	for i := range sandboxToolDefs {
-		if sandboxToolDefs[i].Name == name {
-			return &sandboxToolDefs[i], nil
-		}
+	def, ok := toolDefinitions[strings.ToLower(name)]
+	if !ok {
+		return nil, fmt.Errorf("tool %q not found", name)
 	}
-	return nil, fmt.Errorf("sandbox tool %q not found", name)
+
+	return &def, nil
+}
+
+func (p *SandboxToolsPlugin) Validate(_ context.Context, req plugins.ExecuteRequest) (*plugins.ValidateResponse, error) {
+	def, ok := toolDefinitions[req.Tool]
+	if !ok {
+		return &plugins.ValidateResponse{
+			Valid:  false,
+			Errors: []string{fmt.Sprintf("unknown tool %q", req.Tool)},
+		}, nil
+	}
+	return plugins.ValidateAgainstDefinition(def, req), nil
 }
 
 func (p *SandboxToolsPlugin) Execute(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
@@ -271,7 +107,7 @@ func (p *SandboxToolsPlugin) execDestroy(ctx context.Context, args map[string]an
 	return &plugins.ExecuteResponse{Result: map[string]any{"destroyed": true, "id": id}}, nil
 }
 
-func (p *SandboxToolsPlugin) execList(ctx context.Context) (*plugins.ExecuteResponse, error) {
+func (p *SandboxToolsPlugin) execList(_ context.Context) (*plugins.ExecuteResponse, error) {
 	sbs, err := p.Manager.List(ListOptions{SessionID: p.SessionID})
 	if err != nil {
 		return &plugins.ExecuteResponse{IsError: true, Result: err.Error()}, nil
