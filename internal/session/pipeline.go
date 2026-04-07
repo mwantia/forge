@@ -109,6 +109,10 @@ func (m *SessionManager) runPipeline(
 			messages = append(messages, plugins.ChatMessage{
 				Role:    "tool",
 				Content: resultContent,
+				ToolCalls: &plugins.ChatMessageToolCalls{
+					ID:   tc.ID,
+					Name: tc.Name,
+				},
 			})
 		}
 	}

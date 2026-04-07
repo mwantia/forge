@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/mwantia/forge-plugin-discord v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-ollama v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-openai v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-plane v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
@@ -64,6 +65,7 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
@@ -132,3 +134,7 @@ replace github.com/mwantia/forge-plugin-discord => /home/mwantia/Repositories/02
 replace github.com/mwantia/forge-plugin-unifi => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
 
 replace github.com/mwantia/forge-plugin-unifiYX => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
+
+replace github.com/mwantia/forge-plugin-bifrost => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/bifrost
+
+replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
