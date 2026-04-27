@@ -1,0 +1,999 @@
+definitions:
+  memory.storeResourceRequest:
+    properties:
+      content:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+    required:
+    - content
+    type: object
+  pipeline.WireEvent:
+    properties:
+      data:
+        type: object
+      type:
+        type: string
+    type: object
+  pipeline.dispatchRequest:
+    properties:
+      content:
+        type: string
+      no_store:
+        type: boolean
+      session_id:
+        type: string
+    required:
+    - content
+    - session_id
+    type: object
+  pipeline.previewRequest:
+    properties:
+      content:
+        type: string
+      session_id:
+        type: string
+    required:
+    - session_id
+    type: object
+  pipeline.previewResponse:
+    properties:
+      est_accuracy:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/pipeline.previewResponseMessage'
+        type: array
+      session_id:
+        type: string
+      system:
+        type: string
+      system_usage:
+        $ref: '#/definitions/pipeline.previewUsage'
+      tool_count:
+        type: integer
+      total:
+        $ref: '#/definitions/pipeline.previewUsage'
+    type: object
+  pipeline.previewResponseMessage:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+      usage:
+        $ref: '#/definitions/pipeline.previewUsage'
+    type: object
+  pipeline.previewUsage:
+    properties:
+      bytes:
+        type: integer
+      est_tokens:
+        type: integer
+      runes:
+        type: integer
+    type: object
+  plugins.PluginDriverInfo:
+    properties:
+      args:
+        items:
+          type: string
+        type: array
+      config:
+        additionalProperties: {}
+        type: object
+      enabled:
+        type: boolean
+      env:
+        additionalProperties: {}
+        type: object
+      max_port:
+        type: integer
+      min_port:
+        type: integer
+      name:
+        type: string
+      path:
+        type: string
+      timeout:
+        type: integer
+      type:
+        type: string
+    type: object
+  session.Message:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/session.MessageToolCall'
+        type: array
+    type: object
+  session.MessageToolCall:
+    properties:
+      arguments:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      is_error:
+        type: boolean
+      name:
+        type: string
+      result:
+        type: string
+    type: object
+  session.SessionMetadata:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      parent:
+        type: string
+      system:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  session.compactResult:
+    properties:
+      after:
+        type: integer
+      before:
+        type: integer
+      deleted:
+        type: integer
+    type: object
+  session.createSessionRequest:
+    properties:
+      description:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      parent:
+        type: string
+      system:
+        type: string
+      title:
+        type: string
+    required:
+    - model
+    type: object
+  tools.executeBody:
+    properties:
+      arguments:
+        additionalProperties: {}
+        type: object
+    type: object
+info:
+  contact: {}
+paths:
+  /v1/health:
+    get:
+      description: Returns OK when the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - system
+  /v1/memory:
+    get:
+      description: Returns whether a memory plugin is bound and which one.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Memory status
+      tags:
+      - memory
+  /v1/memory/{namespace}/resources:
+    get:
+      description: Queries a namespace for resources matching the given query.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: Max number of results (default 5)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve memory resources
+      tags:
+      - memory
+    post:
+      consumes:
+      - application/json
+      description: Persists a resource into the given namespace.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Resource to store
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/memory.storeResourceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Store a memory resource
+      tags:
+      - memory
+  /v1/pipeline/dispatch:
+    post:
+      consumes:
+      - application/json
+      description: Appends a user message to the given session and streams the pipeline
+        response as NDJSON. Each line is a WireEvent JSON object.
+      parameters:
+      - description: Dispatch request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pipeline.dispatchRequest'
+      produces:
+      - application/x-ndjson
+      responses:
+        "200":
+          description: NDJSON stream; one event per line
+          schema:
+            $ref: '#/definitions/pipeline.WireEvent'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dispatch message
+      tags:
+      - pipeline
+  /v1/pipeline/preview:
+    post:
+      consumes:
+      - application/json
+      description: Returns the assembled system prompt and chat-message slice that
+        would be sent to the provider, without persisting the new user message or
+        calling the LLM. Use to debug prompt composition.
+      parameters:
+      - description: Preview request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pipeline.previewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pipeline.previewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Preview pipeline input
+      tags:
+      - pipeline
+  /v1/plugins/:
+    get:
+      description: Returns info for all loaded plugin drivers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/plugins.PluginDriverInfo'
+              type: array
+            type: object
+      summary: List plugins
+      tags:
+      - plugins
+  /v1/plugins/{name}:
+    get:
+      description: Returns info for a single plugin driver by name
+      parameters:
+      - description: Plugin name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/plugins.PluginDriverInfo'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get plugin
+      tags:
+      - plugins
+  /v1/plugins/{name}/capabilities:
+    get:
+      description: Returns the capability set advertised by a plugin driver
+      parameters:
+      - description: Plugin name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get plugin capabilities
+      tags:
+      - plugins
+  /v1/provider/:
+    get:
+      description: Returns names of all loaded provider plugins
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                type: string
+              type: array
+            type: object
+      summary: List providers
+      tags:
+      - provider
+  /v1/provider/{name}:
+    get:
+      description: Returns info for a single provider plugin by name
+      parameters:
+      - description: Provider name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get provider
+      tags:
+      - provider
+  /v1/provider/{name}/models:
+    get:
+      description: Returns all models available from a provider
+      parameters:
+      - description: Provider name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List models
+      tags:
+      - provider
+  /v1/provider/{name}/models/{model}:
+    get:
+      description: Returns info for a single model from a provider
+      parameters:
+      - description: Provider name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Model name
+        in: path
+        name: model
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get model
+      tags:
+      - provider
+  /v1/provider/models:
+    get:
+      description: Returns all models from every provider alongside locally configured
+        model templates
+      parameters:
+      - description: Filter local models by type (chat|embed)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all models
+      tags:
+      - provider
+  /v1/sessions:
+    get:
+      description: Returns all sessions, optionally filtered by parent ID
+      parameters:
+      - description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      - description: Max results (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by parent session ID
+        in: query
+        name: parent
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/session.SessionMetadata'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List sessions
+      tags:
+      - sessions
+    post:
+      consumes:
+      - application/json
+      description: Creates a new session
+      parameters:
+      - description: Session options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.createSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/session.SessionMetadata'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create session
+      tags:
+      - sessions
+  /v1/sessions/{id}/messages/summarize:
+    patch:
+      description: Summarizes the session history into a compressed context message
+        (not yet implemented)
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "501":
+          description: Not Implemented
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Summarize messages
+      tags:
+      - sessions
+  /v1/sessions/{session_id}:
+    delete:
+      description: Deletes a session and all its messages
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete session
+      tags:
+      - sessions
+    get:
+      description: Returns metadata for a single session by ID or name
+      parameters:
+      - description: Session ID or name
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/session.SessionMetadata'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get session
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/messages:
+    get:
+      description: Returns messages for a session in chronological order
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      - description: Max results (default 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/session.Message'
+              type: array
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List messages
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/messages/{msg_id}:
+    get:
+      description: Returns a single message by ID
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Message ID
+        in: path
+        name: msg_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/session.Message'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get message
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/messages/compact:
+    patch:
+      description: Removes intermediate tool call and tool result messages to reduce
+        context size
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/session.compactResult'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Compact messages
+      tags:
+      - sessions
+  /v1/tools/:
+    get:
+      description: Returns definitions for all registered tools across all namespaces
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: List all tools
+      tags:
+      - tools
+  /v1/tools/{namespace}:
+    get:
+      description: Returns definitions for all tools in the given namespace
+      parameters:
+      - description: Tool namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List tools by namespace
+      tags:
+      - tools
+  /v1/tools/{namespace}/{name}:
+    get:
+      description: Returns the definition for a single tool by namespace and name
+      parameters:
+      - description: Tool namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Tool name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get tool
+      tags:
+      - tools
+  /v1/tools/{namespace}/{name}/execute:
+    post:
+      consumes:
+      - application/json
+      description: Executes a tool by namespace and name with the provided arguments
+      parameters:
+      - description: Tool namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Tool name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Execution arguments
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tools.executeBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Execute tool
+      tags:
+      - tools
+  /v1/tools/{namespace}/{name}/execute/{callid}:
+    post:
+      consumes:
+      - application/json
+      description: Executes a tool by namespace and name, associating the result with
+        the given call ID
+      parameters:
+      - description: Tool namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Tool name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Call ID
+        in: path
+        name: callid
+        required: true
+        type: string
+      - description: Execution arguments
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tools.executeBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Execute tool with call ID
+      tags:
+      - tools
+swagger: "2.0"

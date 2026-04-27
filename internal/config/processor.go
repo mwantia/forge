@@ -2,71 +2,151 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/mwantia/fabric/pkg/container"
+	"github.com/mwantia/forge/internal/service/template"
 )
 
-// LoggerTagProcessor handles fabric:"logger" and fabric:"logger:<name>" tags
-// for automatic logger injection with optional named loggers.
-//
-// Supported tag formats:
-//   - `fabric:"logger"` - Injects the base logger service
-//   - `fabric:"logger:<name>"` - Injects a named logger (e.g., logger.Named("database"))
+// ConfigTagProcessor handles fabric:"config:<block>" tags.
+// Finds the named block(s) in AgentConfig.Remain, injects labels into
+// hcl:"...,label" fields, then calls gohcl.DecodeBody for the rest.
+// Slice fields collect all matching blocks; scalar fields take the first.
 type ConfigTagProcessor struct {
-	cfg *AgentConfig
+	mu sync.RWMutex
+
+	cfg  *AgentConfig
+	tmpl *template.Template
 }
 
-// NewLoggerTagProcessor creates a new LoggerTagProcessor instance.
-func NewLoggerTagProcessor(cfg *AgentConfig) *ConfigTagProcessor {
-	return &ConfigTagProcessor{
-		cfg: cfg,
-	}
+// sharedConfigProcessor is registered at init time so that container.Register
+// calls that validate fabric tags can find a "config" processor immediately.
+// The actual *AgentConfig and template are set later via SetConfig, before any
+// Resolve call that needs config tags.
+var sharedConfigProcessor = &ConfigTagProcessor{}
+
+func init() {
+	container.AddTagProcessor(sharedConfigProcessor)
 }
 
-// GetPriority returns the processing priority for this processor.
-// Priority 50 ensures it runs before the default inject processor (priority 0)
-// but after any custom high-priority processors.
-func (p *ConfigTagProcessor) GetPriority() int {
-	return 50
+// SetConfig sets the parsed config and shared template on the processor. Must
+// be called after config.Parse() and before any container.Resolve that needs
+// config tags.
+func SetConfig(cfg *AgentConfig, tmpl *template.Template) {
+	sharedConfigProcessor.mu.Lock()
+	sharedConfigProcessor.cfg = cfg
+	sharedConfigProcessor.tmpl = tmpl
+	sharedConfigProcessor.mu.Unlock()
 }
 
-// CanProcess returns true if this processor can handle the given tag value.
-// The LoggerTagProcessor handles:
-//   - "config" - for base logger injection
-//   - "config:<name>" - for named logger injection
-//
-// All matching is case-insensitive.
+func (p *ConfigTagProcessor) GetPriority() int { return 50 }
+
 func (p *ConfigTagProcessor) CanProcess(value string) bool {
-	return strings.EqualFold(value, "config") || strings.HasPrefix(strings.ToLower(value), "config:")
+	lower := strings.ToLower(value)
+	return lower == "config" || strings.HasPrefix(lower, "config:")
 }
 
-// Process handles the injection of loggers for fabric:"logger" tags.
-// It supports both base and named logger injection:
-//   - "config" - resolves the base LoggerService
-//   - "config:<name>" - resolves the base LoggerService and calls Named(name)
-//
-// The method parses the tag value to extract the logger name and then
-// resolves the appropriate logger from the container.
-func (p *ConfigTagProcessor) Process(ctx context.Context, sc *container.ServiceContainer, field reflect.StructField, value string) (any, error) {
-	// Parse the tag value to extract the logger name
-	configName := ""
-	if strings.Contains(value, ":") {
-		parts := strings.SplitN(value, ":", 2)
-		if len(parts) == 2 {
-			configName = strings.ToLower(strings.TrimSpace(parts[1]))
+func (p *ConfigTagProcessor) Process(_ context.Context, _ *container.ServiceContainer, field reflect.StructField, value string) (any, error) {
+	p.mu.RLock()
+	cfg := p.cfg
+	tmpl := p.tmpl
+	p.mu.RUnlock()
+	if cfg == nil {
+		return nil, fmt.Errorf("config not yet loaded (SetConfig must be called before Resolve)")
+	}
+	if tmpl == nil {
+		return nil, fmt.Errorf("template not yet loaded (SetConfig must be called with a template before Resolve)")
+	}
+
+	_, blockName, _ := strings.Cut(value, ":")
+	blockName = strings.ToLower(strings.TrimSpace(blockName))
+	if blockName == "" {
+		return cfg, nil
+	}
+
+	// Slice field → collect all matching blocks.
+	if field.Type.Kind() == reflect.Slice {
+		return decodeBlockSlice(field.Type, findBlocks(cfg.Remain, blockName), tmpl)
+	}
+
+	// Scalar field → first matching block, or zero value if absent.
+	targetType := indirectType(field.Type)
+	target := reflect.New(targetType).Interface()
+
+	blocks := findBlocks(cfg.Remain, blockName)
+	if len(blocks) > 0 {
+		injectLabels(reflect.ValueOf(target).Elem(), blocks[0].Labels)
+		if diags := gohcl.DecodeBody(blocks[0].Body, tmpl.Eval(), target); diags.HasErrors() {
+			return nil, fmt.Errorf("config block %q: %s", blockName, diags.Error())
 		}
 	}
 
-	switch configName {
-	case "server":
-		return p.cfg.Server, nil
-	case "metrics":
-		return p.cfg.Metrics, nil
-	case "storage":
-		return p.cfg.Storage, nil
-	default:
-		return p.cfg, nil
+	if field.Type.Kind() == reflect.Pointer {
+		return target, nil
 	}
+	return reflect.ValueOf(target).Elem().Interface(), nil
+}
+
+// decodeBlockSlice decodes each block into an element of sliceType ([]T or []*T).
+func decodeBlockSlice(sliceType reflect.Type, blocks []*hclsyntax.Block, tmpl *template.Template) (any, error) {
+	elemType := sliceType.Elem()
+	isPtr := elemType.Kind() == reflect.Pointer
+	baseType := indirectType(elemType)
+
+	result := reflect.MakeSlice(sliceType, 0, len(blocks))
+	for _, block := range blocks {
+		elem := reflect.New(baseType).Interface()
+		injectLabels(reflect.ValueOf(elem).Elem(), block.Labels)
+		if diags := gohcl.DecodeBody(block.Body, tmpl.Eval(), elem); diags.HasErrors() {
+			return nil, fmt.Errorf("failed to decode block %q: %s", block.Type, diags.Error())
+		}
+		if isPtr {
+			result = reflect.Append(result, reflect.ValueOf(elem))
+		} else {
+			result = reflect.Append(result, reflect.ValueOf(elem).Elem())
+		}
+	}
+	return result.Interface(), nil
+}
+
+// findBlocks returns all blocks matching name in body.
+func findBlocks(body hcl.Body, name string) []*hclsyntax.Block {
+	syn, ok := body.(*hclsyntax.Body)
+	if !ok {
+		return nil
+	}
+	var result []*hclsyntax.Block
+	for _, block := range syn.Blocks {
+		if strings.EqualFold(block.Type, name) {
+			result = append(result, block)
+		}
+	}
+	return result
+}
+
+// injectLabels sets struct fields tagged hcl:"...,label" from labels in order.
+func injectLabels(v reflect.Value, labels []string) {
+	t := v.Type()
+	idx := 0
+	for i := 0; i < t.NumField() && idx < len(labels); i++ {
+		_, kind, _ := strings.Cut(t.Field(i).Tag.Get("hcl"), ",")
+		if strings.TrimSpace(kind) == "label" {
+			v.Field(i).SetString(labels[idx])
+			idx++
+		}
+	}
+}
+
+// indirectType unwraps one pointer level: *T → T, T → T.
+func indirectType(t reflect.Type) reflect.Type {
+	if t.Kind() == reflect.Pointer {
+		return t.Elem()
+	}
+	return t
 }

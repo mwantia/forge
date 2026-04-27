@@ -6,17 +6,9 @@ import (
 	"os/signal"
 
 	"github.com/mwantia/fabric/pkg/container"
-	"github.com/mwantia/forge-sdk/pkg/errors"
-	"github.com/mwantia/forge-sdk/pkg/log"
 	"github.com/mwantia/forge/internal/agent"
-	"github.com/mwantia/forge/internal/channel"
-	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/internal/metrics"
-	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/internal/sandbox"
-	"github.com/mwantia/forge/internal/server"
-	"github.com/mwantia/forge/internal/session"
-	"github.com/mwantia/forge/internal/storage"
+	forgeconfig "github.com/mwantia/forge/internal/config"
+	"github.com/mwantia/forge/internal/service/template"
 	"github.com/spf13/cobra"
 )
 
@@ -33,53 +25,28 @@ func NewAgentCommand() *cobra.Command {
 			ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt)
 			defer cancel()
 
-			cfg, err := config.Parse(ConfigFlag)
+			tmpl, err := container.Resolve[template.TemplateRenderer](ctx)
+			if err != nil {
+				return fmt.Errorf("failed to resolve template renderer: %w", err)
+			}
+
+			cfg, err := forgeconfig.Parse(ConfigFlag, tmpl.Base())
 			if err != nil {
 				return fmt.Errorf("unable to parse config: %w", err)
 			}
 
-			errs := errors.Errors{}
-			sc := container.NewServiceContainer()
+			forgeconfig.SetConfig(cfg, tmpl.Base())
 
-			sc.AddTagProcessor(log.NewDefaultLoggerTagProcessor())
-			sc.AddTagProcessor(config.NewLoggerTagProcessor(cfg))
-
-			errs.Add(container.Register[*container.ServiceContainer](sc,
-				container.AsSingleton(),
-				container.WithInstance(sc)))
-
-			errs.Add(container.Register[*registry.PluginRegistry](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*channel.ChannelDispatcher](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*sandbox.SandboxManager](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*session.SessionManager](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*server.Server](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*metrics.Metrics](sc,
-				container.AsSingleton()))
-			errs.Add(container.Register[*agent.Agent](sc,
-				container.AsSingleton()))
-
-			errs.Add(container.Register[*storage.StorageBackendInjector](sc,
-				container.AsSingleton(),
-				container.With[storage.Backend]()))
-
-			// No idea why we have to manually resolve it here
-			container.Resolve[storage.Backend](ctx, sc)
-
-			agent, err := container.Resolve[*agent.Agent](ctx, sc)
+			agent, err := container.Resolve[*agent.Agent](ctx)
 			if err != nil {
-				return fmt.Errorf("failed to create agent: %w", err)
+				return fmt.Errorf("failed to resolve agent: %w", err)
 			}
 
 			if err := agent.Serve(OnceFlag, ctx); err != nil {
 				return err
 			}
 
-			return sc.Cleanup(ctx)
+			return agent.Cleanup(ctx)
 		},
 	}
 

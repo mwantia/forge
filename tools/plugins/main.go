@@ -27,8 +27,8 @@ func (p Plugin) ResolvedImport() string {
 	if p.Import == "" {
 		return p.Module
 	}
-	if strings.HasPrefix(p.Import, "./") {
-		sub := strings.TrimPrefix(p.Import, "./")
+	if after, ok := strings.CutPrefix(p.Import, "./"); ok {
+		sub := after
 		return p.Module + "/" + sub
 	}
 	return p.Import

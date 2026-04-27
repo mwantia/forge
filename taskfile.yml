@@ -23,9 +23,10 @@ tasks:
         - go mod tidy
 
     generate:
-        desc: Generate plugin_*.go files from plugins.yaml
+        desc: Generate plugin_*.go files from plugins.yaml and regenerate swagger docs
         cmds:
         - go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
+        - swag init -g cmd/forge/main.go -o docs --parseInternal
         - task: setup
 
     build:
@@ -37,8 +38,8 @@ tasks:
     run:
         desc: Run the agent with the test configuration
         cmds:
-        - task: setup
-        - go run -tags all ${MAIN_PATH}... agent --config ${TEST_CONFIG_PATH} --log-level TRACE
+        - task: build
+        - ${BUILD_PATH} agent --config ${TEST_CONFIG_PATH} --log-level TRACE
         ignore_error: true
 
     release:

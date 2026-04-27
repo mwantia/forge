@@ -5,74 +5,99 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/mwantia/fabric/pkg/container"
-
 	"github.com/hashicorp/go-hclog"
+	"github.com/mwantia/fabric/pkg/container"
 	"github.com/mwantia/forge-sdk/pkg/errors"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/internal/metrics"
-	"github.com/mwantia/forge/internal/registry"
-	"github.com/mwantia/forge/internal/server"
+	"github.com/mwantia/forge/internal/service/memory"
+	"github.com/mwantia/forge/internal/service/metrics"
+	"github.com/mwantia/forge/internal/service/pipeline"
+	"github.com/mwantia/forge/internal/service/plugins"
+	"github.com/mwantia/forge/internal/service/provider"
+	"github.com/mwantia/forge/internal/service/server"
+	"github.com/mwantia/forge/internal/service/session"
+	"github.com/mwantia/forge/internal/service/tools"
 )
 
 type Agent struct {
-	mutex    sync.RWMutex
-	wait     sync.WaitGroup
-	cleanups []func() error
+	mutex sync.RWMutex
+	wait  sync.WaitGroup
 
-	logger    hclog.Logger                `fabric:"logger:agent"`
-	config    *config.AgentConfig         `fabric:"config"`
-	container *container.ServiceContainer `fabric:"inject"`
-	registry  *registry.PluginRegistry    `fabric:"inject"`
+	logger hclog.Logger        `fabric:"logger:agent"`
+	config *config.AgentConfig `fabric:"config"`
+
+	plugins   plugins.PluginsServer     `fabric:"inject"`
+	srv       *server.ServerService     `fabric:"inject"`
+	met       *metrics.MetricsService   `fabric:"inject"`
+	pipe      *pipeline.PipelineService `fabric:"inject"`
+	sess      *session.SessionService   `fabric:"inject"`
+	mem       *memory.MemoryService     `fabric:"inject"`
+	providers *provider.ProviderService `fabric:"inject"`
+	toolsSvc  *tools.ToolsService       `fabric:"inject"`
+}
+
+func init() {
+	if err := container.Register[*Agent](container.AsSingleton()); err != nil {
+		panic(err)
+	}
 }
 
 func (a *Agent) Serve(once bool, ctx context.Context) error {
-	// Load configured plugins
 	a.logger.Debug("Loading configured plugins...")
-	if err := a.registry.ServePlugins(ctx, a.config.PluginDir, a.config.Plugins); err != nil {
+	if err := a.plugins.ServePluginsFrom(ctx, a.config.PluginDir); err != nil {
 		a.logger.Error("Plugins failed to load", "errors", err.Error())
 	}
 
-	a.cleanups = make([]func() error, 0)
-	a.cleanups = append(a.cleanups, func() error {
-		a.registry.CleanupDrivers()
-		return nil
-	})
+	a.logger.Debug("Loading provider plugins...")
+	if err := a.providers.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to load providers: %w", err)
+	}
+
+	a.logger.Debug("Loading tools plugins...")
+	if err := a.toolsSvc.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to load tools: %w", err)
+	}
+
+	a.logger.Debug("Binding session backend...")
+	if err := a.sess.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to bind session backend: %w", err)
+	}
+
+	a.logger.Debug("Binding memory backend...")
+	if err := a.mem.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to bind memory backend: %w", err)
+	}
 
 	a.mutex.Lock()
-
-	if a.config.Server != nil {
-		a.logger.Debug("Server config set - Starting server runner...")
-		srv, err := container.Resolve[*server.Server](ctx, a.container)
-		if err != nil {
-			return fmt.Errorf("failed to create http server: %w", err)
+	a.logger.Debug("Starting server runner...")
+	a.wait.Go(func() {
+		if err := a.srv.Serve(ctx); err != nil {
+			a.logger.Error("error serving http server", "error", err)
 		}
+	})
 
-		if err := a.serveRunner(ctx, srv); err != nil {
-			return err
+	a.logger.Debug("Starting metrics runner...")
+	a.wait.Go(func() {
+		if err := a.met.Serve(ctx); err != nil {
+			a.logger.Error("error serving metrics server", "error", err)
 		}
-	}
+	})
 
-	if a.config.Metrics != nil {
-		a.logger.Debug("Metrics config set - Starting metrics runner...")
-		metrics, err := container.Resolve[*metrics.Metrics](ctx, a.container)
-		if err != nil {
-			return fmt.Errorf("failed to create metrics server: %w", err)
+	a.logger.Debug("Starting pipeline runner...")
+	a.wait.Go(func() {
+		if err := a.pipe.Serve(ctx); err != nil {
+			a.logger.Error("error serving pipeline server", "error", err)
 		}
-
-		if err := a.serveRunner(ctx, metrics); err != nil {
-			return err
-		}
-	}
-
+	})
 	a.mutex.Unlock()
+
 	if !once {
 		<-ctx.Done()
 	}
 
 	a.logger.Debug("Shutting down agent...")
 
-	if err := a.Cleanup(); err != nil {
+	if err := a.Cleanup(ctx); err != nil {
 		return fmt.Errorf("failed to complete agent cleanup: %w", err)
 	}
 
@@ -80,13 +105,16 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 	return nil
 }
 
-func (a *Agent) Cleanup() error {
+func (a *Agent) Cleanup(ctx context.Context) error {
 	errs := &errors.Errors{}
-	for _, cleanup := range a.cleanups {
-		if err := cleanup(); err != nil {
-			errs.Add(fmt.Errorf("error during cleanup: %w", err))
-		}
+	if err := a.plugins.Cleanup(ctx); err != nil {
+		errs.Add(fmt.Errorf("plugins cleanup: %w", err))
 	}
-
+	if err := a.srv.Cleanup(ctx); err != nil {
+		errs.Add(fmt.Errorf("server cleanup: %w", err))
+	}
+	if err := a.met.Cleanup(ctx); err != nil {
+		errs.Add(fmt.Errorf("metrics cleanup: %w", err))
+	}
 	return errs.Errors()
 }

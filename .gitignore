@@ -12,6 +12,7 @@
 *.test
 *.code-workspace
 tmp/
+old_code/
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out

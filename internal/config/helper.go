@@ -4,17 +4,32 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/mwantia/forge/internal/service/template"
 	"github.com/zclconf/go-cty/cty"
 )
 
-func DecodeBody(ctx *hcl.EvalContext, body hcl.Body) (map[string]any, error) {
+// Decode decodes an hcl.Body into T using gohcl. Returns zero value if body is nil.
+func Decode[T any](body hcl.Body, tmpl *template.Template) (T, error) {
+	var target T
+	if body == nil {
+		return target, nil
+	}
+
+	if diags := gohcl.DecodeBody(body, tmpl.Eval(), &target); diags.HasErrors() {
+		return target, fmt.Errorf("%s", diags.Error())
+	}
+	return target, nil
+}
+
+func DecodeBody(body hcl.Body, tmpl *template.Template) (map[string]any, error) {
 	if body == nil {
 		return make(map[string]any), nil
 	}
 
 	if synBody, ok := body.(*hclsyntax.Body); ok {
-		return decodeSyntaxBody(ctx, synBody)
+		return decodeSyntaxBody(synBody, tmpl)
 	}
 
 	attrs, diags := body.JustAttributes()
@@ -23,7 +38,7 @@ func DecodeBody(ctx *hcl.EvalContext, body hcl.Body) (map[string]any, error) {
 	}
 	result := make(map[string]any)
 	for name, attr := range attrs {
-		val, diags := attr.Expr.Value(ctx)
+		val, diags := attr.Expr.Value(tmpl.Eval())
 		if diags.HasErrors() {
 			return nil, fmt.Errorf("attribute %q: %s", name, diags.Error())
 		}
@@ -32,11 +47,11 @@ func DecodeBody(ctx *hcl.EvalContext, body hcl.Body) (map[string]any, error) {
 	return result, nil
 }
 
-func decodeSyntaxBody(ctx *hcl.EvalContext, body *hclsyntax.Body) (map[string]any, error) {
+func decodeSyntaxBody(body *hclsyntax.Body, tmpl *template.Template) (map[string]any, error) {
 	result := make(map[string]any)
 
 	for name, attr := range body.Attributes {
-		val, diags := attr.Expr.Value(ctx)
+		val, diags := attr.Expr.Value(tmpl.Eval())
 		if diags.HasErrors() {
 			return nil, fmt.Errorf("attribute %q: %s", name, diags.Error())
 		}
@@ -44,7 +59,7 @@ func decodeSyntaxBody(ctx *hcl.EvalContext, body *hclsyntax.Body) (map[string]an
 	}
 
 	for _, block := range body.Blocks {
-		blockMap, err := decodeSyntaxBody(ctx, block.Body)
+		blockMap, err := decodeSyntaxBody(block.Body, tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("block %q: %w", block.Type, err)
 		}

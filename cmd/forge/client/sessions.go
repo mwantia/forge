@@ -1,18 +1,16 @@
 package client
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/mwantia/forge-sdk/pkg/plugins"
-	"github.com/mwantia/forge/internal/session"
+	"github.com/mwantia/forge-sdk/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -27,48 +25,143 @@ func NewSessionsCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
 	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token for the forge agent (env: FORGE_HTTP_TOKEN)")
 
-	client := func() *ForgeClient { return resolveClient(httpAddr, httpToken) }
+	client := func() *api.Client { return api.New(httpAddr, httpToken) }
 
 	cmd.AddCommand(newSessionsListCmd(client))
 	cmd.AddCommand(newSessionsCreateCmd(client))
 	cmd.AddCommand(newSessionsGetCmd(client))
 	cmd.AddCommand(newSessionsDeleteCmd(client))
-	cmd.AddCommand(newSessionsToolsCmd(client))
 	cmd.AddCommand(newSessionsMessagesCmd(client))
-	cmd.AddCommand(newSessionsSendCmd(client))
-	cmd.AddCommand(NewSessionsSandboxCommand(client))
 
 	return cmd
 }
 
-func newSessionsListCmd(client func() *ForgeClient) *cobra.Command {
+// NewPipelineCommand builds the `forge pipeline` command tree, currently
+// hosting `dispatch` for sending a user message and streaming the response.
+func NewPipelineCommand() *cobra.Command {
+	var httpAddr, httpToken string
+
+	cmd := &cobra.Command{
+		Use:   "pipeline",
+		Short: "Interact with the forge pipeline",
+	}
+
+	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
+	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token for the forge agent (env: FORGE_HTTP_TOKEN)")
+
+	client := func() *api.Client { return api.New(httpAddr, httpToken) }
+
+	cmd.AddCommand(newPipelineDispatchCmd(client))
+	cmd.AddCommand(newPipelinePreviewCmd(client))
+
+	return cmd
+}
+
+func newPipelinePreviewCmd(client func() *api.Client) *cobra.Command {
+	var asJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "preview <session-id> [content]",
+		Short: "Preview the assembled prompt and chat history without calling the LLM",
+		Long: "Returns the exact system prompt and message slice that would be " +
+			"sent to the provider for the given session. The optional [content] " +
+			"argument is appended as a tentative user message — it is NOT " +
+			"persisted to the session.",
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			content := ""
+			if len(args) == 2 {
+				content = args[1]
+			}
+			resp, err := client().PreviewPipeline(cmd.Context(), args[0], content)
+			if err != nil {
+				return err
+			}
+			if asJSON {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(resp)
+			}
+
+			accuracy := resp.EstAccuracy
+			if accuracy == "" {
+				accuracy = "±20%"
+			}
+			fmt.Printf("Session:    %s\n", resp.SessionID)
+			fmt.Printf("Tool count: %d\n", resp.ToolCount)
+			fmt.Printf("Total:      %d bytes, %d runes, ~%d tokens (%s)\n",
+				resp.Total.Bytes, resp.Total.Runes, resp.Total.EstTokens, accuracy)
+			fmt.Println()
+			fmt.Printf("=== SYSTEM (%s) ===\n", formatUsage(resp.SystemUsage))
+			if resp.System == "" {
+				fmt.Println("(empty)")
+			} else {
+				fmt.Println(resp.System)
+			}
+			for _, m := range resp.Messages {
+				fmt.Println()
+				fmt.Printf("=== %s (%s) ===\n", strings.ToUpper(m.Role), formatUsage(m.Usage))
+				if m.Content == "" {
+					fmt.Println("(empty)")
+				} else {
+					fmt.Println(m.Content)
+				}
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Print raw JSON response instead of human-readable layout")
+
+	return cmd
+}
+
+func newPipelineDispatchCmd(client func() *api.Client) *cobra.Command {
+	var raw, noRender, noStore bool
+
+	cmd := &cobra.Command{
+		Use:   "dispatch <session-id> <content>",
+		Short: "Dispatch a user message to a session and stream the response",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return streamSend(cmd.Context(), client(), args[0], args[1], raw, noRender, noStore)
+		},
+	}
+
+	cmd.Flags().BoolVar(&raw, "raw", false, "Bypass server chunking/pacing; print deltas as they arrive, no markdown rendering")
+	cmd.Flags().BoolVar(&noRender, "no-render", false, "Print raw output without markdown rendering")
+	cmd.Flags().BoolVar(&noStore, "no-store", false, "Do not persist the generated messages to storage")
+
+	return cmd
+}
+
+// --- sessions list ---
+
+func newSessionsListCmd(client func() *api.Client) *cobra.Command {
 	var limit, offset int
+	var parent string
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all sessions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var resp struct {
-				Sessions []*session.Session `json:"sessions"`
-			}
-			path := fmt.Sprintf("/v1/sessions?limit=%d&offset=%d", limit, offset)
-			if err := client().get(path, &resp); err != nil {
+			sessions, err := client().ListSessions(cmd.Context(), parent, offset, limit)
+			if err != nil {
 				return err
 			}
 
-			if len(resp.Sessions) == 0 {
+			if len(sessions) == 0 {
 				fmt.Println("No sessions found.")
 				return nil
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tNAME\tMODEL\tMESSAGES\tCREATED")
-			for _, s := range resp.Sessions {
-				fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
+			fmt.Fprintln(w, "ID\tNAME\tMODEL\tCREATED")
+			for _, s := range sessions {
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 					s.ID,
 					s.Name,
 					s.Model,
-					s.MessageCount,
 					s.CreatedAt.Format(time.DateTime),
 				)
 			}
@@ -78,16 +171,17 @@ func newSessionsListCmd(client func() *ForgeClient) *cobra.Command {
 
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of sessions to return")
 	cmd.Flags().IntVar(&offset, "offset", 0, "Number of sessions to skip")
+	cmd.Flags().StringVar(&parent, "parent", "", "Filter by parent session ID")
 
 	return cmd
 }
 
-func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
+// --- sessions create ---
+
+func newSessionsCreateCmd(client func() *api.Client) *cobra.Command {
 	var (
 		name              string
 		model             string
-		memory            string
-		tools             []string
 		systemPrompt      string
 		maxToolIterations int
 	)
@@ -96,27 +190,25 @@ func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
 		Use:   "create",
 		Short: "Create a new session",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts := session.CreateOptions{
+			req := api.CreateSessionRequest{
 				Name:              name,
 				Model:             model,
-				Memory:            memory,
-				Tools:             tools,
-				SystemPrompt:      systemPrompt,
 				MaxToolIterations: maxToolIterations,
 			}
-			var sess session.Session
-			if err := client().post("/v1/sessions", opts, &sess); err != nil {
+			if systemPrompt != "" {
+				req.SystemPrompts = []api.SystemPromptEntry{{Name: "main", Content: systemPrompt}}
+			}
+			meta, err := client().CreateSession(cmd.Context(), req)
+			if err != nil {
 				return err
 			}
-			printSession(&sess)
+			printSession(meta)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "Session name (auto-generated if not set)")
-	cmd.Flags().StringVar(&model, "model", "", "Model to use (format: provider/model, required)")
-	cmd.Flags().StringVar(&memory, "memory", "", "Memory plugin name")
-	cmd.Flags().StringSliceVar(&tools, "tools", nil, "Tool plugin names (comma-separated)")
+	cmd.Flags().StringVar(&model, "model", "", "Model to use (format: provider/model)")
 	cmd.Flags().StringVar(&systemPrompt, "system-prompt", "", "System prompt for the session")
 	cmd.Flags().IntVar(&maxToolIterations, "max-tool-iterations", 0, "Maximum tool call iterations (0 = default)")
 	cmd.MarkFlagRequired("model")
@@ -124,29 +216,33 @@ func newSessionsCreateCmd(client func() *ForgeClient) *cobra.Command {
 	return cmd
 }
 
-func newSessionsGetCmd(client func() *ForgeClient) *cobra.Command {
+// --- sessions get ---
+
+func newSessionsGetCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <id>",
 		Short: "Get session details",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var sess session.Session
-			if err := client().get("/v1/sessions/"+args[0], &sess); err != nil {
+			meta, err := client().GetSession(cmd.Context(), args[0])
+			if err != nil {
 				return err
 			}
-			printSession(&sess)
+			printSession(meta)
 			return nil
 		},
 	}
 }
 
-func newSessionsDeleteCmd(client func() *ForgeClient) *cobra.Command {
+// --- sessions delete ---
+
+func newSessionsDeleteCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <id>",
 		Short: "Delete a session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client().delete("/v1/sessions/" + args[0]); err != nil {
+			if err := client().DeleteSession(cmd.Context(), args[0]); err != nil {
 				return err
 			}
 			fmt.Printf("Session %s deleted.\n", args[0])
@@ -155,7 +251,9 @@ func newSessionsDeleteCmd(client func() *ForgeClient) *cobra.Command {
 	}
 }
 
-func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
+// --- sessions messages ---
+
+func newSessionsMessagesCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "messages",
 		Short: "Manage messages in a session",
@@ -166,7 +264,7 @@ func newSessionsMessagesCmd(client func() *ForgeClient) *cobra.Command {
 	return cmd
 }
 
-func newSessionsMessagesListCmd(client func() *ForgeClient) *cobra.Command {
+func newSessionsMessagesListCmd(client func() *api.Client) *cobra.Command {
 	var limit, offset int
 
 	cmd := &cobra.Command{
@@ -174,22 +272,19 @@ func newSessionsMessagesListCmd(client func() *ForgeClient) *cobra.Command {
 		Short: "List messages in a session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var resp struct {
-				Messages []*session.Message `json:"messages"`
-			}
-			path := fmt.Sprintf("/v1/sessions/%s/messages?limit=%d&offset=%d", args[0], limit, offset)
-			if err := client().get(path, &resp); err != nil {
+			messages, err := client().ListMessages(cmd.Context(), args[0], offset, limit)
+			if err != nil {
 				return err
 			}
 
-			if len(resp.Messages) == 0 {
+			if len(messages) == 0 {
 				fmt.Println("No messages found.")
 				return nil
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "ID\tCREATED\tROLE\tCONTENT")
-			for _, m := range resp.Messages {
+			for _, m := range messages {
 				content := m.Content
 				if len(content) > 80 {
 					content = content[:77] + "..."
@@ -212,7 +307,7 @@ func newSessionsMessagesListCmd(client func() *ForgeClient) *cobra.Command {
 	return cmd
 }
 
-func newSessionsMessagesViewCmd(client func() *ForgeClient) *cobra.Command {
+func newSessionsMessagesViewCmd(client func() *api.Client) *cobra.Command {
 	var noRender bool
 
 	cmd := &cobra.Command{
@@ -220,9 +315,8 @@ func newSessionsMessagesViewCmd(client func() *ForgeClient) *cobra.Command {
 		Short: "View the content of a single message",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sessionID, messageID := args[0], args[1]
-			var msg session.Message
-			if err := client().get("/v1/sessions/"+sessionID+"/messages/"+messageID, &msg); err != nil {
+			msg, err := client().GetMessage(cmd.Context(), args[0], args[1])
+			if err != nil {
 				return err
 			}
 
@@ -248,130 +342,100 @@ func newSessionsMessagesViewCmd(client func() *ForgeClient) *cobra.Command {
 	return cmd
 }
 
-func newSessionsMessagesCompactCmd(client func() *ForgeClient) *cobra.Command {
-	var stripTools bool
-
+func newSessionsMessagesCompactCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compact <id>",
-		Short: "Compact messages in a session by removing redundant entries",
+		Short: "Compact messages in a session by removing tool call entries",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !stripTools {
-				return fmt.Errorf("no compaction options specified (use --strip-tools)")
-			}
-
-			body := map[string]any{
-				"strip_tools": stripTools,
-			}
-			var result session.CompactResult
-			if err := client().post("/v1/sessions/"+args[0]+"/messages/compact", body, &result); err != nil {
+			result, err := client().CompactMessages(cmd.Context(), args[0])
+			if err != nil {
 				return err
 			}
-
-			fmt.Printf("Compacted: %d → %d messages (%d deleted)\n", result.Before, result.After, result.Deleted)
+			fmt.Printf("Compacted: %d → %d messages (%d deleted)\n",
+				result.Before, result.After, result.Deleted)
 			return nil
 		},
 	}
-
-	cmd.Flags().BoolVar(&stripTools, "strip-tools", false, "Remove tool result messages and intermediate assistant tool-call turns")
-
 	return cmd
 }
 
-func newSessionsSendCmd(client func() *ForgeClient) *cobra.Command {
-	var stream, noRender bool
-
-	cmd := &cobra.Command{
-		Use:   "send <id> <content>",
-		Short: "Send a message to a session",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			id, content := args[0], args[1]
-			body := map[string]any{
-				"content": content,
-				"stream":  stream,
-			}
-
-			if stream {
-				return streamMessage(client(), id, body, noRender)
-			}
-
-			var result plugins.ChatResult
-			if err := client().post("/v1/sessions/"+id+"/messages", body, &result); err != nil {
-				return err
-			}
-			fmt.Println(renderMarkdown(result.Content, noRender))
-			return nil
-		},
-	}
-
-	cmd.Flags().BoolVar(&stream, "stream", false, "Stream the response as it arrives")
-	cmd.Flags().BoolVar(&noRender, "no-render", false, "Print raw output without markdown rendering")
-
-	return cmd
-}
-
-func newSessionsToolsCmd(client func() *ForgeClient) *cobra.Command {
-	return &cobra.Command{
-		Use:   "tools <id>",
-		Short: "List all tools available to a session",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			var resp struct {
-				Tools []plugins.ToolCall `json:"tools"`
-			}
-			if err := client().get("/v1/sessions/"+args[0]+"/tools", &resp); err != nil {
-				return err
-			}
-
-			if len(resp.Tools) == 0 {
-				fmt.Println("No tools found.")
-				return nil
-			}
-
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "TOOL\tDESCRIPTION")
-			for _, t := range resp.Tools {
-				desc := t.Description
-				if len(desc) > 70 {
-					desc = desc[:67] + "..."
-				}
-				fmt.Fprintf(w, "%s\t%s\n", t.Name, desc)
-			}
-			return w.Flush()
-		},
-	}
-}
-
-func streamMessage(c *ForgeClient, id string, body map[string]any, noRender bool) error {
-	resp, err := c.postRaw("/v1/sessions/"+id+"/messages", body)
+// streamSend consumes the NDJSON ChunkEvent stream. Each chunk's Boundary
+// dictates how to display it:
+//   - token    → print raw (no rendering possible on partial tokens)
+//   - sentence → print raw
+//   - block    → render with glamour (self-contained markdown unit)
+//   - final    → render with glamour (tail / whole response in final mode)
+//
+// --raw forces token-boundary streaming from the server and disables all
+// rendering, matching pipe/programmatic use. --no-render keeps the server's
+// chunking but skips glamour locally.
+func streamSend(ctx context.Context, c *api.Client, sessionID, content string, raw, noRender, noStore bool) error {
+	ch, err := c.SendMessage(ctx, sessionID, content, noStore, raw)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
-	var buf strings.Builder
-	scanner := bufio.NewScanner(resp.Body)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
+	render := !raw && !noRender
+	printed := false
+
+	for ev := range ch {
+		parsed, err := api.ParseWireEvent(ev)
+		if err != nil {
 			continue
 		}
-		data := strings.TrimPrefix(line, "data: ")
-		if data == "[DONE]" {
-			break
+		switch e := parsed.(type) {
+		case api.ChunkEvent:
+			if e.Text == "" {
+				continue
+			}
+			switch e.Boundary {
+			case api.ChunkBoundaryBlock, api.ChunkBoundaryFinal:
+				if render {
+					fmt.Print(renderMarkdown(e.Text, false))
+				} else {
+					fmt.Print(e.Text)
+				}
+			default: // token | sentence
+				fmt.Print(e.Text)
+			}
+			printed = true
+		case api.ErrorEvent:
+			return fmt.Errorf("pipeline error: %s", e.Message)
 		}
-		var chunk plugins.ChatChunk
-		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-			continue
-		}
-		buf.WriteString(chunk.Delta)
 	}
-	if err := scanner.Err(); err != nil {
-		return err
+
+	if printed {
+		fmt.Println()
 	}
-	fmt.Println(renderMarkdown(buf.String(), noRender))
 	return nil
+}
+
+// --- helpers ---
+
+func printSession(s *api.SessionMetadata) {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "ID:\t%s\n", s.ID)
+	fmt.Fprintf(w, "Name:\t%s\n", s.Name)
+	fmt.Fprintf(w, "Model:\t%s\n", s.Model)
+	for _, p := range s.SystemPrompts {
+		label := p.Name
+		if label == "" {
+			label = "system"
+		}
+		preview := p.Content
+		if len(preview) > 60 {
+			preview = preview[:57] + "..."
+		}
+		fmt.Fprintf(w, "Prompt [%s]:\t%s\n", label, preview)
+	}
+	fmt.Fprintf(w, "Created:\t%s\n", s.CreatedAt.Format(time.DateTime))
+	fmt.Fprintf(w, "Updated:\t%s\n", s.UpdatedAt.Format(time.DateTime))
+	w.Flush()
+}
+
+func formatUsage(u api.PreviewUsage) string {
+	return fmt.Sprintf("%d bytes, %d runes, ~%d tokens", u.Bytes, u.Runes, u.EstTokens)
 }
 
 func renderMarkdown(content string, noRender bool) string {
@@ -390,29 +454,4 @@ func renderMarkdown(content string, noRender bool) string {
 		return content
 	}
 	return out
-}
-
-func printSession(s *session.Session) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "ID:\t%s\n", s.ID)
-	fmt.Fprintf(w, "Name:\t%s\n", s.Name)
-	fmt.Fprintf(w, "Model:\t%s\n", s.Model)
-	if s.Memory != "" {
-		fmt.Fprintf(w, "Memory:\t%s\n", s.Memory)
-	}
-	if len(s.Tools) > 0 {
-		fmt.Fprintf(w, "Tools:\t%s\n", strings.Join(s.Tools, ", "))
-	}
-	if s.SystemPrompt != "" {
-		prompt := s.SystemPrompt
-		if len(prompt) > 60 {
-			prompt = prompt[:57] + "..."
-		}
-		fmt.Fprintf(w, "System Prompt:\t%s\n", prompt)
-	}
-	fmt.Fprintf(w, "Max Tool Iterations:\t%s\n", strconv.Itoa(s.MaxToolIterations))
-	fmt.Fprintf(w, "Messages:\t%d\n", s.MessageCount)
-	fmt.Fprintf(w, "Created:\t%s\n", s.CreatedAt.Format(time.DateTime))
-	fmt.Fprintf(w, "Updated:\t%s\n", s.UpdatedAt.Format(time.DateTime))
-	w.Flush()
 }

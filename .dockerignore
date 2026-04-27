@@ -10,6 +10,7 @@ tmp/
 # Runtime data
 .env
 data/
+old_code/
 
 # Test configs and fixtures
 test/
