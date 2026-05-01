@@ -26,11 +26,12 @@ import (
 // Every field is captured at request-build time so assembly is a pure
 // function of `promptLayers`.
 type promptLayers struct {
-	agent    string
-	builtins []pluginPromptBlock
-	model    string
-	plugins  []pluginPromptBlock
-	session  string
+	agent     string
+	builtins  []pluginPromptBlock
+	model     string
+	plugins   []pluginPromptBlock
+	session   string
+	resources string // pre-rendered <relevant-resources> block, populated per-turn
 }
 
 type pluginPromptBlock struct {
@@ -189,8 +190,37 @@ func assembleSystemPrompt(p promptLayers, tmpl *template.Template, logger hclog.
 		appendSection(renderBlock("plugin", plg))
 	}
 	appendSection(render("session", p.session))
+	// Resources are last: they're the per-turn slot, most cache-volatile.
+	appendSection(p.resources)
 
 	return b.String()
+}
+
+// renderResourcesBlock formats Recall hits as a <relevant-resources>
+// system block. Empty input returns "" so assembleSystemPrompt can elide
+// the section entirely.
+func renderResourcesBlock(items []resourceItem) string {
+	if len(items) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("<relevant-resources>")
+	for _, r := range items {
+		b.WriteString("\n  <resource id=\"")
+		b.WriteString(r.ID)
+		b.WriteString("\">\n    ")
+		b.WriteString(strings.ReplaceAll(strings.TrimSpace(r.Content), "\n", "\n    "))
+		b.WriteString("\n  </resource>")
+	}
+	b.WriteString("\n</relevant-resources>")
+	return b.String()
+}
+
+// resourceItem is the prompt-layer view of a Resource — only the bits the
+// model actually consumes. Decouples the prompt code from the SDK type.
+type resourceItem struct {
+	ID      string
+	Content string
 }
 
 // pluginHeader formats the per-plugin block header per the proposal:

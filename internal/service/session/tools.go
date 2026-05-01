@@ -10,10 +10,6 @@ import (
 	"github.com/mwantia/forge/internal/service/template"
 )
 
-type sessionCtxKey struct{}
-
-var callerSessionKey = sessionCtxKey{}
-
 func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
 	switch request.Tool {
 	case "update_session_title":
@@ -79,6 +75,30 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		return &plugins.ExecuteResponse{
 			Result: msgs,
 		}, nil
+
+	case "archive_session":
+		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
+		if err != nil {
+			return nil, err
+		}
+		ref, _ := ArgString(request.Arguments, "ref")
+		res, err := s.ArchiveSession(ctx, sessionID, ref)
+		if err != nil {
+			return nil, err
+		}
+		return &plugins.ExecuteResponse{Result: res}, nil
+
+	case "clone_archived_session":
+		sourceID, ok := ArgString(request.Arguments, "source_id")
+		if !ok {
+			return nil, fmt.Errorf("missing argument %q", "source_id")
+		}
+		name, _ := ArgString(request.Arguments, "name")
+		clone, err := s.CloneSession(ctx, sourceID, name)
+		if err != nil {
+			return nil, err
+		}
+		return &plugins.ExecuteResponse{Result: clone}, nil
 
 	case "read_message":
 		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")

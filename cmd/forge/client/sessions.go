@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -32,6 +33,10 @@ func NewSessionsCommand() *cobra.Command {
 	cmd.AddCommand(newSessionsGetCmd(client))
 	cmd.AddCommand(newSessionsDeleteCmd(client))
 	cmd.AddCommand(newSessionsMessagesCmd(client))
+	cmd.AddCommand(newSessionsBranchesCmd(client))
+	cmd.AddCommand(newSessionsBranchCmd(client))
+	cmd.AddCommand(newSessionsCheckoutCmd(client))
+	cmd.AddCommand(newSessionsLogCmd(client))
 
 	return cmd
 }
@@ -122,9 +127,23 @@ func newPipelineDispatchCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dispatch <session-id> <content>",
 		Short: "Dispatch a user message to a session and stream the response",
-		Args:  cobra.ExactArgs(2),
+		Long: "Dispatch a user message to a session and stream the response. " +
+			"Pass `-` as <content> to read the message body from stdin " +
+			"(e.g. `echo \"Hello\" | forge pipeline dispatch test-session -`).",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return streamSend(cmd.Context(), client(), args[0], args[1], raw, noRender, noStore)
+			content := args[1]
+			if content == "-" {
+				buf, err := io.ReadAll(os.Stdin)
+				if err != nil {
+					return fmt.Errorf("failed to read stdin: %w", err)
+				}
+				content = strings.TrimRight(string(buf), "\n")
+				if content == "" {
+					return fmt.Errorf("stdin produced empty message content")
+				}
+			}
+			return streamSend(cmd.Context(), client(), args[0], content, raw, noRender, noStore)
 		},
 	}
 
@@ -283,7 +302,7 @@ func newSessionsMessagesListCmd(client func() *api.Client) *cobra.Command {
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tCREATED\tROLE\tCONTENT")
+			fmt.Fprintln(w, "HASH\tCREATED\tROLE\tCONTENT")
 			for _, m := range messages {
 				content := m.Content
 				if len(content) > 80 {
@@ -291,7 +310,7 @@ func newSessionsMessagesListCmd(client func() *api.Client) *cobra.Command {
 				}
 				content = strings.ReplaceAll(content, "\n", " ")
 				fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-					m.ID,
+					shortHash(m.Hash),
 					m.CreatedAt.Format(time.DateTime),
 					m.Role,
 					content,
@@ -322,7 +341,7 @@ func newSessionsMessagesViewCmd(client func() *api.Client) *cobra.Command {
 
 			var sb strings.Builder
 			sb.WriteString("---\n")
-			fmt.Fprintf(&sb, "ID:      %s\n", msg.ID)
+			fmt.Fprintf(&sb, "Hash:    %s\n", msg.Hash)
 			fmt.Fprintf(&sb, "Role:    %s\n", msg.Role)
 			fmt.Fprintf(&sb, "Created: %s\n", msg.CreatedAt.Format(time.DateTime))
 			if len(msg.ToolCalls) > 0 {
@@ -371,7 +390,7 @@ func newSessionsMessagesCompactCmd(client func() *api.Client) *cobra.Command {
 // rendering, matching pipe/programmatic use. --no-render keeps the server's
 // chunking but skips glamour locally.
 func streamSend(ctx context.Context, c *api.Client, sessionID, content string, raw, noRender, noStore bool) error {
-	ch, err := c.SendMessage(ctx, sessionID, content, noStore, raw)
+	ch, err := c.SendMessage(ctx, sessionID, content, api.DispatchOptions{NoStore: noStore, Raw: raw})
 	if err != nil {
 		return err
 	}

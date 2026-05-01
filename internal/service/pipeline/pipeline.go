@@ -11,7 +11,6 @@ import (
 
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service/session"
-	"github.com/mwantia/forge/internal/service/template"
 )
 
 // PipelineExecutor is the interface for running a session pipeline.
@@ -46,25 +45,20 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 	for i := range s.config.MaxToolIterations {
 		s.logger.Trace("Pipeline iteration", "iteration", i+1, "session", sess.SessionID)
 
-		stream, err := s.provider.Chat(ctx, providerName, modelName, messages, sess.ToolCalls)
+		content, toolCalls, finalChunk, err := s.chatWithRetry(ctx, providerName, modelName, messages, sess.ToolCalls, out, sess.Output, i+1)
 		if err != nil {
 			out <- ErrorEvent{Message: fmt.Sprintf("provider error (iteration %d): %s", i+1, err)}
 			return fmt.Errorf("provider chat error (iteration %d): %w", i+1, err)
-		}
-
-		content, toolCalls, finalChunk, err := s.streamFromProvider(ctx, stream, out, sess.Output)
-		if err != nil {
-			out <- ErrorEvent{Message: fmt.Sprintf("stream error (iteration %d): %s", i+1, err)}
-			return fmt.Errorf("stream error (iteration %d): %w", i+1, err)
 		}
 		s.logger.Debug("Pipeline iteration completed", "iteration", i+1, "session", sess.SessionID, "content_len", len(content), "tool_calls", len(toolCalls))
 
 		if len(toolCalls) == 0 {
 			s.persistMessage(ctx, sess, &session.Message{
-				ID:        template.GenerateNewID(),
-				Role:      "assistant",
-				Content:   content,
-				CreatedAt: time.Now(),
+				Role:        "assistant",
+				Content:     content,
+				CreatedAt:   time.Now(),
+				ContextHash: sess.ContextHash,
+				Usage:       finalChunk.Usage,
 			})
 			out <- DoneEvent{
 				Usage:    finalChunk.Usage,
@@ -75,10 +69,11 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 
 		// Persist assistant turn with tool calls and emit ToolCallEvents.
 		assistantMsg := &session.Message{
-			ID:        template.GenerateNewID(),
-			Role:      "assistant",
-			Content:   content,
-			CreatedAt: time.Now(),
+			Role:        "assistant",
+			Content:     content,
+			CreatedAt:   time.Now(),
+			ContextHash: sess.ContextHash,
+			Usage:       finalChunk.Usage,
 		}
 		for _, tc := range toolCalls {
 			assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, session.MessageToolCall{
@@ -118,11 +113,15 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 		wg.Wait()
 
 		for _, r := range results {
-			out <- ToolResultEvent{CallID: r.tc.ID, Name: r.tc.Name, Result: r.result, IsError: r.isError}
+			out <- ToolResultEvent{
+				CallID:  r.tc.ID,
+				Name:    r.tc.Name,
+				Result:  r.result,
+				IsError: r.isError,
+			}
 
 			resultStr := marshalResult(r.result)
 			s.persistMessage(ctx, sess, &session.Message{
-				ID:      template.GenerateNewID(),
 				Role:    "tool",
 				Content: resultStr,
 				ToolCalls: []session.MessageToolCall{{
@@ -131,7 +130,8 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 					Result:  resultStr,
 					IsError: r.isError,
 				}},
-				CreatedAt: time.Now(),
+				CreatedAt:   time.Now(),
+				ContextHash: sess.ContextHash,
 			})
 			messages = append(messages, sdkplugins.ChatMessage{
 				Role:    "tool",
@@ -189,6 +189,63 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 	}
 }
 
+// chatWithRetry calls the provider and drains its stream, retrying transient
+// failures up to providerMaxAttempts times. A retry is only attempted when
+// nothing has been committed to the client yet (no content, no tool calls)
+// — otherwise replaying the call would duplicate already-streamed tokens.
+//
+// ctx cancellation aborts immediately; all other errors are treated as
+// transient and retried with exponential backoff.
+func (s *PipelineService) chatWithRetry(
+	ctx context.Context,
+	providerName, modelName string,
+	messages []sdkplugins.ChatMessage,
+	tools []sdkplugins.ToolCall,
+	out chan<- PipelineEvent,
+	policy resolvedOutput,
+	iteration int,
+) (string, []sdkplugins.ChatToolCall, *sdkplugins.ChatChunk, error) {
+	retry := s.config.Retry.resolve()
+
+	var lastErr error
+	for attempt := 1; attempt <= retry.Attempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return "", nil, nil, err
+		}
+
+		stream, err := s.provider.Chat(ctx, providerName, modelName, messages, tools)
+		if err != nil {
+			lastErr = err
+			s.logger.Warn("provider chat failed", "iteration", iteration, "attempt", attempt, "error", err)
+		} else {
+			content, toolCalls, finalChunk, streamErr := s.streamFromProvider(ctx, stream, out, policy)
+			if streamErr == nil {
+				return content, toolCalls, finalChunk, nil
+			}
+			lastErr = streamErr
+			// Tokens already on the wire — replay would duplicate. Bail.
+			if len(content) > 0 || len(toolCalls) > 0 {
+				s.logger.Warn("stream error after partial output; not retrying",
+					"iteration", iteration, "attempt", attempt, "error", streamErr)
+				return "", nil, nil, streamErr
+			}
+			s.logger.Warn("stream error before any output; will retry",
+				"iteration", iteration, "attempt", attempt, "error", streamErr)
+		}
+
+		if attempt == retry.Attempts {
+			break
+		}
+		backoff := min(retry.BaseBackoff*(1<<(attempt-1)), retry.MaxBackoff)
+		select {
+		case <-ctx.Done():
+			return "", nil, nil, ctx.Err()
+		case <-time.After(backoff):
+		}
+	}
+	return "", nil, nil, lastErr
+}
+
 // executeToolCall dispatches a single tool call via the tools registrar.
 // Tool call names are expected in "namespace__name" format.
 func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.ChatToolCall) (any, bool) {
@@ -210,11 +267,14 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 
 // persistMessage saves a message to storage via the session manager, logging
 // on failure (non-fatal). It is a no-op when sess.NoStore is true.
+//
+// On success the new content-hash is set on msg.Hash and msg.ParentHash
+// is filled in by the store (the existing HEAD before this write).
 func (s *PipelineService) persistMessage(ctx context.Context, sess *Session, msg *session.Message) {
 	if sess.NoStore {
 		return
 	}
-	if err := s.sessions.AppendMessage(ctx, sess.SessionID, msg); err != nil {
+	if _, err := s.sessions.AppendMessageToRef(ctx, sess.SessionID, sess.Ref, msg); err != nil {
 		s.logger.Error("Failed to persist message", "session", sess.SessionID, "role", msg.Role, "error", err)
 	}
 }

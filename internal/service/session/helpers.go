@@ -3,6 +3,8 @@ package session
 import (
 	"context"
 	"fmt"
+
+	"github.com/mwantia/forge/internal/service/sessionctx"
 )
 
 func constructSessionPrefix(sessionID string) string {
@@ -13,25 +15,16 @@ func constructSessionKey(sessionID string) string {
 	return constructSessionPrefix(sessionID) + "session.json"
 }
 
-func constructMessagePrefix(sessionID string) string {
-	return constructSessionPrefix(sessionID) + "messages/"
-}
-
-func constructMessageKey(sessionID string, msg *Message) string {
-	return fmt.Sprintf("%s%020d.json", constructMessagePrefix(sessionID), msg.CreatedAt.UnixNano())
-}
-
 // WithCallerSession threads the dispatching session ID through the context so
 // that tool implementations can resolve "the current session" without an
 // explicit argument from the LLM.
 func WithCallerSession(ctx context.Context, sessionID string) context.Context {
-	return context.WithValue(ctx, callerSessionKey, sessionID)
+	return sessionctx.With(ctx, sessionID)
 }
 
 // CallerSessionID returns the session ID stored by WithCallerSession, or "".
 func CallerSessionID(ctx context.Context) string {
-	v, _ := ctx.Value(callerSessionKey).(string)
-	return v
+	return sessionctx.From(ctx)
 }
 
 // resolveSessionArg picks a session ID from the tool arguments, falling back to

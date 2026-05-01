@@ -1,8 +1,8 @@
-package memory
+package resource
 
-type MemoryConfig struct {
-	// Plugin is the block name of the memory-capable plugin to bind to.
-	// When empty the first driver exposing MemoryCapabilities is chosen.
+type ResourceConfig struct {
+	// Plugin is the block name of the resource-capable plugin to bind to.
+	// When empty the first driver exposing ResourceCapabilities is chosen.
 	Plugin string `hcl:"plugin,optional"`
 
 	// DefaultNamespace is used when a caller omits one and no caller session

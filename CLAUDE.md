@@ -133,24 +133,19 @@ flowchart TB
     PLUGS[PluginsService<br/>PluginsRegistry + PluginsServer]
     PROV[ProviderService<br/>ProviderRegistar]
     TOOL[ToolsService<br/>ToolsRegistar]
+    SESS[SessionService<br/>SessionManager]
+    RES[ResourceService<br/>ResourceRegistar]
     PIPE[PipelineService<br/>PipelineExecutor]
     SBX[SandboxService]
 
-    PLUGS --> MET
-    PLUGS --> SRV
+    PLUGS --> MET & SRV
     SRV --> MET
     STOR --> MET
-    PROV --> MET
-    PROV --> SRV
-    PROV --> PLUGS
-    TOOL --> MET
-    TOOL --> SRV
-    TOOL --> PLUGS
-    PIPE --> MET
-    PIPE --> SRV
-    PIPE --> STOR
-    PIPE --> PROV
-    PIPE --> TOOL
+    PROV --> MET & SRV & PLUGS
+    TOOL --> MET & SRV & PLUGS
+    RES --> MET & SRV & PLUGS & STOR
+    SESS --> MET & SRV & STOR & TOOL & RES
+    PIPE --> MET & SRV & STOR & PROV & TOOL & SESS & RES
 ```
 
 Agent (`internal/agent/agent.go`) is the top-level orchestrator. It:
@@ -167,46 +162,52 @@ Agent (`internal/agent/agent.go`) is the top-level orchestrator. It:
 ```mermaid
 sequenceDiagram
     participant C as HTTP client
-    participant SRV as ServerService
     participant PIPE as PipelineService
+    participant SESS as SessionService<br/>(DAG)
+    participant RES as ResourceService
     participant PROV as ProviderService
     participant TOOL as ToolsService
-    participant PL as Plugin (gRPC subprocess)
-    participant STOR as StorageService
+    participant PL as Plugin (gRPC)
 
-    C->>SRV: POST /v1/pipeline/sessions/:id/messages
-    SRV->>PIPE: handleSendMessage
-    PIPE->>STOR: LoadSession + ListMessages
+    C->>PIPE: POST /v1/pipeline/dispatch<br/>?ref=<name> | ?fork_from=<hash>
+    PIPE->>SESS: ResolveSession + ListMessagesFromRef
+    PIPE->>RES: Recall(sessionID, userText, 5)
+    RES-->>PIPE: <relevant-resources>
+    PIPE->>SESS: AppendMessageToRef (user)<br/>hash + CAS
     PIPE->>PROV: GetModel(provider, model)
-    PIPE->>STOR: SaveMessage (user)
     PIPE->>TOOL: GetAllToolCalls
+    PIPE->>SESS: PutPromptContext -> ctxHash
     PIPE-->>C: stream NDJSON begins
     loop max_tool_iterations
         PIPE->>PROV: Chat(messages, tools, model)
         PROV->>PL: gRPC Chat stream
         PL-->>PROV: ChatChunk(s)
-        PROV-->>PIPE: sdkplugins.ChatStream
+        PROV-->>PIPE: ChatStream
         PIPE-->>C: TokenEvent per chunk
         alt no tool_calls on Done
-            PIPE->>STOR: SaveMessage (assistant)
+            PIPE->>SESS: AppendMessageToRef (assistant, ContextHash=ctxHash)
             PIPE-->>C: DoneEvent
         else tool_calls present
-            PIPE->>STOR: SaveMessage (assistant + tool_calls)
+            PIPE->>SESS: AppendMessageToRef (assistant + tool_calls)
             PIPE-->>C: ToolCallEvent per call
             par parallel per call
                 PIPE->>TOOL: ExecuteToolWithCallID(ns, name, args, id)
                 TOOL->>PL: gRPC Execute
                 PL-->>TOOL: ExecuteResponse
             end
-            PIPE->>STOR: SaveMessage (tool result)
+            PIPE->>SESS: AppendMessageToRef (tool result)
             PIPE-->>C: ToolResultEvent per call
         end
     end
 ```
 
-**Tool naming:** tools are registered as `namespace__name` (double underscore, e.g. `skills__list_files`). `PipelineService.executeToolCall` splits on `__` to find the registrar entry. This differs from the old `namespace/name` convention documented in `old_code`.
+**Tool naming:** tools are registered as `namespace__name` (double underscore, e.g. `skills__list_files`, `resource__recall`, `sessions__archive_session`). `PipelineService.executeToolCall` splits on `__` to find the registrar entry, then forwards the bare name to the plugin's `Execute()`.
 
-**Streaming format:** `POST /v1/pipeline/sessions/:id/messages` responds with `application/x-ndjson`. Each line is a `WireEvent { type, data }` — see `pipeline/events.go` for the envelope and concrete event shapes (`TokenEvent`, `ToolCallEvent`, `ToolResultEvent`, `ErrorEvent`, `DoneEvent`).
+**Branching:** `?ref=<name>` dispatches against an existing branch; `?fork_from=<hash>` resolves the hash, finds its `ParentHash`, and creates a fresh `fork-<8hex>[-N]` ref pointing at that parent — so editing an old message branches off it without disturbing `HEAD`. The chosen ref is returned as `X-Forge-Ref` and CAS-advanced for every message of the turn; concurrent dispatches on the same branch surface as `409 Conflict` with the actual current tip.
+
+**Replay:** every turn's `PromptContext` (provider + model + message hashes + tool catalog hash + options) is canonicalized and stored. `GET /v1/contexts/:hash` returns the raw object, `/materialized` re-renders the system messages, and `POST /:hash/replay` re-dispatches *without* persisting — useful for diffing model behaviour across providers or reproducing a bug.
+
+**Streaming format:** `POST /v1/pipeline/dispatch` responds with `application/x-ndjson`. Each line is a `WireEvent { type, data }` — see `pipeline/events.go` for the envelope and concrete event shapes (`TokenEvent`, `ToolCallEvent`, `ToolResultEvent`, `ErrorEvent`, `DoneEvent`).
 
 ## Plugin System
 
@@ -217,7 +218,7 @@ flowchart LR
         D[plugins.Driver<br/>interface]
         PP[ProviderPlugin]
         TP[ToolsPlugin]
-        MP[MemoryPlugin]
+        RP[ResourcePlugin]
         CP[ChannelPlugin]
         SP[SandboxPlugin]
     end
@@ -239,12 +240,12 @@ flowchart LR
 
     PS -- fork+exec --> Plugin
     Plugin <-- gRPC over stdio --> PS
-    D --> PP & TP & MP & CP & SP
+    D --> PP & TP & RP & CP & SP
 ```
 
 - **Packaging:** each plugin lives in a sibling module (`plugins/<name>/`) and publishes a `plugin` subpackage whose `init()` calls `plugins.Register(name, description, factory)`. Blank-imported plugins can be served from the same binary via `forge plugin <name>`. Out-of-tree plugins remain standalone binaries placed under `plugin_dir` and named to match the block's `type` label.
 - **Runtime:** `PluginsService.ServePluginsFrom` iterates `PluginConfig` blocks, resolves the binary path (explicit `runtime { path = ... }`, then `<plugin_dir>/<type>`, then falls back to `os.Executable() plugin <type>` for embedded plugins), launches it via `hashicorp/go-plugin` with the `pluginsgrpc.Handshake` + `pluginsgrpc.Plugins`, dispenses the `driver`, calls `ConfigDriver` + `OpenDriver`, and caches the handle with capabilities.
-- **Capability gating:** `ProviderService.Serve` and `ToolsService.Serve` both skip drivers whose `DriverCapabilities.Provider` / `.Tools` is nil. Memory, Channel, and Sandbox plugin types are declared in the SDK and tracked in `PluginType` constants, but no service currently consumes them.
+- **Capability gating:** `ProviderService.Serve`, `ToolsService.Serve`, and `ResourceService.Serve` skip drivers whose corresponding `DriverCapabilities.*` field is nil. Channel and Sandbox capabilities are declared in the SDK but no service currently consumes them.
 
 ## Configuration
 
@@ -320,44 +321,102 @@ Mounted under `/v1/`. The `ServerService` exposes two Gin groups — `public` (u
 ```
 GET    /v1/health                                     # public
 
-GET    /v1/plugins
-GET    /v1/plugins/:name
-GET    /v1/plugins/:name/capabilities
+GET    /v1/plugins                                    /v1/plugins/:name[/capabilities]
+GET    /v1/provider                                   /v1/provider/models
+GET    /v1/provider/:name[/models[/:model]]
 
-GET    /v1/provider
-GET    /v1/provider/models
-GET    /v1/provider/:name
-GET    /v1/provider/:name/models
-GET    /v1/provider/:name/models/:model
+GET    /v1/tools                                      /v1/tools/:namespace[/:name]
+POST   /v1/tools/:namespace/:name/execute[/:callid]
 
-GET    /v1/tools
-GET    /v1/tools/:namespace
-GET    /v1/tools/:namespace/:name
-POST   /v1/tools/:namespace/:name/execute
-POST   /v1/tools/:namespace/:name/execute/:callid
+# Sessions — owns metadata, message log, refs, archive/clone
+GET    /v1/sessions                                   # list (filter by ?parent=<id>)
+POST   /v1/sessions                                   # create (name unique per deployment)
+GET    /v1/sessions/:session_id                       # by ID or name
+DELETE /v1/sessions/:session_id
 
-GET    /v1/pipeline/sessions
-POST   /v1/pipeline/sessions
-GET    /v1/pipeline/sessions/:id
-DELETE /v1/pipeline/sessions/:id
-GET    /v1/pipeline/sessions/:id/tools
-GET    /v1/pipeline/sessions/:id/tools/:namespace
-GET    /v1/pipeline/sessions/:id/messages              # list
-POST   /v1/pipeline/sessions/:id/messages              # send -> NDJSON stream
-GET    /v1/pipeline/sessions/:id/messages/:msg_id
-PATCH  /v1/pipeline/sessions/:id/messages/compact
-PATCH  /v1/pipeline/sessions/:id/messages/summarize    # 501 not implemented
+GET    /v1/sessions/:session_id/messages              # walk HEAD chronologically
+GET    /v1/sessions/:session_id/messages/:msg_id      # :msg_id is a hash or ≥4-char prefix
+PATCH  /v1/sessions/:session_id/messages/compact      # rewrites HEAD without tool turns
+PATCH  /v1/sessions/:session_id/messages/summarize    # 501 (not implemented)
+
+GET    /v1/sessions/:session_id/refs                  # name -> hash map
+POST   /v1/sessions/:session_id/refs                  # create (CAS from "")
+PATCH  /v1/sessions/:session_id/refs/:ref             # CAS move; expected_hash optional
+DELETE /v1/sessions/:session_id/refs/:ref
+
+POST   /v1/sessions/:session_id/archive               # walk ref -> envelope -> resource store; flips immutable
+POST   /v1/sessions/:session_id/clone                 # replay envelope into a fresh live session
+
+# Pipeline — dispatch + replay
+POST   /v1/pipeline/dispatch                          # NDJSON stream; ?ref=<name> | ?fork_from=<hash>
+POST   /v1/pipeline/preview                           # render the prompt without sending it
+
+# Contexts — observability for recorded PromptContexts
+GET    /v1/contexts/:hash                             # raw object
+GET    /v1/contexts/:hash/materialized                # rendered system messages
+POST   /v1/contexts/:hash/replay                      # NDJSON stream; no persistence
+
+# Resources — long-term memory; per-namespace
+GET    /v1/resources                                  # backend status
+POST   /v1/resources/:namespace                       # store
+GET    /v1/resources/:namespace                       # list
+GET    /v1/resources/:namespace/recall?q=...          # semantic-ish recall
+GET    /v1/resources/:namespace/:id
+DELETE /v1/resources/:namespace/:id                   # forget
 ```
+
+`POST /v1/pipeline/dispatch` returns `application/x-ndjson`. Each line is a
+`{ "type": "token|tool_call|tool_result|error|done", "data": {...} }`
+envelope (see `pipeline/events.go`). Response headers include
+`X-Forge-Ref` so clients know which branch was advanced.
+
+`POST /v1/sessions/.../archive` returns a `ArchiveResult` with the
+resource ID + namespace; pass that ID (or the source session ID) to
+`/clone` to fork a live successor. Mutations on archived sessions return
+`409 Conflict` with `ErrSessionArchived`.
 
 Swagger UI at `GET /swagger/index.html` when `server { swagger {} }` is set.
 
 Prometheus: `GET /metrics` on the metrics server, with optional bearer `metrics { token = "..." }`.
 
-## Storage
+## Storage & DAG layout
 
-`StorageBackend` is a flat K/V-with-prefix interface (`ReadRaw/ReadJson/WriteRaw/WriteJson/CreateEntry/ListEntry/DeleteEntry/DeletePrefix`). The `file` backend maps keys directly onto `filepath.Join(root, key)`. Sessions and messages are persisted by `PipelineStorageManager` (`pipeline/storage.go`) under key prefixes — zero-padded unix-nano prefixes on message keys give chronological ordering from a plain `ListEntry`.
+`StorageBackend` is a flat K/V-with-prefix interface
+(`ReadRaw/ReadJson/WriteRaw/WriteJson/CreateEntry/ListEntry/DeleteEntry/DeletePrefix`).
+The `file` backend maps keys directly onto `filepath.Join(root, key)`. Important
+contract: `ReadRaw` returns `(nil, nil)` for missing keys — never an empty
+slice — so the DAG layer can use `len(b) == 0` as "absent".
 
-Swapping in a new backend = add a `case "kv"` branch in `StorageService.Init` returning a type that implements `StorageBackend`. Everything else — metrics, pipeline, whatever else gets wired up later — goes through the injected `StorageBackend` interface.
+Sessions are persisted as a content-addressed Merkle DAG. Layout:
+
+```
+objects/<aa>/<rest-of-hash>                       # immutable blobs (MessageObj, PromptContext, ToolCatalog)
+sessions/<id>/session.json                        # SessionMetadata (incl. ArchivedAt)
+sessions/<id>/refs/<ref-name>                     # mutable hash pointer (HEAD, branches, fork-*)
+sessions/<id>/log/<020d-unix_nano>_<hash>.json    # MessageMeta sidecar (CreatedAt, ContextHash, SessionID)
+resources/<namespace>/<id>.json                   # built-in ResourcePlugin fallback (incl. archives)
+```
+
+Three packages own this:
+
+- `internal/service/session/dag/` — `ObjectStore` (PutIfAbsent / GetMessage /
+  GetPromptContext / GetToolCatalog), `RefStore` (Read / Write / CAS / List /
+  Delete; per-key in-process mutex), `Walk(refOrHash, limit, offset)`.
+- `internal/service/session/storage.go` — `dagSessionStore` glues the above
+  with the per-session metadata and log layout.
+- `shared/pkg/contenthash/` — canonical JSON encoder + SHA-256; the only
+  legitimate way to compute a content hash. Direct `json.Marshal` + hash is a
+  bug.
+
+`MessageObj`s never carry timestamps or session IDs — those live in the
+sidecar log entry — so byte-identical turns dedup across sessions and
+across replays. Compaction (`messages/compact`) rewrites the active
+branch with all `tool` turns + tool-only assistant turns removed, leaving
+the original chain as orphaned objects (collected by a future `forge gc`).
+
+Swapping the backend = add a `case "kv"` branch in `StorageService.Init`
+returning a type that implements `StorageBackend`; the DAG layer rebinds
+automatically.
 
 ## Key Files
 
@@ -372,8 +431,20 @@ Swapping in a new backend = add a `case "kv"` branch in `StorageService.Init` re
 | `internal/config/processor.go` | `fabric:"config:<block>"` tag resolver. |
 | `internal/service/service.go` | Core `Service` interface. |
 | `internal/service/plugins/serve.go` | Plugin subprocess lifecycle. |
-| `internal/service/pipeline/pipeline.go` | LLM + tool-call loop, event emission. |
-| `internal/service/pipeline/handlers.go` | HTTP handlers; builds the system-message chain and drives NDJSON streaming. |
+| `internal/service/pipeline/pipeline.go` | LLM + tool-call loop, event emission. Hashes messages, advances refs via CAS, stamps `ContextHash`. |
+| `internal/service/pipeline/handlers.go` | `/v1/pipeline/dispatch` + `/preview`; resolves `?ref=` / `?fork_from=`; renders `<relevant-resources>` per turn. |
+| `internal/service/pipeline/contexts.go` | `/v1/contexts/:hash[/materialized]` + `/replay` (no persistence). |
+| `internal/service/pipeline/prompt.go` | Cache-friendly system-prompt assembly: agent → builtins → model → plugins → session → resources. |
+| `internal/service/session/service.go` | `/v1/sessions/...` route mount + DI registration. |
+| `internal/service/session/storage.go` | `dagSessionStore`: object pool + per-session metadata, refs, log entries. |
+| `internal/service/session/manager.go` | `SessionManager` interface — the surface other services consume. |
+| `internal/service/session/refs.go` | Ref CRUD handlers (CAS-aware; 409 on archived). |
+| `internal/service/session/archive.go` | Archive envelope build + clone replay. Defines `ErrSessionArchived`. |
+| `internal/service/session/dag/` | `ObjectStore`, `RefStore`, `Walk`, types. |
+| `internal/service/sessionctx/sessionctx.go` | Caller-session context-key carrier; lets `resource` resolve "the current session" without an import cycle. |
+| `internal/service/resource/registar.go` | `ResourceRegistar` interface (`Store/Recall/Forget/List/Get`). |
+| `internal/service/resource/store.go` | Built-in file-backed fallback + `pluginResourceStore` for `ResourcePlugin`. |
+| `shared/pkg/contenthash/contenthash.go` | Canonical JSON + SHA-256 hex. The only valid hash path. |
 | `internal/service/provider/registar.go` | Model aliasing, `forge/` virtual namespace, Chat/Embed dispatch. |
 | `internal/service/tools/registar.go` | `namespace__name` registration + execution. |
 | `internal/service/storage/service.go` | Storage backend selection + instrumentation. |
@@ -397,11 +468,19 @@ Swapping in a new backend = add a `case "kv"` branch in `StorageService.Init` re
 ## Known Gaps & Conventions
 
 - `SandboxService` is a stub (`internal/service/sandbox/service.go`). The SDK still exports a `SandboxPlugin` interface but no service consumes it.
-- `ChannelPlugin` is defined in the SDK but there is no `internal/service/channel/` — the old channel dispatcher lives in `old_code/channel`.
-- `PipelineService.ExecuteTool` only implements `session_set_title`; the other tools listed in `pipeline/definitions.go` (`update_session_description`, `read_session`, `list_sub_sessions`, `create_session`, `dispatch_session`, `list_message_history`, `read_message`) are registered but will return `unknown tool execution`.
-- `handleSummarizeMessages` returns 501.
+- `ChannelPlugin` is defined in the SDK but there is no `internal/service/channel/`.
+- Session-tool fallbacks: `dispatch_session` returns "not yet implemented"; `handleSummarizeMessages` returns 501. Everything else under `sessions__*` is wired (incl. `archive_session`, `clone_archived_session`).
+- No `forge gc` yet — compaction and forks leave orphaned objects in `objects/`. Expect this to grow; lock removal behind explicit user request.
 - `internal/config/agent.go` no longer carries `data_dir`; persistence lives under `storage "file" { path = ... }`.
 - Most plugins under `../plugins/**` are still mid-migration to the new SDK and won't compile. Only the ones listed in `plugins.yaml` (currently `skills`, `plane`, `consul`, `ollama`) are expected to build with the `all` tag.
+- OpenViking `ResourcePlugin` adapter is referenced in `docs/03` but not in this repo. It plugs into `internal/service/resource/` without service-side changes — schema_version 1 of the archive envelope is the contract.
+
+### Conventions specific to the DAG layer
+
+- **Never compute a hash without `shared/pkg/contenthash`.** Direct `json.Marshal` + sha256 will produce non-canonical bytes (Go map iteration is randomized) and silently break dedup.
+- **Never set `MessageObj.Hash` from caller code.** The hash is the canonical encoding of the whole object; it falls out of `ObjectStore.PutMessage`.
+- **CAS, not blind write.** `RefStore.Write` exists for archive/clone-style bootstrapping. Pipeline code uses `CAS(expected → next)` so concurrent dispatches surface as 409, not lost writes.
+- **Mutation paths must call `ensureNotArchived`.** Already wired for `AppendMessage*`, `WriteRef`, `CASRef`, `DeleteRef`. New mutation entry points need the same guard.
 
 ## Commit & Review Conventions
 
@@ -410,3 +489,4 @@ Swapping in a new backend = add a `case "kv"` branch in `StorageService.Init` re
 - Route registration belongs in `Init`, not `Serve`. `Serve` should only run the long-lived loop.
 - Metrics: register Prometheus collectors in `Init` via the injected `MetricsRegistar`, not global `MustRegister`.
 - NDJSON streaming: always flush after `Writer.Write`. Use `WireEvent` — never leak concrete `PipelineEvent` types over the wire.
+- Swagger annotations on HTTP handlers: use `map[string]any` (or `map[string]string` for error bodies) in `@Success` / `@Failure` tags. `swag init` cannot resolve cross-module types like `plugins.Resource` or other `forge-sdk` types from inside `service/` — referencing them breaks `task generate`. If a precise response schema is needed, declare a local response struct in the same handler package and reference that.

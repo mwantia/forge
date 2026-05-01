@@ -1,16 +1,16 @@
-package memory
+package resource
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/mwantia/forge-sdk/pkg/plugins"
-	"github.com/mwantia/forge/internal/service/session"
+	"github.com/mwantia/forge/internal/service/sessionctx"
 )
 
-func (s *MemoryService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
 	switch req.Tool {
-	case "store_resource":
+	case "store":
 		content, ok := argString(req.Arguments, "content")
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "content")
@@ -23,7 +23,7 @@ func (s *MemoryService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequ
 		}
 		return &plugins.ExecuteResponse{Result: res}, nil
 
-	case "retrieve_resources":
+	case "recall":
 		query, ok := argString(req.Arguments, "query")
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "query")
@@ -31,21 +31,32 @@ func (s *MemoryService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequ
 		ns := s.resolveNamespace(ctx, req.Arguments)
 		limit := argInt(req.Arguments, "limit", 5)
 		filter, _ := req.Arguments["filter"].(map[string]any)
-		res, err := s.Retrieve(ctx, ns, query, limit, filter)
+		res, err := s.Recall(ctx, ns, query, limit, filter)
 		if err != nil {
 			return nil, err
 		}
 		return &plugins.ExecuteResponse{Result: res}, nil
+
+	case "forget":
+		id, ok := argString(req.Arguments, "id")
+		if !ok {
+			return nil, fmt.Errorf("missing argument %q", "id")
+		}
+		ns := s.resolveNamespace(ctx, req.Arguments)
+		if err := s.Forget(ctx, ns, id); err != nil {
+			return nil, err
+		}
+		return &plugins.ExecuteResponse{Result: map[string]any{"id": id, "namespace": ns}}, nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", req.Tool, req.CallID)
 }
 
-func (s *MemoryService) resolveNamespace(ctx context.Context, args map[string]any) string {
+func (s *ResourceService) resolveNamespace(ctx context.Context, args map[string]any) string {
 	if v, ok := argString(args, "namespace"); ok {
 		return v
 	}
-	if id := session.CallerSessionID(ctx); id != "" {
+	if id := sessionctx.From(ctx); id != "" {
 		return id
 	}
 	if s.config.DefaultNamespace != "" {

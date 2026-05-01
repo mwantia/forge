@@ -1,14 +1,4 @@
 definitions:
-  memory.storeResourceRequest:
-    properties:
-      content:
-        type: string
-      metadata:
-        additionalProperties: {}
-        type: object
-    required:
-    - content
-    type: object
   pipeline.WireEvent:
     properties:
       data:
@@ -74,6 +64,14 @@ definitions:
       runes:
         type: integer
     type: object
+  pipeline.replayRequest:
+    properties:
+      model:
+        type: string
+      options_override:
+        additionalProperties: {}
+        type: object
+    type: object
   plugins.PluginDriverInfo:
     properties:
       args:
@@ -101,13 +99,44 @@ definitions:
       type:
         type: string
     type: object
+  resource.storeResourceRequest:
+    properties:
+      content:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+    required:
+    - content
+    type: object
+  session.ArchiveResult:
+    properties:
+      archived_at:
+        type: string
+      head_hash:
+        type: string
+      messages:
+        type: integer
+      namespace:
+        type: string
+      ref_name:
+        type: string
+      resource_id:
+        type: string
+      session_id:
+        type: string
+    type: object
   session.Message:
     properties:
       content:
         type: string
+      context_hash:
+        type: string
       created_at:
         type: string
-      id:
+      hash:
+        type: string
+      parent_hash:
         type: string
       role:
         type: string
@@ -115,6 +144,8 @@ definitions:
         items:
           $ref: '#/definitions/session.MessageToolCall'
         type: array
+      usage:
+        type: object
     type: object
   session.MessageToolCall:
     properties:
@@ -132,6 +163,20 @@ definitions:
     type: object
   session.SessionMetadata:
     properties:
+      archive_namespace:
+        description: ArchiveNamespace is the resource namespace the envelope was stored
+          under.
+        type: string
+      archive_resource_id:
+        description: |-
+          ArchiveResourceID is the resource-store ID of the archive envelope,
+          when the session has been archived through a ResourcePlugin.
+        type: string
+      archived_at:
+        description: |-
+          ArchivedAt is non-nil when the session has been archived. Archived
+          sessions are immutable: ref/commit writes return 409.
+        type: string
       created_at:
         type: string
       description:
@@ -149,6 +194,22 @@ definitions:
       title:
         type: string
       updated_at:
+        type: string
+      usage:
+        description: |-
+          Usage aggregates provider-reported token consumption across every
+          turn dispatched against this session. Updated atomically with each
+          assistant message that carries a usage report.
+        type: object
+    type: object
+  session.archiveRequest:
+    properties:
+      ref:
+        type: string
+    type: object
+  session.cloneRequest:
+    properties:
+      name:
         type: string
     type: object
   session.compactResult:
@@ -177,6 +238,25 @@ definitions:
     required:
     - model
     type: object
+  session.refCreateRequest:
+    properties:
+      hash:
+        type: string
+      name:
+        type: string
+    required:
+    - hash
+    - name
+    type: object
+  session.refUpdateRequest:
+    properties:
+      expected_hash:
+        type: string
+      hash:
+        type: string
+    required:
+    - hash
+    type: object
   tools.executeBody:
     properties:
       arguments:
@@ -186,6 +266,118 @@ definitions:
 info:
   contact: {}
 paths:
+  /v1/contexts/{hash}:
+    get:
+      description: Returns the raw PromptContext blob for a hash. The materialized
+        form is at GET /v1/contexts/{hash}/materialized.
+      parameters:
+      - description: PromptContext hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get prompt context
+      tags:
+      - contexts
+  /v1/contexts/{hash}/materialized:
+    get:
+      description: Resolves a PromptContext's referenced message hashes into a fully
+        expanded chat slice.
+      parameters:
+      - description: PromptContext hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Materialize prompt context
+      tags:
+      - contexts
+  /v1/contexts/{hash}/replay:
+    post:
+      consumes:
+      - application/json
+      description: Re-dispatches a stored PromptContext to a provider and streams
+        the response as NDJSON. The original session is not modified; this is purely
+        a debugging surface.
+      parameters:
+      - description: PromptContext hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      - description: Optional model + options override
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/pipeline.replayRequest'
+      produces:
+      - application/x-ndjson
+      responses:
+        "200":
+          description: NDJSON stream; one event per line
+          schema:
+            $ref: '#/definitions/pipeline.WireEvent'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replay prompt context
+      tags:
+      - contexts
   /v1/health:
     get:
       description: Returns OK when the server is running
@@ -201,106 +393,6 @@ paths:
       summary: Health check
       tags:
       - system
-  /v1/memory:
-    get:
-      description: Returns whether a memory plugin is bound and which one.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Memory status
-      tags:
-      - memory
-  /v1/memory/{namespace}/resources:
-    get:
-      description: Queries a namespace for resources matching the given query.
-      parameters:
-      - description: Namespace
-        in: path
-        name: namespace
-        required: true
-        type: string
-      - description: Search query
-        in: query
-        name: query
-        required: true
-        type: string
-      - description: Max number of results (default 5)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "503":
-          description: Service Unavailable
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Retrieve memory resources
-      tags:
-      - memory
-    post:
-      consumes:
-      - application/json
-      description: Persists a resource into the given namespace.
-      parameters:
-      - description: Namespace
-        in: path
-        name: namespace
-        required: true
-        type: string
-      - description: Resource to store
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/memory.storeResourceRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "503":
-          description: Service Unavailable
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Store a memory resource
-      tags:
-      - memory
   /v1/pipeline/dispatch:
     post:
       consumes:
@@ -577,6 +669,188 @@ paths:
       summary: List all models
       tags:
       - provider
+  /v1/resources:
+    get:
+      description: Returns whether a resource plugin is bound and which one.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resource status
+      tags:
+      - resource
+  /v1/resources/{namespace}:
+    get:
+      description: Returns all resources in a namespace.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List resources
+      tags:
+      - resource
+    post:
+      consumes:
+      - application/json
+      description: Persists a resource into the given namespace.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Resource to store
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/resource.storeResourceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Store a resource
+      tags:
+      - resource
+  /v1/resources/{namespace}/{id}:
+    delete:
+      description: Removes the resource at namespace/id. Missing IDs are not an error.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Forget a resource
+      tags:
+      - resource
+    get:
+      description: Returns the resource at namespace/id.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a resource by id
+      tags:
+      - resource
+  /v1/resources/{namespace}/recall:
+    get:
+      description: Semantic-search a namespace for resources matching q.
+      parameters:
+      - description: Namespace
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Max number of results (default 5)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recall resources
+      tags:
+      - resource
   /v1/sessions:
     get:
       description: Returns all sessions, optionally filtered by parent ID
@@ -729,6 +1003,94 @@ paths:
       summary: Get session
       tags:
       - sessions
+  /v1/sessions/{session_id}/archive:
+    post:
+      consumes:
+      - application/json
+      description: Walks the named ref (default HEAD), stores an envelope through
+        the resource layer, and flips the session to immutable.
+      parameters:
+      - description: Session ID or name
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Archive options
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/session.archiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/session.ArchiveResult'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Archive session
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/clone:
+    post:
+      consumes:
+      - application/json
+      description: Replays an archive envelope into a fresh live session whose HEAD
+        points at the archived tip.
+      parameters:
+      - description: Source session ID, name, or archive resource ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Clone options
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/session.cloneRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/session.SessionMetadata'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clone archived session
+      tags:
+      - sessions
   /v1/sessions/{session_id}/messages:
     get:
       description: Returns messages for a session in chronological order
@@ -832,6 +1194,156 @@ paths:
       security:
       - BearerAuth: []
       summary: Compact messages
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/refs:
+    get:
+      description: Returns all refs (HEAD + branches + tags) for a session as a name
+        -> hash map.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List session refs
+      tags:
+      - sessions
+    post:
+      consumes:
+      - application/json
+      description: Creates a named branch or tag pointing at a message hash. Fails
+        with 409 when the ref already exists.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Ref to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.refCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create session ref
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/refs/{ref}:
+    delete:
+      description: Removes a ref. Missing refs are not an error. Deleting HEAD is
+        allowed but should generally be avoided.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Ref name
+        in: path
+        name: ref
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete session ref
+      tags:
+      - sessions
+    patch:
+      consumes:
+      - application/json
+      description: Atomically advances a ref. When expected_hash is set the move only
+        succeeds if the ref currently equals it; on mismatch returns 409 with the
+        actual current value.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Ref name
+        in: path
+        name: ref
+        required: true
+        type: string
+      - description: New hash + optional expected
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.refUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Move ref (CAS)
       tags:
       - sessions
   /v1/tools/:

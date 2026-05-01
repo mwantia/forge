@@ -13,10 +13,10 @@ import (
 	cliserver "github.com/mwantia/forge/cmd/forge/server"
 	"github.com/mwantia/forge/internal/agent"
 	flog "github.com/mwantia/forge/internal/log"
-	"github.com/mwantia/forge/internal/service/memory"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/pipeline"
 	"github.com/mwantia/forge/internal/service/plugins"
+	"github.com/mwantia/forge/internal/service/resource"
 	"github.com/mwantia/forge/internal/service/sandbox"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/session"
@@ -29,10 +29,10 @@ import (
 // Ensure init() registrations run for all service packages.
 var (
 	_ *agent.Agent              = nil
-	_ *memory.MemoryService     = nil
 	_ *metrics.MetricsService   = nil
 	_ *pipeline.PipelineService = nil
 	_ *plugins.PluginsService   = nil
+	_ *resource.ResourceService = nil
 	_ *sandbox.SandboxService   = nil
 	_ *server.ServerService     = nil
 	_ *session.SessionService   = nil
@@ -77,6 +77,10 @@ func main() {
 	cmd.AddCommand(cliserver.NewPluginCommand())
 	cmd.AddCommand(client.NewSessionsCommand())
 	cmd.AddCommand(client.NewPipelineCommand())
+	cmd.AddCommand(client.NewResourceCommand())
+	cmd.AddCommand(client.NewContextsCommand())
+	cmd.AddCommand(client.NewReplayCommand())
+	cmd.AddCommand(client.NewMessagesCommand())
 	//cmd.AddCommand(client.NewChannelsCommand())
 
 	if err := cmd.Execute(); err != nil {

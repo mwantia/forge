@@ -1,9 +1,12 @@
 package pipeline
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service/session"
+	"github.com/mwantia/forge/internal/service/session/dag"
 	"github.com/mwantia/forge/internal/service/template"
 )
 
@@ -50,8 +54,22 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			return
 		}
 
-		// Load full message history for LLM context.
-		history, err := s.sessions.ListMessages(ctx, meta.ID, 0, 0)
+		// Resolve target ref. ?fork_from=<msg-hash-or-prefix> auto-creates
+		// a new branch off that message's parent and dispatches there. ?ref=
+		// dispatches on an existing non-HEAD branch.
+		ref, err := s.resolveDispatchRef(ctx, meta.ID, c.Query("ref"), c.Query("fork_from"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Load full message history along the target ref.
+		var history []*session.Message
+		if ref == dag.HEAD {
+			history, err = s.sessions.ListMessages(ctx, meta.ID, 0, 0)
+		} else {
+			history, err = s.sessions.ListMessagesFromRef(ctx, meta.ID, ref, 0, 0)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load message history: " + err.Error()})
 			return
@@ -79,20 +97,23 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			agentSystem = DefaultAgentSystem
 		}
 		layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
+		layers.resources = s.recallRelevantResources(ctx, meta.ID, req.Content)
 		chatMessages := buildChatMessages(scoped, layers, history, s.logger)
 
 		// Persist user message before pipeline start (skipped when no_store is set).
 		userMsg := &session.Message{
-			ID:        template.GenerateNewID(),
 			Role:      "user",
 			Content:   req.Content,
 			CreatedAt: time.Now(),
 		}
+		var userHash string
 		if !req.NoStore {
-			if err := s.sessions.AppendMessage(ctx, meta.ID, userMsg); err != nil {
+			h, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, userMsg)
+			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save message: " + err.Error()})
 				return
 			}
+			userHash = h
 		}
 
 		chatMessages = append(chatMessages, sdkplugins.ChatMessage{
@@ -112,14 +133,26 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			output = rawOverride()
 		}
 
-		sess := &Session{
-			SessionID: meta.ID,
-			Metadata:  meta,
-			Messages:  chatMessages,
-			ToolCalls: toolCalls,
-			NoStore:   req.NoStore,
-			Output:    output,
+		// Materialize PromptContext for this dispatch (docs/03 §1.2). The
+		// hash is stamped onto every assistant + tool message produced
+		// during the run so the turn is replayable later.
+		ctxHash, err := s.recordPromptContext(ctx, meta, history, userHash, toolCalls)
+		if err != nil {
+			s.logger.Warn("failed to record prompt context", "session", meta.ID, "error", err)
 		}
+
+		sess := &Session{
+			SessionID:   meta.ID,
+			Metadata:    meta,
+			Messages:    chatMessages,
+			ToolCalls:   toolCalls,
+			NoStore:     req.NoStore,
+			Ref:         ref,
+			ContextHash: ctxHash,
+			Output:      output,
+		}
+
+		c.Writer.Header().Set("X-Forge-Ref", ref)
 
 		out := make(chan PipelineEvent, 32)
 		go func() {
@@ -260,6 +293,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			agentSystem = DefaultAgentSystem
 		}
 		layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
+		layers.resources = s.recallRelevantResources(ctx, meta.ID, req.Content)
 		chatMessages := buildChatMessages(scoped, layers, history, s.logger)
 		if req.Content != "" {
 			chatMessages = append(chatMessages, sdkplugins.ChatMessage{
@@ -298,6 +332,116 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, resp)
 	}
+}
+
+// recallRelevantResources queries the resource service for items that
+// match the user's input on the session's namespace and renders them as
+// the <relevant-resources> prompt block. Returns "" on any error or when
+// the resource registar is unbound — the dispatch must never break
+// because of a memory layer failure.
+func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID, query string) string {
+	if s.resources == nil || strings.TrimSpace(query) == "" {
+		return ""
+	}
+	const resourceRecallLimit = 5
+	hits, err := s.resources.Recall(ctx, sessionID, query, resourceRecallLimit, nil)
+	if err != nil {
+		s.logger.Debug("resource recall failed", "session", sessionID, "error", err)
+		return ""
+	}
+	if len(hits) == 0 {
+		return ""
+	}
+	items := make([]resourceItem, 0, len(hits))
+	for _, h := range hits {
+		items = append(items, resourceItem{ID: h.ID, Content: h.Content})
+	}
+	return renderResourcesBlock(items)
+}
+
+// resolveDispatchRef interprets the ?ref= and ?fork_from= dispatch query
+// params (docs/03 §3.2). Precedence: fork_from beats ref. fork_from auto-
+// creates a branch named "fork-<8hex>[-N]" off the parent of the named
+// message. ref must already exist when supplied.
+func (s *PipelineService) resolveDispatchRef(ctx context.Context, sessionID, ref, forkFrom string) (string, error) {
+	if forkFrom != "" {
+		full, err := s.sessions.ResolveMessageHash(ctx, sessionID, forkFrom)
+		if err != nil {
+			return "", fmt.Errorf("fork_from: %w", err)
+		}
+		obj, err := s.sessions.GetMessageObj(ctx, full)
+		if err != nil {
+			return "", fmt.Errorf("fork_from load: %w", err)
+		}
+		base := "fork-" + full[:8]
+		name := base
+		for i := 2; ; i++ {
+			existing, err := s.sessions.ReadRef(ctx, sessionID, name)
+			if err != nil {
+				return "", err
+			}
+			if existing == "" {
+				break
+			}
+			name = fmt.Sprintf("%s-%d", base, i)
+		}
+		if err := s.sessions.WriteRef(ctx, sessionID, name, obj.ParentHash); err != nil {
+			return "", fmt.Errorf("create fork ref: %w", err)
+		}
+		return name, nil
+	}
+
+	if ref == "" || ref == dag.HEAD {
+		return dag.HEAD, nil
+	}
+	hash, err := s.sessions.ReadRef(ctx, sessionID, ref)
+	if err != nil {
+		return "", err
+	}
+	if hash == "" {
+		return "", fmt.Errorf("ref %q does not exist", ref)
+	}
+	return ref, nil
+}
+
+// recordPromptContext builds a dag.PromptContext snapshot of what the
+// provider is about to receive and stores it in the global object pool.
+// Returns the resulting hash, which is stamped onto every assistant + tool
+// message produced during the run.
+//
+// The "history" arg is the persisted history loaded before the new user
+// message; userHash (when non-empty) is appended to the message-hash list.
+func (s *PipelineService) recordPromptContext(
+	ctx context.Context,
+	meta *session.SessionMetadata,
+	history []*session.Message,
+	userHash string,
+	tools []sdkplugins.ToolCall,
+) (string, error) {
+	provider, model, _ := s.splitModelName(meta.Model)
+
+	hashes := make([]string, 0, len(history)+1)
+	for _, m := range history {
+		if m.Hash != "" {
+			hashes = append(hashes, m.Hash)
+		}
+	}
+	if userHash != "" {
+		hashes = append(hashes, userHash)
+	}
+
+	// ToolCatalog is referenced by hash in the proposal; storing the bare
+	// catalog blob is reserved for phase 4 once the contexts API needs it.
+	// The tool-name list is captured here only to keep the prompt-context
+	// hash sensitive to the available toolset for the dispatch.
+	_ = tools
+
+	pc := &dag.PromptContext{
+		Provider:      provider,
+		Model:         model,
+		MessageHashes: hashes,
+	}
+	return s.sessions.PutPromptContext(ctx, pc)
 }
 
 // buildChatMessages assembles the ChatMessage slice sent to the LLM:

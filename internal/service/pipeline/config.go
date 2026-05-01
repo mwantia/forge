@@ -1,9 +1,52 @@
 package pipeline
 
+import "time"
+
 type PipelineConfig struct {
 	MaxToolIterations int           `hcl:"max_tool_iterations,optional"`
 	System            string        `hcl:"system,optional"`
 	Output            *OutputConfig `hcl:"output,block"`
+	Retry             *RetryConfig  `hcl:"retry,block"`
+}
+
+// RetryConfig governs transient-failure recovery for provider chat calls
+// inside the dispatch loop. A retry only happens when no content has been
+// streamed to the client yet (otherwise replaying would duplicate tokens).
+type RetryConfig struct {
+	Attempts    int    `hcl:"attempts,optional"`     // total attempts incl. first try (default 3)
+	BaseBackoff string `hcl:"base_backoff,optional"` // duration string, doubled per attempt (default "250ms")
+	MaxBackoff  string `hcl:"max_backoff,optional"`  // duration string; cap on per-attempt wait (default "5s")
+}
+
+type resolvedRetry struct {
+	Attempts    int
+	BaseBackoff time.Duration
+	MaxBackoff  time.Duration
+}
+
+func (r *RetryConfig) resolve() resolvedRetry {
+	out := resolvedRetry{
+		Attempts:    3,
+		BaseBackoff: 250 * time.Millisecond,
+		MaxBackoff:  5 * time.Second,
+	}
+	if r == nil {
+		return out
+	}
+	if r.Attempts > 0 {
+		out.Attempts = r.Attempts
+	}
+	if r.BaseBackoff != "" {
+		if d, err := time.ParseDuration(r.BaseBackoff); err == nil && d > 0 {
+			out.BaseBackoff = d
+		}
+	}
+	if r.MaxBackoff != "" {
+		if d, err := time.ParseDuration(r.MaxBackoff); err == nil && d > 0 {
+			out.MaxBackoff = d
+		}
+	}
+	return out
 }
 
 // OutputConfig controls how the server chunks and paces pipeline output.

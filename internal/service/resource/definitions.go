@@ -1,13 +1,15 @@
-package memory
+package resource
 
 import "github.com/mwantia/forge-sdk/pkg/plugins"
 
-// ToolsDefinitions are registered under the "memory" namespace at Init.
+// ToolsDefinitions are registered under the "resource" namespace at Init.
+// LLM-visible names are prefixed: resource__store, resource__recall,
+// resource__forget (docs/03 §5.3).
 var ToolsDefinitions = []plugins.ToolDefinition{
 	{
-		Name:        "store_resource",
+		Name:        "store",
 		Description: `Persist a piece of context (text plus optional metadata) into long-term memory so it can be retrieved by later turns or sessions.`,
-		Tags:        []string{"memory", "store"},
+		Tags:        []string{"resource", "store"},
 		Annotations: plugins.ToolAnnotations{
 			CostHint: plugins.ToolCostCheap,
 			System: `
@@ -29,9 +31,9 @@ helps later filter calls (e.g. {"kind":"preference"}).
 		},
 	},
 	{
-		Name:        "retrieve_resources",
+		Name:        "recall",
 		Description: `Retrieve previously stored context resources by semantic similarity to the provided query.`,
-		Tags:        []string{"memory", "retrieve"},
+		Tags:        []string{"resource", "recall"},
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
@@ -50,9 +52,32 @@ not as keyword soup. Default limit of 5 is usually plenty.
 				"query":     {Type: "string", Description: "The search query."},
 				"limit":     {Type: "integer", Description: "Maximum number of results to return. Defaults to 5."},
 				"namespace": {Type: "string", Description: "Optional namespace. Defaults to the caller session ID, then to the configured default namespace."},
-				"filter":    {Type: "object", Description: "Optional metadata filter applied by the memory backend."},
+				"filter":    {Type: "object", Description: "Optional metadata filter applied by the resource backend."},
 			},
 			Required: []string{"query"},
+		},
+	},
+	{
+		Name:        "forget",
+		Description: `Delete a previously stored resource by ID.`,
+		Tags:        []string{"resource", "forget"},
+		Annotations: plugins.ToolAnnotations{
+			Idempotent: true,
+			CostHint:   plugins.ToolCostCheap,
+			System: `
+Use when the user asks you to remove a stored memory, or when a
+prior recall surfaced information that is no longer correct. Pair
+with recall first to find the right ID; do not loop forget over
+many IDs without confirmation.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"id":        {Type: "string", Description: "The ID of the resource to delete."},
+				"namespace": {Type: "string", Description: "Optional namespace. Defaults to the caller session ID, then to the configured default namespace."},
+			},
+			Required: []string{"id"},
 		},
 	},
 }

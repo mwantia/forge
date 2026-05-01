@@ -18,8 +18,7 @@ type PluginType string
 
 const (
 	PluginTypeChannel  PluginType = "channel"
-	PluginTypeMemory   PluginType = "memory"
-	PluginTypeSessions PluginType = "sessions"
+	PluginTypeResource PluginType = "resource"
 	PluginTypeProvider PluginType = "provider"
 	PluginTypeTools    PluginType = "tools"
 	PluginTypeSandbox  PluginType = "sandbox"
@@ -50,10 +49,8 @@ func (s *PluginsService) GetPlugin(ctx context.Context, ptype PluginType, name s
 	switch ptype {
 	case PluginTypeChannel:
 		return driver.Driver.GetChannelPlugin(ctx)
-	case PluginTypeMemory:
-		return driver.Driver.GetMemoryPlugin(ctx)
-	case PluginTypeSessions:
-		return driver.Driver.GetSessionsPlugin(ctx)
+	case PluginTypeResource:
+		return driver.Driver.GetResourcePlugin(ctx)
 	case PluginTypeProvider:
 		return driver.Driver.GetProviderPlugin(ctx)
 	case PluginTypeTools:

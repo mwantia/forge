@@ -173,6 +173,49 @@ when you need the full body of a specific entry the list returns.
 		},
 	},
 	{
+		Name:        "archive_session",
+		Description: `Walk a session ref to root, persist an archive envelope through the resource layer, and flip the session to immutable.`,
+		Tags:        []string{"session", "archive"},
+		Annotations: plugins.ToolAnnotations{
+			CostHint: plugins.ToolCostModerate,
+			System: `
+Archive a session when the user signals it's done — wrap-up phrasing,
+"save this for later", or before a long pause. The session becomes
+immutable: no further commits or ref moves succeed. Pair with
+clone_archived_session to fork a live successor off the archive.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session to archive. Defaults to the caller session."},
+				"ref":        {Type: "string", Description: "Ref to archive. Defaults to HEAD."},
+			},
+		},
+	},
+	{
+		Name:        "clone_archived_session",
+		Description: `Replay an archive envelope into a fresh live session whose HEAD points at the archived tip.`,
+		Tags:        []string{"session", "clone"},
+		Annotations: plugins.ToolAnnotations{
+			CostHint: plugins.ToolCostModerate,
+			System: `
+Use to revive an archived session as a new live conversation — e.g.
+the user wants to "pick up where we left off" on a session that was
+archived. The clone has its own ID and ref set; lineage to the source
+is recorded as parent_session_id.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"source_id": {Type: "string", Description: "Source session ID (live archived session) or archive resource ID."},
+				"name":      {Type: "string", Description: "Optional name for the clone. Defaults to <source-name>-clone-<n>."},
+			},
+			Required: []string{"source_id"},
+		},
+	},
+	{
 		Name:        "read_message",
 		Description: `Retrieve a single message by its ID from a session.`,
 		Tags:        []string{"session", "read", "message"},

@@ -86,9 +86,18 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 			system = s.config.DefaultSystem
 		}
 
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		// Name uniqueness within deployment (docs/03 §1.5). Conflict = 409.
+		if existing, err := s.store.FindSessionByName(c.Request.Context(), name); err == nil && existing != nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "session name already exists: " + name})
+			return
+		}
+
 		now := time.Now()
 		meta := &SessionMetadata{
-			ID:          template.GenerateNewID(),
+			ID:          DeriveSessionID(name, now.UnixNano(), req.Parent),
 			Name:        name,
 			Title:       req.Title,
 			Description: req.Description,
@@ -98,9 +107,6 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}
-
-		s.mu.Lock()
-		defer s.mu.Unlock()
 
 		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

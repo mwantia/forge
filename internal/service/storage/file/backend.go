@@ -33,7 +33,7 @@ func (b *FileStorageBackend) ReadRaw(ctx context.Context, key string) ([]byte, e
 	path := b.constructKeyPath(key)
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
-		return make([]byte, 0), nil
+		return nil, nil
 	}
 
 	if err != nil {

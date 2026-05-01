@@ -9,6 +9,7 @@ import (
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/provider"
+	"github.com/mwantia/forge/internal/service/resource"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/session"
 	"github.com/mwantia/forge/internal/service/template"
@@ -28,9 +29,10 @@ type PipelineService struct {
 	config  PipelineConfig            `fabric:"config:pipeline"`
 	logger  hclog.Logger              `fabric:"logger:pipeline"`
 
-	sessions session.SessionManager    `fabric:"inject"`
-	tools    tools.ToolsRegistar       `fabric:"inject"`
-	provider provider.ProviderRegistar `fabric:"inject"`
+	sessions  session.SessionManager     `fabric:"inject"`
+	tools     tools.ToolsRegistar        `fabric:"inject"`
+	provider  provider.ProviderRegistar  `fabric:"inject"`
+	resources resource.ResourceRegistar  `fabric:"inject"`
 }
 
 func init() {
@@ -56,6 +58,15 @@ func (s *PipelineService) Init(ctx context.Context) error {
 	{
 		group.POST("/dispatch", s.handleDispatch())
 		group.POST("/preview", s.handlePreview())
+	}
+
+	// /v1/contexts — debug/observability surface for the dispatched
+	// PromptContext blobs that the pipeline records each turn.
+	contexts := s.router.AuthGroup("/contexts")
+	{
+		contexts.GET("/:hash", s.handleGetContext())
+		contexts.GET("/:hash/materialized", s.handleMaterializeContext())
+		contexts.POST("/:hash/replay", s.handleReplayContext())
 	}
 
 	return nil

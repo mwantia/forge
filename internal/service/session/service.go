@@ -10,7 +10,7 @@ import (
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
-	"github.com/mwantia/forge/internal/service/plugins"
+	"github.com/mwantia/forge/internal/service/resource"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/storage"
 	"github.com/mwantia/forge/internal/service/tools"
@@ -19,17 +19,16 @@ import (
 type SessionService struct {
 	service.UnimplementedService
 
-	mu      sync.RWMutex
-	store   sessionBackend
-	backend string
+	mu    sync.RWMutex
+	store sessionBackend
 
-	metrics    metrics.MetricsRegistar `fabric:"inject"`
-	pluginsReg plugins.PluginsRegistry `fabric:"inject"`
-	router     server.HttpRouter       `fabric:"inject"`
-	storage    storage.StorageBackend  `fabric:"inject"`
-	tools      tools.ToolsRegistar     `fabric:"inject"`
-	config     SessionConfig           `fabric:"config:session"`
-	logger     hclog.Logger            `fabric:"logger:session"`
+	metrics   metrics.MetricsRegistar   `fabric:"inject"`
+	router    server.HttpRouter         `fabric:"inject"`
+	storage   storage.StorageBackend    `fabric:"inject"`
+	tools     tools.ToolsRegistar       `fabric:"inject"`
+	resources resource.ResourceRegistar `fabric:"inject"`
+	config    SessionConfig             `fabric:"config:session"`
+	logger    hclog.Logger              `fabric:"logger:session"`
 }
 
 func init() {
@@ -49,9 +48,7 @@ func (s *SessionService) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to register metrics: %w", err)
 	}
 
-	// Default to the file-backed store. Serve may swap to plugin-backed.
-	s.store = &fileSessionStore{storage: s.storage}
-	s.backend = BackendFile
+	s.store = newDagSessionStore(s.storage)
 
 	const namespace = "sessions"
 	if err := s.tools.RegisterNamespaceMetadata(namespace, tools.NamespaceMetadata{
@@ -87,42 +84,17 @@ func (s *SessionService) Init(ctx context.Context) error {
 		// /v1/sessions/:session_id/messages/compact|summarize
 		group.PATCH("/:session_id/messages/compact", s.handleCompactMessages())
 		group.PATCH("/:session_id/messages/summarize", s.handleSummarizeMessages())
+		// /v1/sessions/:session_id/refs
+		group.GET("/:session_id/refs", s.handleListRefs())
+		group.POST("/:session_id/refs", s.handleCreateRef())
+		group.PATCH("/:session_id/refs/:ref", s.handleUpdateRef())
+		group.DELETE("/:session_id/refs/:ref", s.handleDeleteRef())
+		// /v1/sessions/:session_id/archive|clone
+		group.POST("/:session_id/archive", s.handleArchiveSession())
+		group.POST("/:session_id/clone", s.handleCloneSession())
 	}
 
 	return nil
-}
-
-func (s *SessionService) Serve(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	switch s.config.Backend {
-	case "", BackendFile:
-		return nil
-	case BackendPlugin:
-		if s.config.Plugin == "" {
-			return fmt.Errorf("session backend=plugin requires plugin name")
-		}
-		for _, driver := range s.pluginsReg.ListDrivers() {
-			if driver.Info.Name != s.config.Plugin {
-				continue
-			}
-			p, err := driver.Driver.GetSessionsPlugin(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to dispense sessions plugin %q: %w", s.config.Plugin, err)
-			}
-			if p == nil {
-				return fmt.Errorf("plugin %q does not implement SessionsPlugin", s.config.Plugin)
-			}
-			s.store = &pluginSessionStore{plugin: p}
-			s.backend = s.config.Plugin
-			s.logger.Info("Bound sessions plugin", "name", s.backend)
-			return nil
-		}
-		return fmt.Errorf("session plugin %q not found", s.config.Plugin)
-	default:
-		return fmt.Errorf("unknown session backend %q", s.config.Backend)
-	}
 }
 
 func (s *SessionService) Cleanup(context.Context) error {

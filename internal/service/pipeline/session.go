@@ -19,6 +19,15 @@ type Session struct {
 	Plugins   []string
 	NoStore   bool
 
+	// Ref is the session branch to advance during this dispatch. Empty
+	// means HEAD.
+	Ref string
+
+	// ContextHash is the hash of the PromptContext recorded for this
+	// dispatch (docs/03 §1.2). Stamped onto every assistant + tool message
+	// produced during the run so the turn can be replayed later.
+	ContextHash string
+
 	// Output is the resolved per-request chunking/pacing policy.
 	Output resolvedOutput
 }

@@ -9,11 +9,11 @@ import (
 	"github.com/mwantia/fabric/pkg/container"
 	"github.com/mwantia/forge-sdk/pkg/errors"
 	"github.com/mwantia/forge/internal/config"
-	"github.com/mwantia/forge/internal/service/memory"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/pipeline"
 	"github.com/mwantia/forge/internal/service/plugins"
 	"github.com/mwantia/forge/internal/service/provider"
+	"github.com/mwantia/forge/internal/service/resource"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/session"
 	"github.com/mwantia/forge/internal/service/tools"
@@ -31,7 +31,7 @@ type Agent struct {
 	met       *metrics.MetricsService   `fabric:"inject"`
 	pipe      *pipeline.PipelineService `fabric:"inject"`
 	sess      *session.SessionService   `fabric:"inject"`
-	mem       *memory.MemoryService     `fabric:"inject"`
+	res       *resource.ResourceService `fabric:"inject"`
 	providers *provider.ProviderService `fabric:"inject"`
 	toolsSvc  *tools.ToolsService       `fabric:"inject"`
 }
@@ -63,9 +63,9 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 		return fmt.Errorf("failed to bind session backend: %w", err)
 	}
 
-	a.logger.Debug("Binding memory backend...")
-	if err := a.mem.Serve(ctx); err != nil {
-		return fmt.Errorf("failed to bind memory backend: %w", err)
+	a.logger.Debug("Binding resource backend...")
+	if err := a.res.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to bind resource backend: %w", err)
 	}
 
 	a.mutex.Lock()
