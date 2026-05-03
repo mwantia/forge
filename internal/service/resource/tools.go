@@ -59,10 +59,8 @@ func (s *ResourceService) resolvePath(ctx context.Context, args map[string]any) 
 	if id := sessionctx.From(ctx); id != "" {
 		return "/sessions/" + id
 	}
-	if s.config.DefaultPath != "" {
-		return s.config.DefaultPath
-	}
-	return "/global"
+
+	return "/"
 }
 
 // recallQueryFromArgs parses the flat tool argument map into a RecallQuery.

@@ -10,7 +10,7 @@ import (
 // handleStatus godoc
 //
 //	@Summary		Resource status
-//	@Description	Returns whether a resource plugin is bound and which one.
+//	@Description	Returns the active mount table and the catch-all backend.
 //	@Tags			resource
 //	@Produce		json
 //	@Success		200	{object}	map[string]any
@@ -18,8 +18,15 @@ import (
 //	@Router			/v1/resources [get]
 func (s *ResourceService) handleStatus() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		s.mu.RLock()
+		mounts := make([]gin.H, len(s.mounts))
+		for i, m := range s.mounts {
+			mounts[i] = gin.H{"path": m.prefix, "plugin": m.plugin}
+		}
+		s.mu.RUnlock()
 		c.JSON(http.StatusOK, gin.H{
-			"backend": s.Backend(),
+			"mounts":  mounts,
+			"default": "file",
 		})
 	}
 }

@@ -1,16 +1,22 @@
 package resource
 
 type ResourceConfig struct {
-	// Plugin is the block name of the resource-capable plugin to bind to.
-	// When empty the first driver exposing ResourceCapabilities is chosen.
-	Plugin string `hcl:"plugin,optional"`
-
-	// DefaultPath is used when a caller omits a path and no caller session
-	// ID is available in the context.
-	DefaultPath string `hcl:"default_path,optional"`
+	// Mounts declares path-to-plugin bindings. Longest prefix wins.
+	// Paths not matching any mount fall through to the built-in file store.
+	Mounts []*ResourceMountConfig `hcl:"mount,block"`
 
 	// EmbedModel is a forge model alias (e.g. "forge/nomic") used for
-	// embedding augmentation. Wired up in a later phase; tolerated here so
-	// config files can declare it without parse errors.
+	// embedding augmentation. Tolerated here so config files can declare it
+	// without parse errors.
 	EmbedModel string `hcl:"embed_model,optional"`
+}
+
+type ResourceMountConfig struct {
+	// Plugin is the name of a resource-capable plugin driver to bind at this
+	// prefix. Empty (or "file") selects the built-in file store.
+	Plugin string `hcl:"plugin,label"`
+
+	// Path is the path prefix this mount owns (e.g. "/global", "/archives").
+	// Use "/" for a catch-all.
+	Path string `hcl:"path,optional"`
 }

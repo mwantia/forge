@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# LLM specific files
+.claude/
+CLAUDE.md
+
 # Test binary, built with `go test -c`
 *.test
 *.code-workspace
