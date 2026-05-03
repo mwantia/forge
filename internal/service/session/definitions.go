@@ -106,21 +106,26 @@ asks for older entries.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-Spawn a sub-session for parallel or sandboxed work — e.g. a research
-side-quest that shouldn't pollute the main thread, or a delegated task
-with a tighter system prompt. Inherits the current model and tool set
-unless overridden. Pair with dispatch_session to actually drive it.
+Spawn a focused sub-session for a specific delegated task. Always scope
+the sub-session to only the plugins it actually needs:
+
+- Set "plugins" to the minimal list of plugin namespaces required
+  (e.g. ["skills"] for a file task, ["consul"] for a service-discovery
+  lookup). Built-in namespaces (sessions, resource) are always available
+  regardless of this list.
+
+Narrowing plugins and verbosity keeps the context window small and the
+model focused. Pair with dispatch_session to drive the sub-session.
 `,
 		},
 		Parameters: plugins.ToolParameters{
 			Type: "object",
 			Properties: map[string]plugins.ToolProperty{
-				"model":               {Type: "string", Description: "LLM model to use. Defaults to the current session's model."},
-				"title":               {Type: "string", Description: "Optional short title for the sub-session."},
-				"description":         {Type: "string", Description: "Optional description for the sub-session."},
-				"system_prompts":      {Type: "array", Description: "Optional system prompt entries for the sub-session. Each entry has 'name' and 'content' fields."},
-				"tools":               {Type: "array", Description: "Tool plugin names to enable. Defaults to the current session's tools."},
-				"max_tool_iterations": {Type: "integer", Description: "Maximum tool call iterations. Defaults to the current session's value."},
+				"model":       {Type: "string", Description: "LLM model to use. Defaults to the current session's model."},
+				"title":       {Type: "string", Description: "Optional short title for the sub-session."},
+				"description": {Type: "string", Description: "Optional description for the sub-session."},
+				"system":      {Type: "string", Description: "Optional system prompt for the sub-session."},
+				"plugins":     {Type: "array", Description: "Plugin namespaces to allow in the sub-session (e.g. [\"skills\", \"consul\"]). When set, only the listed namespaces appear in the system prompt and are offered as tools. Built-in namespaces (sessions, resource) are always active."},
 			},
 		},
 	},

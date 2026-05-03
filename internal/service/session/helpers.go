@@ -55,3 +55,23 @@ func ArgInt(args map[string]any, key string, def int) int {
 	}
 	return def
 }
+
+func ArgStringSlice(args map[string]any, key string) ([]string, bool) {
+	raw, ok := args[key]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	switch v := raw.(type) {
+	case []string:
+		return v, len(v) > 0
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out, len(out) > 0
+	}
+	return nil, false
+}

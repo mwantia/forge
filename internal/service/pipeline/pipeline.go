@@ -196,19 +196,20 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 //
 // ctx cancellation aborts immediately; all other errors are treated as
 // transient and retried with exponential backoff.
-func (s *PipelineService) chatWithRetry(
-	ctx context.Context,
-	providerName, modelName string,
-	messages []sdkplugins.ChatMessage,
-	tools []sdkplugins.ToolCall,
-	out chan<- PipelineEvent,
-	policy resolvedOutput,
-	iteration int,
-) (string, []sdkplugins.ChatToolCall, *sdkplugins.ChatChunk, error) {
-	retry := s.config.Retry.resolve()
+func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, modelName string, messages []sdkplugins.ChatMessage, tools []sdkplugins.ToolCall, out chan<- PipelineEvent, policy resolvedOutput, iteration int) (string, []sdkplugins.ChatToolCall, *sdkplugins.ChatChunk, error) {
+	//
+	attempts := 3
+	if s.config.Retry.Attempts > 0 {
+		attempts = s.config.Retry.Attempts
+	}
+
+	baseRetry, maxRetry, err := s.config.Retry.Backoff.Resolve()
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to resolve backoff config: %w", err)
+	}
 
 	var lastErr error
-	for attempt := 1; attempt <= retry.Attempts; attempt++ {
+	for attempt := 1; attempt <= attempts; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return "", nil, nil, err
 		}
@@ -233,10 +234,10 @@ func (s *PipelineService) chatWithRetry(
 				"iteration", iteration, "attempt", attempt, "error", streamErr)
 		}
 
-		if attempt == retry.Attempts {
+		if attempt == attempts {
 			break
 		}
-		backoff := min(retry.BaseBackoff*(1<<(attempt-1)), retry.MaxBackoff)
+		backoff := min(baseRetry*(1<<(attempt-1)), maxRetry)
 		select {
 		case <-ctx.Done():
 			return "", nil, nil, ctx.Err()

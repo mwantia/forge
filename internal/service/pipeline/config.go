@@ -1,65 +1,71 @@
 package pipeline
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type PipelineConfig struct {
-	MaxToolIterations int           `hcl:"max_tool_iterations,optional"`
-	System            string        `hcl:"system,optional"`
-	Output            *OutputConfig `hcl:"output,block"`
-	Retry             *RetryConfig  `hcl:"retry,block"`
+	MaxToolIterations int                   `hcl:"max_tool_iterations,optional"`
+	System            string                `hcl:"system,optional"`
+	Output            *PipelineOutputConfig `hcl:"output,block"`
+	Retry             *PipelineRetryConfig  `hcl:"retry,block"`
 }
 
 // RetryConfig governs transient-failure recovery for provider chat calls
 // inside the dispatch loop. A retry only happens when no content has been
 // streamed to the client yet (otherwise replaying would duplicate tokens).
-type RetryConfig struct {
-	Attempts    int    `hcl:"attempts,optional"`     // total attempts incl. first try (default 3)
-	BaseBackoff string `hcl:"base_backoff,optional"` // duration string, doubled per attempt (default "250ms")
-	MaxBackoff  string `hcl:"max_backoff,optional"`  // duration string; cap on per-attempt wait (default "5s")
+type PipelineRetryConfig struct {
+	Attempts int                    `hcl:"attempts,optional"` // total attempts incl. first try (default 3)
+	Backoff  *PipelineBackoffConfig `hcl:"backoff,block"`
 }
 
-type resolvedRetry struct {
-	Attempts    int
-	BaseBackoff time.Duration
-	MaxBackoff  time.Duration
+type PipelineBackoffConfig struct {
+	Base string `hcl:"base,optional"` // duration string, doubled per attempt (default "250ms")
+	Max  string `hcl:"max,optional"`  // duration string; cap on per-attempt wait (default "5s")
 }
 
-func (r *RetryConfig) resolve() resolvedRetry {
-	out := resolvedRetry{
-		Attempts:    3,
-		BaseBackoff: 250 * time.Millisecond,
-		MaxBackoff:  5 * time.Second,
-	}
-	if r == nil {
-		return out
-	}
-	if r.Attempts > 0 {
-		out.Attempts = r.Attempts
-	}
-	if r.BaseBackoff != "" {
-		if d, err := time.ParseDuration(r.BaseBackoff); err == nil && d > 0 {
-			out.BaseBackoff = d
+func (c *PipelineBackoffConfig) Resolve() (time.Duration, time.Duration, error) {
+	base := 250 * time.Millisecond
+	max := 5 * time.Second
+
+	if c != nil {
+		if c.Base != "" {
+			duration, err := time.ParseDuration(c.Base)
+			if err != nil {
+				return base, max, fmt.Errorf("failed to parse 'base' duration: %w", err)
+			}
+
+			if duration > 0 {
+				base = duration
+			}
+		}
+		if c.Max != "" {
+			duration, err := time.ParseDuration(c.Max)
+			if err != nil {
+				return base, max, fmt.Errorf("failed to parse 'max' duration: %w", err)
+			}
+
+			if duration > 0 {
+				max = duration
+			}
 		}
 	}
-	if r.MaxBackoff != "" {
-		if d, err := time.ParseDuration(r.MaxBackoff); err == nil && d > 0 {
-			out.MaxBackoff = d
-		}
-	}
-	return out
+
+	return base, max, nil
 }
 
 // OutputConfig controls how the server chunks and paces pipeline output.
 // Rendering is always a per-channel concern; this block only dictates
 // what boundaries are emitted and how fast.
-type OutputConfig struct {
-	Mode          string        `hcl:"mode,optional"`            // token | sentence | block | final
-	CodeFence     string        `hcl:"code_fence,optional"`      // atomic | split
-	MaxChunkBytes int           `hcl:"max_chunk_bytes,optional"` // 0 = no cap
-	Pacing        *PacingConfig `hcl:"pacing,block"`
+type PipelineOutputConfig struct {
+	Mode          string                `hcl:"mode,optional"`            // token | sentence | block | final
+	CodeFence     string                `hcl:"code_fence,optional"`      // atomic | split
+	MaxChunkBytes int                   `hcl:"max_chunk_bytes,optional"` // 0 = no cap
+	Pacing        *PipelinePacingConfig `hcl:"pacing,block"`
 }
 
-type PacingConfig struct {
+type PipelinePacingConfig struct {
 	Enabled            bool    `hcl:"enabled,optional"`
 	CPS                int     `hcl:"cps,optional"`
 	Jitter             float64 `hcl:"jitter,optional"`
@@ -98,7 +104,7 @@ type resolvedPacing struct {
 
 // resolve applies defaults to an OutputConfig and returns the effective policy.
 // A nil receiver yields the default policy.
-func (o *OutputConfig) resolve() resolvedOutput {
+func (o *PipelineOutputConfig) resolve() resolvedOutput {
 	out := resolvedOutput{
 		Mode:      OutputModeBlock,
 		CodeFence: CodeFenceAtomic,

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service/session"
 	"github.com/mwantia/forge/internal/service/template"
 	"github.com/mwantia/forge/internal/service/tools"
@@ -54,24 +55,50 @@ type toolPromptEntry struct {
 // Plugin-level System() failures are logged and skipped (the rest of the
 // fragments still contribute) — a misbehaving plugin must never break the
 // pipeline.
-func collectPromptLayers(
-	ctx context.Context,
-	agentSystem string,
-	modelSystem string,
-	meta *session.SessionMetadata,
-	registar tools.ToolsRegistar,
-	logger hclog.Logger,
-) promptLayers {
+//
+// meta.ToolsVerbosity controls how much plugin/tool content is included:
+//   - "full" (default): plugin prose + per-tool annotations
+//   - "basic": plugin-level prose only, no per-tool annotations
+//   - "none": no plugin or tool blocks at all
+//
+// meta.Plugins, when non-empty, restricts which external plugin namespaces
+// appear in the prompt. Built-in namespaces always pass through.
+func collectPromptLayers(ctx context.Context, agentSystem string, modelSystem string, meta *session.SessionMetadata, registar tools.ToolsRegistar, logger hclog.Logger) promptLayers {
 	layers := promptLayers{
 		agent:   agentSystem,
 		model:   modelSystem,
 		session: meta.System,
 	}
 
+	verbosity := meta.ToolsVerbosity
+	if verbosity == "" {
+		verbosity = "full"
+	}
+
+	if verbosity == "none" {
+		layers.builtins = []pluginPromptBlock{}
+		layers.plugins = []pluginPromptBlock{}
+		return layers
+	}
+
+	// Build allowed-plugin index (lower-cased) for O(1) lookup.
+	// An empty set means all external plugins are allowed.
+	allowedPlugins := make(map[string]struct{}, len(meta.Plugins))
+	for _, p := range meta.Plugins {
+		allowedPlugins[strings.ToLower(p)] = struct{}{}
+	}
+
 	namespaces := registar.ListNamespaces()
 	layers.builtins = make([]pluginPromptBlock, 0, len(namespaces))
 	layers.plugins = make([]pluginPromptBlock, 0, len(namespaces))
 	for _, ns := range namespaces {
+		// Apply the plugins allow-list only to external (non-builtin) namespaces.
+		if !ns.Builtin && len(allowedPlugins) > 0 {
+			if _, ok := allowedPlugins[strings.ToLower(ns.Namespace)]; !ok {
+				continue
+			}
+		}
+
 		block := pluginPromptBlock{
 			name:        ns.Namespace,
 			version:     ns.Version,
@@ -87,16 +114,21 @@ func collectPromptLayers(
 		} else {
 			block.system = ns.System
 		}
-		block.tools = make([]toolPromptEntry, 0, len(ns.Tools))
-		for _, t := range ns.Tools {
-			if t.Annotations.System == "" {
-				continue
+
+		// "basic" verbosity: include plugin-level prose but omit per-tool annotations.
+		if verbosity == "full" {
+			block.tools = make([]toolPromptEntry, 0, len(ns.Tools))
+			for _, t := range ns.Tools {
+				if t.Annotations.System == "" {
+					continue
+				}
+				block.tools = append(block.tools, toolPromptEntry{
+					name:   t.Name,
+					system: t.Annotations.System,
+				})
 			}
-			block.tools = append(block.tools, toolPromptEntry{
-				name:   t.Name,
-				system: t.Annotations.System,
-			})
 		}
+
 		if ns.Builtin {
 			layers.builtins = append(layers.builtins, block)
 		} else {
@@ -194,6 +226,57 @@ func assembleSystemPrompt(p promptLayers, tmpl *template.Template, logger hclog.
 	appendSection(p.resources)
 
 	return b.String()
+}
+
+// builtinNamespaceSet returns the set of namespace names that are marked
+// builtin in the collected prompt layers. Used by filterToolCallsByPlugins so
+// builtin tools are never removed by the plugins allow-list.
+func builtinNamespaceSet(layers promptLayers) map[string]struct{} {
+	set := make(map[string]struct{}, len(layers.builtins))
+	for _, b := range layers.builtins {
+		set[strings.ToLower(b.name)] = struct{}{}
+	}
+	return set
+}
+
+// filterToolCallsByPlugins removes tool calls whose namespace is not in the
+// allowed set. When allowedNamespaces is empty all calls pass through.
+// Built-in namespaces (those whose NamespaceInfo.Builtin == true) are not
+// consulted here — the caller already knows which calls to keep because
+// GetAllToolCalls returns the flat name list. We therefore treat any namespace
+// absent from the allow-list as blocked, regardless of builtin status, unless
+// the allow-list itself is empty.
+//
+// To preserve built-in tools unconditionally, callers should NOT include them
+// in GetAllToolCalls filtering — instead this helper is only called when
+// meta.Plugins is non-empty, and the caller is responsible for deciding
+// whether builtins should bypass the filter. The current contract: builtins
+// always bypass (their namespace is never in the deny set).
+func filterToolCallsByPlugins(calls []sdkplugins.ToolCall, builtinNamespaces map[string]struct{}, allowedPlugins []string) []sdkplugins.ToolCall {
+	if len(allowedPlugins) == 0 {
+		return calls
+	}
+	allowed := make(map[string]struct{}, len(allowedPlugins))
+	for _, p := range allowedPlugins {
+		allowed[strings.ToLower(p)] = struct{}{}
+	}
+	out := calls[:0:0] // fresh slice, same underlying array reuse avoided
+	for _, tc := range calls {
+		ns, _, ok := strings.Cut(tc.Name, "__")
+		if !ok {
+			out = append(out, tc)
+			continue
+		}
+		nsLower := strings.ToLower(ns)
+		if _, isBuiltin := builtinNamespaces[nsLower]; isBuiltin {
+			out = append(out, tc)
+			continue
+		}
+		if _, isAllowed := allowed[nsLower]; isAllowed {
+			out = append(out, tc)
+		}
+	}
+	return out
 }
 
 // renderResourcesBlock formats Recall hits as a <relevant-resources>

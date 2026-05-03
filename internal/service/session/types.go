@@ -28,6 +28,16 @@ type SessionMetadata struct {
 	// turn dispatched against this session. Updated atomically with each
 	// assistant message that carries a usage report.
 	Usage *sdkplugins.TokenUsage `json:"usage,omitempty" swaggertype:"object"`
+	// ToolsVerbosity controls how much plugin/tool guidance appears in the
+	// assembled system prompt: "full" (default) includes plugin prose and
+	// per-tool annotations; "basic" includes only plugin-level prose; "none"
+	// omits all plugin and tool blocks entirely.
+	ToolsVerbosity string `json:"tools_verbosity,omitempty"`
+	// Plugins restricts which plugin namespaces are active for this session.
+	// When non-empty, only the listed namespaces appear in the system prompt
+	// and are offered as callable tools. Built-in namespaces (sessions,
+	// resource) always remain active regardless of this list.
+	Plugins []string `json:"plugins,omitempty"`
 }
 
 // Message is the session-layer projection of a dag.MessageObj plus its

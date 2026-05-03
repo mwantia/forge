@@ -127,6 +127,7 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve tools: " + err.Error()})
 			return
 		}
+		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSet(layers), meta.Plugins)
 
 		output := s.config.Output.resolve()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
@@ -307,6 +308,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve tools: " + err.Error()})
 			return
 		}
+		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSet(layers), meta.Plugins)
 
 		resp := previewResponse{
 			SessionID:   meta.ID,

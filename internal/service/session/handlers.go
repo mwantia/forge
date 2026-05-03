@@ -10,12 +10,14 @@ import (
 )
 
 type createSessionRequest struct {
-	Model       string `json:"model"          binding:"required"`
-	Name        string `json:"name"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Parent      string `json:"parent"`
-	System      string `json:"system"`
+	Model          string   `json:"model"           binding:"required"`
+	Name           string   `json:"name"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Parent         string   `json:"parent"`
+	System         string   `json:"system"`
+	ToolsVerbosity string   `json:"tools_verbosity"`
+	Plugins        []string `json:"plugins"`
 }
 
 type compactResult struct {
@@ -97,15 +99,17 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 
 		now := time.Now()
 		meta := &SessionMetadata{
-			ID:          DeriveSessionID(name, now.UnixNano(), req.Parent),
-			Name:        name,
-			Title:       req.Title,
-			Description: req.Description,
-			Parent:      req.Parent,
-			Model:       req.Model,
-			System:      system,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:             DeriveSessionID(name, now.UnixNano(), req.Parent),
+			Name:           name,
+			Title:          req.Title,
+			Description:    req.Description,
+			Parent:         req.Parent,
+			Model:          req.Model,
+			System:         system,
+			ToolsVerbosity: req.ToolsVerbosity,
+			Plugins:        req.Plugins,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 
 		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
