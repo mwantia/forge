@@ -346,7 +346,11 @@ func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID
 		return ""
 	}
 	const resourceRecallLimit = 5
-	hits, err := s.resources.Recall(ctx, sessionID, query, resourceRecallLimit, nil)
+	hits, err := s.resources.Recall(ctx, sdkplugins.RecallQuery{
+		Path:  "/sessions/" + sessionID,
+		Query: query,
+		Limit: resourceRecallLimit,
+	})
 	if err != nil {
 		s.logger.Debug("resource recall failed", "session", sessionID, "error", err)
 		return ""

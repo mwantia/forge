@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service/storage"
 	"github.com/mwantia/forge/internal/service/template"
@@ -16,93 +17,179 @@ import (
 // Two implementations: fileResourceStore (built-in, file-backed) and
 // pluginResourceStore (forwards to a bound ResourcePlugin).
 type resourceStore interface {
-	Store(ctx context.Context, namespace, content string, metadata map[string]any) (*sdkplugins.Resource, error)
-	Recall(ctx context.Context, namespace, query string, limit int, filter map[string]any) ([]*sdkplugins.Resource, error)
-	Forget(ctx context.Context, namespace, id string) error
-	List(ctx context.Context, namespace string) ([]*sdkplugins.Resource, error)
-	Get(ctx context.Context, namespace, id string) (*sdkplugins.Resource, error)
+	Store(ctx context.Context, path, content string, tags []string, metadata map[string]any) (*sdkplugins.Resource, error)
+	Recall(ctx context.Context, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, error)
+	Forget(ctx context.Context, path, id string) error
+	List(ctx context.Context, path string) ([]*sdkplugins.Resource, error)
+	Get(ctx context.Context, path, id string) (*sdkplugins.Resource, error)
 }
 
-// fileResourceStore persists resources under resources/<namespace>/<id>.json
-// using the injected StorageBackend. Retrieve uses a naive case-insensitive
-// substring match — good enough for the built-in fallback. Plug in a real
-// resource plugin (OpenViking) for semantic search.
+// fileResourceStore persists resources under resources/<path>/<id>.json
+// using the injected StorageBackend. Recall uses case-insensitive substring
+// matching with path glob filtering — good enough for the built-in fallback.
 type fileResourceStore struct {
 	storage storage.StorageBackend
 }
 
 type fileResource struct {
 	ID        string         `json:"id"`
-	Namespace string         `json:"namespace"`
+	Path      string         `json:"path"`
 	Content   string         `json:"content"`
+	Tags      []string       `json:"tags,omitempty"`
 	Metadata  map[string]any `json:"metadata,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 }
 
-func resourceKey(namespace, id string) string {
-	return "resources/" + namespace + "/" + id + ".json"
+func pathToKey(path, id string) string {
+	p := strings.Trim(path, "/")
+	return "resources/" + p + "/" + id + ".json"
 }
 
-func resourceNamespacePrefix(namespace string) string {
-	return "resources/" + namespace + "/"
+func pathToPrefix(path string) string {
+	p := strings.Trim(path, "/")
+	if p == "" {
+		return "resources/"
+	}
+	return "resources/" + p + "/"
 }
 
-func (s *fileResourceStore) Store(ctx context.Context, namespace, content string, metadata map[string]any) (*sdkplugins.Resource, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("namespace is required")
+// storageKeyToPathAndID reverses pathToKey: "resources/sessions/abc/id.json"
+// → ("/sessions/abc", "id").
+func storageKeyToPathAndID(key string) (path, id string) {
+	trimmed := strings.TrimPrefix(key, "resources/")
+	last := strings.LastIndex(trimmed, "/")
+	if last < 0 {
+		return "/", strings.TrimSuffix(trimmed, ".json")
 	}
-	res := fileResource{
-		ID:        template.GenerateNewID(),
-		Namespace: namespace,
-		Content:   content,
-		Metadata:  metadata,
-		CreatedAt: time.Now(),
-	}
-	if err := s.storage.WriteJson(ctx, resourceKey(namespace, res.ID), res); err != nil {
-		return nil, fmt.Errorf("failed to write resource: %w", err)
-	}
-	return &sdkplugins.Resource{
-		ID:       res.ID,
-		Content:  res.Content,
-		Metadata: res.Metadata,
-	}, nil
+	return "/" + trimmed[:last], strings.TrimSuffix(trimmed[last+1:], ".json")
 }
 
-func (s *fileResourceStore) Recall(ctx context.Context, namespace, query string, limit int, filter map[string]any) ([]*sdkplugins.Resource, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("namespace is required")
+// globBase returns the deepest path segment before the first wildcard char,
+// used to anchor the recursive listing prefix.
+func globBase(pattern string) string {
+	idx := strings.IndexAny(pattern, "*?[")
+	if idx < 0 {
+		return pattern
 	}
-	prefix := resourceNamespacePrefix(namespace)
+	slash := strings.LastIndex(pattern[:idx], "/")
+	if slash < 0 {
+		return "/"
+	}
+	return pattern[:slash+1]
+}
+
+// listAll recursively lists all .json file storage keys under prefix.
+func (s *fileResourceStore) listAll(ctx context.Context, prefix string) ([]string, error) {
 	entries, err := s.storage.ListEntry(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
+	var result []string
+	for _, e := range entries {
+		if strings.HasSuffix(e, "/") {
+			sub, err := s.listAll(ctx, prefix+e)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, sub...)
+		} else if strings.HasSuffix(e, ".json") {
+			result = append(result, prefix+e)
+		}
+	}
+	return result, nil
+}
+
+func (s *fileResourceStore) Store(ctx context.Context, path, content string, tags []string, metadata map[string]any) (*sdkplugins.Resource, error) {
+	if path == "" {
+		return nil, fmt.Errorf("path is required")
+	}
+	res := fileResource{
+		ID:        template.GenerateNewID(),
+		Path:      path,
+		Content:   content,
+		Tags:      tags,
+		Metadata:  metadata,
+		CreatedAt: time.Now(),
+	}
+	if err := s.storage.WriteJson(ctx, pathToKey(path, res.ID), res); err != nil {
+		return nil, fmt.Errorf("failed to write resource: %w", err)
+	}
+	return &sdkplugins.Resource{
+		ID:        res.ID,
+		Path:      res.Path,
+		Content:   res.Content,
+		Tags:      res.Tags,
+		Metadata:  res.Metadata,
+		CreatedAt: res.CreatedAt,
+	}, nil
+}
+
+func (s *fileResourceStore) Recall(ctx context.Context, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, error) {
+	if q.Path == "" {
+		return nil, fmt.Errorf("path is required")
+	}
+	limit := q.Limit
 	if limit <= 0 {
 		limit = 5
 	}
 
-	q := strings.ToLower(strings.TrimSpace(query))
-	scored := make([]*sdkplugins.Resource, 0, len(entries))
-	for _, entry := range entries {
-		if strings.HasSuffix(entry, "/") || !strings.HasSuffix(entry, ".json") {
+	hasWildcard := strings.ContainsAny(q.Path, "*?[")
+	basePath := q.Path
+	if hasWildcard {
+		basePath = globBase(q.Path)
+	}
+
+	keys, err := s.listAll(ctx, pathToPrefix(basePath))
+	if err != nil {
+		return nil, err
+	}
+
+	queryLower := strings.ToLower(strings.TrimSpace(q.Query))
+
+	scored := make([]*sdkplugins.Resource, 0, len(keys))
+	for _, key := range keys {
+		rpath, _ := storageKeyToPathAndID(key)
+
+		if hasWildcard {
+			matched, _ := doublestar.Match(q.Path, rpath)
+			if !matched {
+				continue
+			}
+		} else if rpath != q.Path {
 			continue
 		}
+
 		var r fileResource
-		if err := s.storage.ReadJson(ctx, prefix+entry, &r); err != nil {
+		if err := s.storage.ReadJson(ctx, key, &r); err != nil {
 			continue
 		}
-		if !metadataMatches(r.Metadata, filter) {
+
+		if !tagsMatch(r.Tags, q.Tags) {
 			continue
 		}
-		score := substringScore(r.Content, q)
-		if q != "" && score == 0 {
+		if !predicatesMatch(r.Metadata, q.Filter) {
 			continue
 		}
+		if !q.CreatedAfter.IsZero() && r.CreatedAt.Before(q.CreatedAfter) {
+			continue
+		}
+		if !q.CreatedBefore.IsZero() && r.CreatedAt.After(q.CreatedBefore) {
+			continue
+		}
+
+		score := substringScore(r.Content, queryLower)
+		if queryLower != "" && score == 0 {
+			continue
+		}
+
 		scored = append(scored, &sdkplugins.Resource{
-			ID:       r.ID,
-			Content:  r.Content,
-			Score:    score,
-			Metadata: r.Metadata,
+			ID:        r.ID,
+			Path:      r.Path,
+			Content:   r.Content,
+			Tags:      r.Tags,
+			Score:     score,
+			Metadata:  r.Metadata,
+			CreatedAt: r.CreatedAt,
 		})
 	}
 
@@ -115,28 +202,31 @@ func (s *fileResourceStore) Recall(ctx context.Context, namespace, query string,
 	return scored, nil
 }
 
-func (s *fileResourceStore) List(ctx context.Context, namespace string) ([]*sdkplugins.Resource, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("namespace is required")
+func (s *fileResourceStore) List(ctx context.Context, path string) ([]*sdkplugins.Resource, error) {
+	if path == "" {
+		return nil, fmt.Errorf("path is required")
 	}
-	prefix := resourceNamespacePrefix(namespace)
+	prefix := pathToPrefix(path)
 	entries, err := s.storage.ListEntry(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]*sdkplugins.Resource, 0, len(entries))
-	for _, entry := range entries {
-		if strings.HasSuffix(entry, "/") || !strings.HasSuffix(entry, ".json") {
+	for _, e := range entries {
+		if strings.HasSuffix(e, "/") || !strings.HasSuffix(e, ".json") {
 			continue
 		}
 		var r fileResource
-		if err := s.storage.ReadJson(ctx, prefix+entry, &r); err != nil {
+		if err := s.storage.ReadJson(ctx, prefix+e, &r); err != nil {
 			continue
 		}
 		out = append(out, &sdkplugins.Resource{
-			ID:       r.ID,
-			Content:  r.Content,
-			Metadata: r.Metadata,
+			ID:        r.ID,
+			Path:      r.Path,
+			Content:   r.Content,
+			Tags:      r.Tags,
+			Metadata:  r.Metadata,
+			CreatedAt: r.CreatedAt,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -145,31 +235,34 @@ func (s *fileResourceStore) List(ctx context.Context, namespace string) ([]*sdkp
 	return out, nil
 }
 
-func (s *fileResourceStore) Forget(ctx context.Context, namespace, id string) error {
-	if namespace == "" {
-		return fmt.Errorf("namespace is required")
+func (s *fileResourceStore) Forget(ctx context.Context, path, id string) error {
+	if path == "" {
+		return fmt.Errorf("path is required")
 	}
 	if id == "" {
 		return fmt.Errorf("id is required")
 	}
-	return s.storage.DeleteEntry(ctx, resourceKey(namespace, id))
+	return s.storage.DeleteEntry(ctx, pathToKey(path, id))
 }
 
-func (s *fileResourceStore) Get(ctx context.Context, namespace, id string) (*sdkplugins.Resource, error) {
-	if namespace == "" {
-		return nil, fmt.Errorf("namespace is required")
+func (s *fileResourceStore) Get(ctx context.Context, path, id string) (*sdkplugins.Resource, error) {
+	if path == "" {
+		return nil, fmt.Errorf("path is required")
 	}
 	if id == "" {
 		return nil, fmt.Errorf("id is required")
 	}
 	var r fileResource
-	if err := s.storage.ReadJson(ctx, resourceKey(namespace, id), &r); err != nil {
+	if err := s.storage.ReadJson(ctx, pathToKey(path, id), &r); err != nil {
 		return nil, err
 	}
 	return &sdkplugins.Resource{
-		ID:       r.ID,
-		Content:  r.Content,
-		Metadata: r.Metadata,
+		ID:        r.ID,
+		Path:      r.Path,
+		Content:   r.Content,
+		Tags:      r.Tags,
+		Metadata:  r.Metadata,
+		CreatedAt: r.CreatedAt,
 	}, nil
 }
 
@@ -185,16 +278,52 @@ func substringScore(content, query string) float64 {
 	return float64(n)
 }
 
-func metadataMatches(meta, filter map[string]any) bool {
-	if len(filter) == 0 {
+func tagsMatch(resourceTags, queryTags []string) bool {
+	if len(queryTags) == 0 {
 		return true
 	}
-	for k, want := range filter {
-		if got, ok := meta[k]; !ok || got != want {
+	set := make(map[string]struct{}, len(resourceTags))
+	for _, t := range resourceTags {
+		set[t] = struct{}{}
+	}
+	for _, t := range queryTags {
+		if _, ok := set[t]; !ok {
 			return false
 		}
 	}
 	return true
+}
+
+func predicatesMatch(meta map[string]any, preds []sdkplugins.FilterPredicate) bool {
+	for _, p := range preds {
+		v, ok := meta[p.Key]
+		if !ok {
+			return false
+		}
+		if !predicateMatches(v, p.Op, p.Value) {
+			return false
+		}
+	}
+	return true
+}
+
+func predicateMatches(got any, op sdkplugins.FilterOp, want any) bool {
+	gs := fmt.Sprintf("%v", got)
+	ws := fmt.Sprintf("%v", want)
+	switch op {
+	case sdkplugins.FilterOpEq:
+		return gs == ws
+	case sdkplugins.FilterOpPrefix:
+		return strings.HasPrefix(gs, ws)
+	case sdkplugins.FilterOpContains:
+		return strings.Contains(gs, ws)
+	case sdkplugins.FilterOpGte:
+		return gs >= ws
+	case sdkplugins.FilterOpLte:
+		return gs <= ws
+	default:
+		return false
+	}
 }
 
 // pluginResourceStore delegates to a bound ResourcePlugin.
@@ -202,22 +331,22 @@ type pluginResourceStore struct {
 	plugin sdkplugins.ResourcePlugin
 }
 
-func (s *pluginResourceStore) Store(ctx context.Context, namespace, content string, metadata map[string]any) (*sdkplugins.Resource, error) {
-	return s.plugin.Store(ctx, namespace, content, metadata)
+func (s *pluginResourceStore) Store(ctx context.Context, path, content string, tags []string, metadata map[string]any) (*sdkplugins.Resource, error) {
+	return s.plugin.Store(ctx, path, content, tags, metadata)
 }
 
-func (s *pluginResourceStore) Recall(ctx context.Context, namespace, query string, limit int, filter map[string]any) ([]*sdkplugins.Resource, error) {
-	return s.plugin.Recall(ctx, namespace, query, limit, filter)
+func (s *pluginResourceStore) Recall(ctx context.Context, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, error) {
+	return s.plugin.Recall(ctx, q)
 }
 
-func (s *pluginResourceStore) Forget(ctx context.Context, namespace, id string) error {
-	return s.plugin.Forget(ctx, namespace, id)
+func (s *pluginResourceStore) Forget(ctx context.Context, path, id string) error {
+	return s.plugin.Forget(ctx, path, id)
 }
 
-func (s *pluginResourceStore) List(ctx context.Context, namespace string) ([]*sdkplugins.Resource, error) {
+func (s *pluginResourceStore) List(ctx context.Context, path string) ([]*sdkplugins.Resource, error) {
 	return nil, fmt.Errorf("list is not supported by the active resource plugin")
 }
 
-func (s *pluginResourceStore) Get(ctx context.Context, namespace, id string) (*sdkplugins.Resource, error) {
+func (s *pluginResourceStore) Get(ctx context.Context, path, id string) (*sdkplugins.Resource, error) {
 	return nil, fmt.Errorf("get is not supported by the active resource plugin")
 }

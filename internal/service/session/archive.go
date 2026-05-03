@@ -15,9 +15,8 @@ import (
 // session has been archived. Surfaces as 409 at the HTTP layer.
 var ErrSessionArchived = errors.New("session is archived (immutable)")
 
-// ArchiveNamespace is the resource namespace where archive envelopes are
-// stored. Plugins like OpenViking can decide how to index the namespace.
-const ArchiveNamespace = "archives"
+// ArchivePath is the resource path where archive envelopes are stored.
+const ArchivePath = "/archives"
 
 // ArchiveEnvelope is the schema-versioned wire form persisted in the resource
 // store and replayed on clone. Locked against docs/03 §7.1.
@@ -46,7 +45,7 @@ type ArchiveResult struct {
 	RefName    string    `json:"ref_name"`
 	HeadHash   string    `json:"head_hash"`
 	ResourceID string    `json:"resource_id"`
-	Namespace  string    `json:"namespace"`
+	Path       string    `json:"path"`
 	ArchivedAt time.Time `json:"archived_at"`
 	Messages   int       `json:"messages"`
 }
@@ -151,14 +150,14 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName 
 		"ref_name":             refName,
 		"head_hash":            tip,
 	}
-	res, err := s.resources.Store(ctx, ArchiveNamespace, string(envBytes), resMeta)
+	res, err := s.resources.Store(ctx, ArchivePath, string(envBytes), nil, resMeta)
 	if err != nil {
 		return nil, fmt.Errorf("store archive envelope: %w", err)
 	}
 
 	meta.ArchivedAt = &now
 	meta.ArchiveResourceID = res.ID
-	meta.ArchiveNamespace = ArchiveNamespace
+	meta.ArchivePath = ArchivePath
 	meta.UpdatedAt = now
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		return nil, fmt.Errorf("flip session to archived: %w", err)
@@ -169,7 +168,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName 
 		RefName:    refName,
 		HeadHash:   tip,
 		ResourceID: res.ID,
-		Namespace:  ArchiveNamespace,
+		Path:       ArchivePath,
 		ArchivedAt: now,
 		Messages:   len(messages),
 	}, nil
@@ -264,21 +263,21 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 
 // loadArchiveEnvelope tries (in order): a live archived session by ID
 // (reads back its recorded resource ID), then a direct resource ID lookup
-// in the archives namespace.
+// at the archives path.
 func (s *SessionService) loadArchiveEnvelope(ctx context.Context, sourceID string) (*ArchiveEnvelope, error) {
 	if meta, err := s.store.LoadSession(ctx, sourceID); err == nil && meta.ArchivedAt != nil && meta.ArchiveResourceID != "" {
-		return s.fetchEnvelope(ctx, meta.ArchiveNamespace, meta.ArchiveResourceID)
+		return s.fetchEnvelope(ctx, meta.ArchivePath, meta.ArchiveResourceID)
 	}
-	return s.fetchEnvelope(ctx, ArchiveNamespace, sourceID)
+	return s.fetchEnvelope(ctx, ArchivePath, sourceID)
 }
 
-func (s *SessionService) fetchEnvelope(ctx context.Context, namespace, id string) (*ArchiveEnvelope, error) {
-	if namespace == "" {
-		namespace = ArchiveNamespace
+func (s *SessionService) fetchEnvelope(ctx context.Context, path, id string) (*ArchiveEnvelope, error) {
+	if path == "" {
+		path = ArchivePath
 	}
-	res, err := s.resources.Get(ctx, namespace, id)
+	res, err := s.resources.Get(ctx, path, id)
 	if err != nil {
-		return nil, fmt.Errorf("fetch archive %s/%s: %w", namespace, id, err)
+		return nil, fmt.Errorf("fetch archive %s/%s: %w", path, id, err)
 	}
 	env := &ArchiveEnvelope{}
 	if err := json.Unmarshal([]byte(res.Content), env); err != nil {

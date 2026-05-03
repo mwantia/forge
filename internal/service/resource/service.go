@@ -72,7 +72,7 @@ func (s *ResourceService) Init(ctx context.Context) error {
 	if err := s.tools.RegisterNamespaceMetadata(namespace, tools.NamespaceMetadata{
 		Description: "Built-in long-term resource store: persist and semantically retrieve context across sessions.",
 		Builtin:     true,
-		System: `Built-in resources persist context across turns and sessions, indexed for semantic retrieval. Store facts the user wants remembered (preferences, project context, recurring constraints) — not transient turn details. Retrieve before answering when the question references prior work that may not be in the current message history. Namespace defaults to the caller session ID; pass it explicitly only when sharing resources across sessions is intended.`,
+		System: `Built-in resources persist context across turns and sessions, indexed for semantic retrieval. Store facts the user wants remembered (preferences, project context, recurring constraints) — not transient turn details. Retrieve before answering when the question references prior work that may not be in the current message history. Path defaults to the caller session (/sessions/<id>); use /global for agent-wide facts or any explicit path to share across sessions.`,
 	}); err != nil {
 		return fmt.Errorf("failed to register namespace metadata for %q: %w", namespace, err)
 	}
@@ -88,14 +88,18 @@ func (s *ResourceService) Init(ctx context.Context) error {
 	}
 
 	// /v1/resources
+	// Method convention (avoids Gin wildcard conflicts):
+	//   GET    /*path          → list (or get with ?id=)
+	//   PUT    /*path          → store
+	//   POST   /*path          → recall (RecallQuery JSON body)
+	//   DELETE /*path          → forget (?id= required)
 	group := s.router.AuthGroup("/resources")
 	{
 		group.GET("", s.handleStatus())
-		group.POST("/:namespace", s.handleStoreResource())
-		group.GET("/:namespace", s.handleListResources())
-		group.GET("/:namespace/recall", s.handleRecallResources())
-		group.GET("/:namespace/:id", s.handleGetResource())
-		group.DELETE("/:namespace/:id", s.handleForgetResource())
+		group.GET("/*path", s.handleListOrGet())
+		group.PUT("/*path", s.handleStoreResource())
+		group.POST("/*path", s.handleRecallResources())
+		group.DELETE("/*path", s.handleForgetResource())
 	}
 
 	return nil

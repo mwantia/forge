@@ -22,8 +22,8 @@ type SessionMetadata struct {
 	// ArchiveResourceID is the resource-store ID of the archive envelope,
 	// when the session has been archived through a ResourcePlugin.
 	ArchiveResourceID string `json:"archive_resource_id,omitempty"`
-	// ArchiveNamespace is the resource namespace the envelope was stored under.
-	ArchiveNamespace string `json:"archive_namespace,omitempty"`
+	// ArchivePath is the resource path the envelope was stored under.
+	ArchivePath string `json:"archive_path,omitempty"`
 	// Usage aggregates provider-reported token consumption across every
 	// turn dispatched against this session. Updated atomically with each
 	// assistant message that carries a usage report.

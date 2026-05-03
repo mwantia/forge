@@ -2,7 +2,7 @@ package resource
 
 import (
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,23 +26,24 @@ func (s *ResourceService) handleStatus() gin.HandlerFunc {
 
 type storeResourceRequest struct {
 	Content  string         `json:"content" binding:"required"`
+	Tags     []string       `json:"tags,omitempty"`
 	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
 // handleStoreResource godoc
 //
 //	@Summary		Store a resource
-//	@Description	Persists a resource into the given namespace.
+//	@Description	Persists a resource at the path given in the URL.
 //	@Tags			resource
 //	@Accept			json
 //	@Produce		json
-//	@Param			namespace	path		string					true	"Namespace"
-//	@Param			body		body		storeResourceRequest	true	"Resource to store"
-//	@Success		200			{object}	map[string]any
-//	@Failure		400			{object}	map[string]string
-//	@Failure		503			{object}	map[string]string
+//	@Param			path	path		string					true	"Resource path (e.g. /sessions/abc123)"
+//	@Param			body	body		storeResourceRequest	true	"Resource body"
+//	@Success		200		{object}	map[string]any
+//	@Failure		400		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/resources/{namespace} [post]
+//	@Router			/v1/resources/{path} [put]
 func (s *ResourceService) handleStoreResource() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req storeResourceRequest
@@ -50,8 +51,8 @@ func (s *ResourceService) handleStoreResource() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		ns := c.Param("namespace")
-		res, err := s.Store(c.Request.Context(), ns, req.Content, req.Metadata)
+		path := normalizePath(c.Param("path"))
+		res, err := s.Store(c.Request.Context(), path, req.Content, req.Tags, req.Metadata)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -60,20 +61,34 @@ func (s *ResourceService) handleStoreResource() gin.HandlerFunc {
 	}
 }
 
-// handleListResources godoc
+// handleListOrGet godoc
 //
-//	@Summary		List resources
-//	@Description	Returns all resources in a namespace.
+//	@Summary		List or get resources
+//	@Description	Lists all resources at the given path. Pass ?id=<id> to fetch a single resource.
 //	@Tags			resource
 //	@Produce		json
-//	@Param			namespace	path		string	true	"Namespace"
-//	@Success		200			{object}	map[string]any
-//	@Failure		500			{object}	map[string]string
+//	@Param			path	path		string	true	"Resource path"
+//	@Param			id		query		string	false	"Resource ID (fetch single)"
+//	@Success		200		{object}	map[string]any
+//	@Failure		404		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/resources/{namespace} [get]
-func (s *ResourceService) handleListResources() gin.HandlerFunc {
+//	@Router			/v1/resources/{path} [get]
+func (s *ResourceService) handleListOrGet() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		res, err := s.List(c.Request.Context(), c.Param("namespace"))
+		path := normalizePath(c.Param("path"))
+
+		if id := c.Query("id"); id != "" {
+			res, err := s.Get(c.Request.Context(), path, id)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		res, err := s.List(c.Request.Context(), path)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -85,34 +100,33 @@ func (s *ResourceService) handleListResources() gin.HandlerFunc {
 // handleRecallResources godoc
 //
 //	@Summary		Recall resources
-//	@Description	Semantic-search a namespace for resources matching q.
+//	@Description	Search resources by path glob, content query, tags, metadata predicates, and time range. Path from URL is the default; body fields override it.
 //	@Tags			resource
+//	@Accept			json
 //	@Produce		json
-//	@Param			namespace	path		string	true	"Namespace"
-//	@Param			q			query		string	true	"Search query"
-//	@Param			limit		query		int		false	"Max number of results (default 5)"
-//	@Success		200			{object}	map[string]any
-//	@Failure		400			{object}	map[string]string
+//	@Param			path	path		string			true	"Default path or glob"
+//	@Param			body	body		map[string]any	false	"RecallQuery overrides (path, query, tags, filter, created_after, created_before, limit)"
+//	@Success		200		{object}	map[string]any
+//	@Failure		400		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/resources/{namespace}/recall [get]
+//	@Router			/v1/resources/{path} [post]
 func (s *ResourceService) handleRecallResources() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ns := c.Param("namespace")
-		query := c.Query("q")
-		if query == "" {
-			query = c.Query("query")
+		defaultPath := normalizePath(c.Param("path"))
+
+		var args map[string]any
+		if err := c.ShouldBindJSON(&args); err != nil {
+			// Empty body is fine — use URL path with no filters
+			args = map[string]any{}
 		}
-		if query == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing query parameter q"})
+
+		q, err := recallQueryFromArgs(args, defaultPath)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		limit := 5
-		if v := c.Query("limit"); v != "" {
-			if n, err := strconv.Atoi(v); err == nil && n > 0 {
-				limit = n
-			}
-		}
-		res, err := s.Recall(c.Request.Context(), ns, query, limit, nil)
+
+		res, err := s.Recall(c.Request.Context(), q)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -121,46 +135,39 @@ func (s *ResourceService) handleRecallResources() gin.HandlerFunc {
 	}
 }
 
-// handleGetResource godoc
-//
-//	@Summary		Get a resource by id
-//	@Description	Returns the resource at namespace/id.
-//	@Tags			resource
-//	@Produce		json
-//	@Param			namespace	path		string	true	"Namespace"
-//	@Param			id			path		string	true	"Resource ID"
-//	@Success		200			{object}	map[string]any
-//	@Failure		404			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/resources/{namespace}/{id} [get]
-func (s *ResourceService) handleGetResource() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		res, err := s.Get(c.Request.Context(), c.Param("namespace"), c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, res)
-	}
-}
-
 // handleForgetResource godoc
 //
 //	@Summary		Forget a resource
-//	@Description	Removes the resource at namespace/id. Missing IDs are not an error.
+//	@Description	Removes the resource at the given path. Requires ?id=<id>.
 //	@Tags			resource
-//	@Param			namespace	path	string	true	"Namespace"
-//	@Param			id			path	string	true	"Resource ID"
+//	@Param			path	path	string	true	"Resource path"
+//	@Param			id		query	string	true	"Resource ID"
 //	@Success		204
+//	@Failure		400	{object}	map[string]string
 //	@Failure		500	{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/resources/{namespace}/{id} [delete]
+//	@Router			/v1/resources/{path} [delete]
 func (s *ResourceService) handleForgetResource() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := s.Forget(c.Request.Context(), c.Param("namespace"), c.Param("id")); err != nil {
+		id := c.Query("id")
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing required query parameter: id"})
+			return
+		}
+		path := normalizePath(c.Param("path"))
+		if err := s.Forget(c.Request.Context(), path, id); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		c.Status(http.StatusNoContent)
 	}
+}
+
+// normalizePath ensures the path has a leading slash and no trailing slash.
+func normalizePath(raw string) string {
+	p := "/" + strings.Trim(raw, "/")
+	if p == "/" {
+		return "/"
+	}
+	return strings.TrimRight(p, "/")
 }
