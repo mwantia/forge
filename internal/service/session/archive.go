@@ -230,7 +230,6 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 		Description: src.Description,
 		Parent:      envelope.SessionID,
 		Model:       src.Model,
-		System:      src.System,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -253,8 +252,11 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 		}
 	}
 
-	if err := d.refs.Write(ctx, clone.ID, dag.HEAD, envelope.HeadHash); err != nil {
-		return nil, fmt.Errorf("write clone HEAD: %w", err)
+	if err := d.refs.Write(ctx, clone.ID, dag.MAIN, envelope.HeadHash); err != nil {
+		return nil, fmt.Errorf("write clone main: %w", err)
+	}
+	if err := d.refs.WriteSymRef(ctx, clone.ID, dag.HEAD, dag.MAIN); err != nil {
+		return nil, fmt.Errorf("write clone HEAD symref: %w", err)
 	}
 
 	SessionsTotal.WithLabelValues("clone").Inc()

@@ -12,27 +12,16 @@ import (
 )
 
 // promptLayers is the deterministic, cache-friendly view of every fragment
-// that contributes to the assembled system prompt for a single pipeline turn.
+// that contributes to the assembled system prompt.
 //
-// Layer order is chosen for prompt-cache stability:
-//
-//	agent → builtins (fixed) → model → plugins (sorted) → session
-//
-// `agent` and `builtins` are agent-process-global and never vary across
-// requests, so they sit at the front for maximum cache reuse. `model` is
-// per-session but stable across turns. `plugins` is the volatile bucket —
-// adding or removing a plugin only invalidates the suffix, not the
-// agent+builtins prefix.
-//
-// Every field is captured at request-build time so assembly is a pure
-// function of `promptLayers`.
+// Layer order (agent → builtins → model → plugins) is chosen for
+// prompt-cache stability: the most stable fragments lead so cache prefixes
+// stay valid across sessions and turns.
 type promptLayers struct {
-	agent     string
-	builtins  []pluginPromptBlock
-	model     string
-	plugins   []pluginPromptBlock
-	session   string
-	resources string // pre-rendered <relevant-resources> block, populated per-turn
+	agent    string
+	builtins []pluginPromptBlock
+	model    string
+	plugins  []pluginPromptBlock
 }
 
 type pluginPromptBlock struct {
@@ -65,9 +54,8 @@ type toolPromptEntry struct {
 // appear in the prompt. Built-in namespaces always pass through.
 func collectPromptLayers(ctx context.Context, agentSystem string, modelSystem string, meta *session.SessionMetadata, registar tools.ToolsRegistar, logger hclog.Logger) promptLayers {
 	layers := promptLayers{
-		agent:   agentSystem,
-		model:   modelSystem,
-		session: meta.System,
+		agent: agentSystem,
+		model: modelSystem,
 	}
 
 	verbosity := meta.ToolsVerbosity
@@ -221,22 +209,8 @@ func assembleSystemPrompt(p promptLayers, tmpl *template.Template, logger hclog.
 	for _, plg := range p.plugins {
 		appendSection(renderBlock("plugin", plg))
 	}
-	appendSection(render("session", p.session))
-	// Resources are last: they're the per-turn slot, most cache-volatile.
-	appendSection(p.resources)
 
 	return b.String()
-}
-
-// builtinNamespaceSet returns the set of namespace names that are marked
-// builtin in the collected prompt layers. Used by filterToolCallsByPlugins so
-// builtin tools are never removed by the plugins allow-list.
-func builtinNamespaceSet(layers promptLayers) map[string]struct{} {
-	set := make(map[string]struct{}, len(layers.builtins))
-	for _, b := range layers.builtins {
-		set[strings.ToLower(b.name)] = struct{}{}
-	}
-	return set
 }
 
 // filterToolCallsByPlugins removes tool calls whose namespace is not in the

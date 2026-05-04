@@ -27,7 +27,6 @@ type SessionService struct {
 	storage   storage.StorageBackend    `fabric:"inject"`
 	tools     tools.ToolsRegistar       `fabric:"inject"`
 	resources resource.ResourceRegistar `fabric:"inject"`
-	config    SessionConfig             `fabric:"config:session"`
 	logger    hclog.Logger              `fabric:"logger:session"`
 }
 
@@ -84,11 +83,11 @@ func (s *SessionService) Init(ctx context.Context) error {
 		// /v1/sessions/:session_id/messages/compact|summarize
 		group.PATCH("/:session_id/messages/compact", s.handleCompactMessages())
 		group.PATCH("/:session_id/messages/summarize", s.handleSummarizeMessages())
-		// /v1/sessions/:session_id/refs
-		group.GET("/:session_id/refs", s.handleListRefs())
-		group.POST("/:session_id/refs", s.handleCreateRef())
-		group.PATCH("/:session_id/refs/:ref", s.handleUpdateRef())
-		group.DELETE("/:session_id/refs/:ref", s.handleDeleteRef())
+		// /v1/sessions/:session_id/branch
+		group.GET("/:session_id/branch", s.handleListRefs())
+		group.POST("/:session_id/branch", s.handleCreateRef())
+		group.PATCH("/:session_id/branch/:ref", s.handleUpdateRef())
+		group.DELETE("/:session_id/branch/:ref", s.handleDeleteRef())
 		// /v1/sessions/:session_id/archive|clone
 		group.POST("/:session_id/archive", s.handleArchiveSession())
 		group.POST("/:session_id/clone", s.handleCloneSession())

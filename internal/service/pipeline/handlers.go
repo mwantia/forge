@@ -11,11 +11,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hashicorp/go-hclog"
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service/session"
 	"github.com/mwantia/forge/internal/service/session/dag"
-	"github.com/mwantia/forge/internal/service/template"
+	"github.com/mwantia/forge/internal/service/tools"
 )
 
 type dispatchRequest struct {
@@ -75,30 +74,22 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			return
 		}
 
-		// Fetch model system prompt from the provider.
-		modelSystem := ""
-		providerName, modelName, ok := s.splitModelName(meta.Model)
-		if ok {
-			if m, err := s.provider.GetModel(ctx, providerName, modelName); err == nil {
-				modelSystem = m.System
+		// If there's no system message at the root yet, assemble and persist one
+		// before the first user message is committed (lazy init for sessions
+		// created without an explicit regen call).
+		if len(history) == 0 || history[0].Role != "system" {
+			history, err = s.initSystemMessage(ctx, meta, ref, history)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to init system message: " + err.Error()})
+				return
 			}
 		}
 
-		// Render system prompts with session-scoped template clone.
-		scoped, err := s.tmpl.Clone(session.SessionVars(meta))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to build session template: " + err.Error()})
-			return
+		// Append per-turn resources block to system content without persisting it.
+		chatMessages := buildChatMessages(history)
+		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
+			chatMessages[0].Content += "\n\n" + resources
 		}
-
-		// Build chat message slice: assembled system prompt + history.
-		agentSystem := s.config.System
-		if agentSystem == "" {
-			agentSystem = DefaultAgentSystem
-		}
-		layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
-		layers.resources = s.recallRelevantResources(ctx, meta.ID, req.Content)
-		chatMessages := buildChatMessages(scoped, layers, history, s.logger)
 
 		// Persist user message before pipeline start (skipped when no_store is set).
 		userMsg := &session.Message{
@@ -127,7 +118,7 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve tools: " + err.Error()})
 			return
 		}
-		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSet(layers), meta.Plugins)
+		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSetFromRegistar(s.tools), meta.Plugins)
 
 		output := s.config.Output.resolve()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
@@ -210,13 +201,13 @@ type previewResponseMessage struct {
 }
 
 type previewResponse struct {
-	SessionID    string                   `json:"session_id"`
-	System       string                   `json:"system"`
-	SystemUsage  previewUsage             `json:"system_usage"`
-	Messages     []previewResponseMessage `json:"messages"`
-	Total        previewUsage             `json:"total"`
-	ToolCount    int                      `json:"tool_count"`
-	EstAccuracy  string                   `json:"est_accuracy"`
+	SessionID   string                   `json:"session_id"`
+	System      string                   `json:"system"`
+	SystemUsage previewUsage             `json:"system_usage"`
+	Messages    []previewResponseMessage `json:"messages"`
+	Total       previewUsage             `json:"total"`
+	ToolCount   int                      `json:"tool_count"`
+	EstAccuracy string                   `json:"est_accuracy"`
 }
 
 // estimateUsage applies the chars-per-token heuristic. Counts UTF-8 runes
@@ -275,27 +266,10 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			return
 		}
 
-		modelSystem := ""
-		providerName, modelName, ok := s.splitModelName(meta.Model)
-		if ok {
-			if m, err := s.provider.GetModel(ctx, providerName, modelName); err == nil {
-				modelSystem = m.System
-			}
+		chatMessages := buildChatMessages(history)
+		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
+			chatMessages[0].Content += "\n\n" + resources
 		}
-
-		scoped, err := s.tmpl.Clone(session.SessionVars(meta))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to build session template: " + err.Error()})
-			return
-		}
-
-		agentSystem := s.config.System
-		if agentSystem == "" {
-			agentSystem = DefaultAgentSystem
-		}
-		layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
-		layers.resources = s.recallRelevantResources(ctx, meta.ID, req.Content)
-		chatMessages := buildChatMessages(scoped, layers, history, s.logger)
 		if req.Content != "" {
 			chatMessages = append(chatMessages, sdkplugins.ChatMessage{
 				Role:    "user",
@@ -308,7 +282,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve tools: " + err.Error()})
 			return
 		}
-		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSet(layers), meta.Plugins)
+		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSetFromRegistar(s.tools), meta.Plugins)
 
 		resp := previewResponse{
 			SessionID:   meta.ID,
@@ -413,10 +387,7 @@ func (s *PipelineService) resolveDispatchRef(ctx context.Context, sessionID, ref
 // recordPromptContext builds a dag.PromptContext snapshot of what the
 // provider is about to receive and stores it in the global object pool.
 // Returns the resulting hash, which is stamped onto every assistant + tool
-// message produced during the run.
-//
-// The "history" arg is the persisted history loaded before the new user
-// message; userHash (when non-empty) is appended to the message-hash list.
+// message produced during the run. history must include the system message.
 func (s *PipelineService) recordPromptContext(
 	ctx context.Context,
 	meta *session.SessionMetadata,
@@ -436,10 +407,6 @@ func (s *PipelineService) recordPromptContext(
 		hashes = append(hashes, userHash)
 	}
 
-	// ToolCatalog is referenced by hash in the proposal; storing the bare
-	// catalog blob is reserved for phase 4 once the contexts API needs it.
-	// The tool-name list is captured here only to keep the prompt-context
-	// hash sensitive to the available toolset for the dispatch.
 	_ = tools
 
 	pc := &dag.PromptContext{
@@ -450,21 +417,61 @@ func (s *PipelineService) recordPromptContext(
 	return s.sessions.PutPromptContext(ctx, pc)
 }
 
-// buildChatMessages assembles the ChatMessage slice sent to the LLM:
-// one assembled system message (if any layer contributed) followed by
-// the persisted message history.
-//
-// All prompt-assembly logic lives in prompt.go; this function only converts
-// the rendered string into a ChatMessage and replays history.
-func buildChatMessages(tmpl *template.Template, layers promptLayers, history []*session.Message, logger hclog.Logger) []sdkplugins.ChatMessage {
-	var messages []sdkplugins.ChatMessage
-	if content := assembleSystemPrompt(layers, tmpl, logger); content != "" {
-		messages = append(messages, sdkplugins.ChatMessage{
-			Role:    "system",
-			Content: content,
-		})
+// fetchModelSystem fetches the system prompt string from the provider's model
+// config. Returns "" on any error.
+func (s *PipelineService) fetchModelSystem(ctx context.Context, modelRef string) string {
+	providerName, modelName, ok := s.splitModelName(modelRef)
+	if !ok {
+		return ""
 	}
+	m, err := s.provider.GetModel(ctx, providerName, modelName)
+	if err != nil {
+		return ""
+	}
+	return m.System
+}
 
+// initSystemMessage assembles and persists a system MessageObj as the root of
+// the target ref when none exists yet. It appends the system message to
+// history and returns the updated slice.
+func (s *PipelineService) initSystemMessage(ctx context.Context, meta *session.SessionMetadata, ref string, history []*session.Message) ([]*session.Message, error) {
+	scoped, err := s.tmpl.Clone(session.SessionVars(meta))
+	if err != nil {
+		return history, err
+	}
+	modelSystem := s.fetchModelSystem(ctx, meta.Model)
+	agentSystem := s.config.System
+	if agentSystem == "" {
+		agentSystem = DefaultAgentSystem
+	}
+	layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
+	content := assembleSystemPrompt(layers, scoped, s.logger)
+
+	sysMsg := &session.Message{Role: "system", Content: content}
+	if _, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, sysMsg); err != nil {
+		return history, err
+	}
+	return append([]*session.Message{sysMsg}, history...), nil
+}
+
+// builtinNamespaceSetFromRegistar returns a set of builtin namespace names
+// directly from the tools registar, avoiding dependency on promptLayers.
+func builtinNamespaceSetFromRegistar(r tools.ToolsRegistar) map[string]struct{} {
+	ns := r.ListNamespaces()
+	set := make(map[string]struct{}, len(ns))
+	for _, n := range ns {
+		if n.Builtin {
+			set[strings.ToLower(n.Namespace)] = struct{}{}
+		}
+	}
+	return set
+}
+
+// buildChatMessages assembles the ChatMessage slice sent to the LLM from
+// the persisted history. The system message (role="system") is expected to be
+// history[0] when present; all roles pass through unchanged.
+func buildChatMessages(history []*session.Message) []sdkplugins.ChatMessage {
+	var messages []sdkplugins.ChatMessage
 	for _, msg := range history {
 		cm := sdkplugins.ChatMessage{
 			Role:    msg.Role,

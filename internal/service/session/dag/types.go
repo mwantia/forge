@@ -54,6 +54,7 @@ type MessageMeta struct {
 
 // PromptContext records the exact prompt handed to a provider on one turn.
 // Bodies live in the object store; this object only carries hashes + params.
+// MessageHashes includes the system message hash (position 0) when present.
 type PromptContext struct {
 	Provider        string         `json:"provider"`
 	Model           string         `json:"model"`

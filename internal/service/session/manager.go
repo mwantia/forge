@@ -70,10 +70,22 @@ type SessionManager interface {
 	// DeleteRef removes a ref. Missing refs are not an error.
 	DeleteRef(ctx context.Context, sessionID, name string) error
 
+	// RenameRef atomically renames a ref. Returns an error if newName already exists.
+	RenameRef(ctx context.Context, sessionID, oldName, newName string) error
+
+	// PutMessageObj stores a raw MessageObj in the global object pool and
+	// returns its content hash. Used to persist system-prompt snapshots.
+	PutMessageObj(ctx context.Context, obj *dag.MessageObj) (string, error)
+
 	// ResolveMessageHash expands a hash prefix (>=4 hex chars) to a full
 	// hash within a session's log. Returns the input unchanged when it is
 	// already a full 64-hex string.
 	ResolveMessageHash(ctx context.Context, sessionID, hashOrPrefix string) (string, error)
+
+	// CheckoutRef sets HEAD to point symbolically at targetBranch, so that
+	// subsequent dispatches advance targetBranch instead of the previous one.
+	// Returns an error if targetBranch does not exist.
+	CheckoutRef(ctx context.Context, sessionID, targetBranch string) error
 }
 
 // ResolveSession implements SessionManager.
@@ -299,11 +311,53 @@ func (s *SessionService) DeleteRef(ctx context.Context, sessionID, name string) 
 	return d.refs.Delete(ctx, sessionID, name)
 }
 
+// RenameRef implements SessionManager.
+func (s *SessionService) RenameRef(ctx context.Context, sessionID, oldName, newName string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.ensureNotArchived(ctx, sessionID); err != nil {
+		return err
+	}
+	d, ok := s.store.(*dagSessionStore)
+	if !ok {
+		return fmt.Errorf("ref store unavailable")
+	}
+	return d.refs.Rename(ctx, sessionID, oldName, newName)
+}
+
+// PutMessageObj implements SessionManager.
+func (s *SessionService) PutMessageObj(ctx context.Context, obj *dag.MessageObj) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.store.(*dagSessionStore)
+	if !ok {
+		return "", fmt.Errorf("object store unavailable")
+	}
+	return d.objects.PutMessage(ctx, obj)
+}
+
 // ResolveMessageHash implements SessionManager.
 func (s *SessionService) ResolveMessageHash(ctx context.Context, sessionID, hashOrPrefix string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.store.ResolvePrefix(ctx, sessionID, hashOrPrefix)
+}
+
+// CheckoutRef implements SessionManager.
+func (s *SessionService) CheckoutRef(ctx context.Context, sessionID, targetBranch string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.ensureNotArchived(ctx, sessionID); err != nil {
+		return err
+	}
+	d, ok := s.store.(*dagSessionStore)
+	if !ok {
+		return fmt.Errorf("ref store unavailable")
+	}
+	if _, err := d.refs.Read(ctx, sessionID, targetBranch); err != nil {
+		return fmt.Errorf("ref %q not found: %w", targetBranch, err)
+	}
+	return d.refs.WriteSymRef(ctx, sessionID, dag.HEAD, targetBranch)
 }
 
 var _ SessionManager = (*SessionService)(nil)

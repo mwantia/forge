@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mwantia/forge/internal/service/session/dag"
 	"github.com/mwantia/forge/internal/service/template"
 )
 
@@ -15,7 +16,6 @@ type createSessionRequest struct {
 	Title          string   `json:"title"`
 	Description    string   `json:"description"`
 	Parent         string   `json:"parent"`
-	System         string   `json:"system"`
 	ToolsVerbosity string   `json:"tools_verbosity"`
 	Plugins        []string `json:"plugins"`
 }
@@ -83,11 +83,6 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 			name = template.GenerateUniqueName()
 		}
 
-		system := req.System
-		if system == "" {
-			system = s.config.DefaultSystem
-		}
-
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
@@ -105,7 +100,6 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 			Description:    req.Description,
 			Parent:         req.Parent,
 			Model:          req.Model,
-			System:         system,
 			ToolsVerbosity: req.ToolsVerbosity,
 			Plugins:        req.Plugins,
 			CreatedAt:      now,
@@ -115,6 +109,14 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+
+		// HEAD starts as a symbolic ref pointing at "main". Dispatches advance
+		// "main"; checkout rewrites the symref to point at another branch.
+		if d, ok := s.store.(*dagSessionStore); ok {
+			if err := d.refs.WriteSymRef(c.Request.Context(), meta.ID, dag.HEAD, dag.MAIN); err != nil {
+				s.logger.Warn("create session: HEAD symref init failed", "session", meta.ID, "error", err)
+			}
 		}
 
 		SessionsTotal.WithLabelValues("create").Inc()

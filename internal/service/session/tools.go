@@ -164,7 +164,7 @@ func (s *SessionService) execCreateSession(ctx context.Context, Args map[string]
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var model, title, description, system, parent string
+	var model, title, description, parent string
 	var allowedPlugins []string
 	if parentSession != "" {
 		if p, err := s.store.LoadSession(ctx, parent); err == nil {
@@ -182,7 +182,6 @@ func (s *SessionService) execCreateSession(ctx context.Context, Args map[string]
 
 	title, _ = ArgString(Args, "title")
 	description, _ = ArgString(Args, "description")
-	system, _ = ArgString(Args, "system")
 	allowedPlugins, _ = ArgStringSlice(Args, "plugins")
 
 	now := time.Now()
@@ -193,7 +192,6 @@ func (s *SessionService) execCreateSession(ctx context.Context, Args map[string]
 		Description: description,
 		Parent:      parent,
 		Model:       model,
-		System:      system,
 		Plugins:     allowedPlugins,
 		CreatedAt:   now,
 		UpdatedAt:   now,

@@ -1,10 +1,8 @@
 plugins:
   - name: ollama
     module: github.com/mwantia/forge-plugin-ollama
-    import: github.com/mwantia/forge-plugin-ollama/plugin
 #   local: ../plugins/ollama
 
   - name: skills
     module: github.com/mwantia/forge-plugin-skills
-    import: github.com/mwantia/forge-plugin-skills/plugin
 #   local: ../plugins/skills

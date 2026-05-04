@@ -76,11 +76,9 @@ func main() {
 	cmd.AddCommand(cliserver.NewAgentCommand())
 	cmd.AddCommand(cliserver.NewPluginCommand())
 	cmd.AddCommand(client.NewSessionsCommand())
-	cmd.AddCommand(client.NewPipelineCommand())
 	cmd.AddCommand(client.NewResourceCommand())
 	cmd.AddCommand(client.NewContextsCommand())
 	cmd.AddCommand(client.NewReplayCommand())
-	cmd.AddCommand(client.NewMessagesCommand())
 	//cmd.AddCommand(client.NewChannelsCommand())
 
 	if err := cmd.Execute(); err != nil {

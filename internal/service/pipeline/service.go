@@ -69,6 +69,14 @@ func (s *PipelineService) Init(ctx context.Context) error {
 		contexts.POST("/:hash/replay", s.handleReplayContext())
 	}
 
+	// /v1/sessions/:session_id/system — system prompt snapshot management.
+	sessions := s.router.AuthGroup("/sessions")
+	{
+		sessions.GET("/:session_id/system", s.handleSystemShow())
+		sessions.PATCH("/:session_id/system", s.handleSystemEdit())
+		sessions.POST("/:session_id/system/regen", s.handleSystemRegen())
+	}
+
 	return nil
 }
 

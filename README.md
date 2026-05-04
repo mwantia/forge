@@ -97,7 +97,7 @@ type Service interface {
 
 …registers itself as a singleton in `init()`, exposes a narrow interface for its peers to `fabric:"inject"`, and reads its HCL config via `fabric:"config:<block>"`. `internal/agent/agent.go` is the orchestrator that spins up long-lived servers (`ServerService`, `MetricsService`, `PipelineService`) and wires plugin subprocesses up to `ProviderService` / `ToolsService`.
 
-For a deeper dive including sequence diagrams and the full config/API surface, see [`CLAUDE.md`](../../fabric/CLAUDE.md).
+For a deeper dive including sequence diagrams and the full config/API surface, see [`CLAUDE.md`](CLAUDE.md).
 
 ## Installation
 
@@ -224,7 +224,7 @@ plugin "skills" "skills" {
 }
 ```
 
-Full reference lives in [`CLAUDE.md`](../../fabric/CLAUDE.md).
+Full reference lives in [`CLAUDE.md`](CLAUDE.md).
 
 ## REST API
 

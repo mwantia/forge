@@ -12,9 +12,8 @@ type SessionMetadata struct {
 	Title       string     `json:"title,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Parent      string     `json:"parent,omitempty"`
-	Model       string     `json:"model"`
-	System      string     `json:"system,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	Model     string    `json:"model"`
+	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	// ArchivedAt is non-nil when the session has been archived. Archived
 	// sessions are immutable: ref/commit writes return 409.

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -14,15 +12,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// --- forge sessions branches | branch | checkout | log ---
+// newSessionsBranchCmd builds the `forge sessions branch` subgroup.
+func newSessionsBranchCmd(client func() *api.Client) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "branch",
+		Short: "Manage session branches",
+	}
+	cmd.AddCommand(newBranchListCmd(client))
+	cmd.AddCommand(newBranchCreateCmd(client))
+	cmd.AddCommand(newBranchCheckoutCmd(client))
+	cmd.AddCommand(newBranchDeleteCmd(client))
+	cmd.AddCommand(newBranchRenameCmd(client))
+	return cmd
+}
 
-func newSessionsBranchesCmd(client func() *api.Client) *cobra.Command {
+func newBranchListCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
-		Use:   "branches <session>",
+		Use:   "list <session>",
 		Short: "List refs (HEAD + branches) for a session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			refs, err := client().ListRefs(cmd.Context(), args[0])
+			refs, symrefs, err := client().ListBranchesWithSymrefs(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
@@ -38,48 +48,66 @@ func newSessionsBranchesCmd(client func() *api.Client) *cobra.Command {
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "REF\tHASH")
 			for _, n := range names {
-				fmt.Fprintf(w, "%s\t%s\n", n, shortHash(refs[n]))
+				label := n
+				if target, ok := symrefs[n]; ok {
+					label = n + " → " + target
+				}
+				fmt.Fprintf(w, "%s\t%s\n", label, shortHash(refs[n]))
 			}
 			return w.Flush()
 		},
 	}
 }
 
-func newSessionsBranchCmd(client func() *api.Client) *cobra.Command {
+func newBranchCreateCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
-		Use:   "branch <session> <ref-name> <hash>",
+		Use:   "create <session> <name> <hash>",
 		Short: "Create a branch ref pointing at a message hash",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return client().CreateRef(cmd.Context(), args[0], args[1], args[2])
+			return client().CreateBranch(cmd.Context(), args[0], args[1], args[2])
 		},
 	}
 }
 
-func newSessionsCheckoutCmd(client func() *api.Client) *cobra.Command {
+func newBranchCheckoutCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
-		Use:   "checkout <session> <ref-name>",
-		Short: "Set HEAD to the value of <ref-name>",
+		Use:   "checkout <session> <branch>",
+		Short: "Switch HEAD to a named branch (e.g. main, fork-abc)",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c := client()
-			refs, err := c.ListRefs(cmd.Context(), args[0])
-			if err != nil {
-				return err
-			}
-			target, ok := refs[args[1]]
-			if !ok {
-				return fmt.Errorf("ref not found: %s", args[1])
-			}
-			return c.MoveRef(cmd.Context(), args[0], "HEAD", target, "")
+			return client().CheckoutBranch(cmd.Context(), args[0], args[1])
 		},
 	}
 }
 
+func newBranchDeleteCmd(client func() *api.Client) *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete <session> <name>",
+		Short: "Delete a branch ref",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return client().DeleteBranch(cmd.Context(), args[0], args[1])
+		},
+	}
+}
+
+func newBranchRenameCmd(client func() *api.Client) *cobra.Command {
+	return &cobra.Command{
+		Use:   "rename <session> <old-name> <new-name>",
+		Short: "Rename a branch ref",
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return client().RenameBranch(cmd.Context(), args[0], args[1], args[2])
+		},
+	}
+}
+
+// newSessionsLogCmd builds `forge sessions log`.
 func newSessionsLogCmd(client func() *api.Client) *cobra.Command {
 	var ref string
-	var limit int
-	var verbose bool
+	var limit, offset int
+	var verbose, table bool
 
 	cmd := &cobra.Command{
 		Use:   "log <session>",
@@ -89,11 +117,20 @@ func newSessionsLogCmd(client func() *api.Client) *cobra.Command {
 			c := client()
 			ctx := cmd.Context()
 
+			msgs, err := listMessagesForRef(ctx, c, args[0], ref, limit)
+			if err != nil {
+				return err
+			}
+
+			if table {
+				return printSessionLogTable(msgs[offset:])
+			}
+
 			meta, err := c.GetSession(ctx, args[0])
 			if err != nil {
 				return err
 			}
-			refs, err := c.ListRefs(ctx, args[0])
+			refs, err := c.ListBranches(ctx, args[0])
 			if err != nil {
 				return err
 			}
@@ -102,15 +139,9 @@ func newSessionsLogCmd(client func() *api.Client) *cobra.Command {
 				byHash[h] = append(byHash[h], n)
 			}
 
-			msgs, err := listMessagesForRef(ctx, c, args[0], ref, limit)
-			if err != nil {
-				return err
-			}
-
 			printSessionLogHeader(meta, msgs)
 			fmt.Println()
 
-			// Render newest-first so the latest exchange is on top.
 			for i := len(msgs) - 1; i >= 0; i-- {
 				printSessionLogEntry(msgs[i], byHash, verbose)
 			}
@@ -120,20 +151,19 @@ func newSessionsLogCmd(client func() *api.Client) *cobra.Command {
 
 	cmd.Flags().StringVar(&ref, "ref", "HEAD", "Ref to walk")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Max entries (0 = all)")
+	cmd.Flags().IntVar(&offset, "offset", 0, "Number of messages to skip (table mode only)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Include full hashes, parent, and context_hash")
+	cmd.Flags().BoolVar(&table, "table", false, "Render as a flat table instead of DAG view")
 	return cmd
 }
 
-// printSessionLogHeader summarises session-level state: model, message
-// counts by role, the live prompt size (latest assistant InputTokens),
-// and cumulative usage across every dispatched turn.
+// printSessionLogHeader summarises session-level state.
 func printSessionLogHeader(meta *api.SessionMetadata, msgs []*api.Message) {
 	roleCounts := map[string]int{}
 	var liveContext int
 	for _, m := range msgs {
 		roleCounts[m.Role]++
 	}
-	// Most-recent assistant InputTokens ≈ what the model just saw as prompt.
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if msgs[i].Role == "assistant" && msgs[i].Usage != nil && msgs[i].Usage.InputTokens > 0 {
 			liveContext = msgs[i].Usage.InputTokens
@@ -179,9 +209,6 @@ func printSessionLogHeader(meta *api.SessionMetadata, msgs []*api.Message) {
 	}
 }
 
-// printSessionLogEntry renders one message line. Role-aware preview width:
-// tool output is high-noise so we clip harder. Verbose mode adds a second
-// indented line with hashes for the DAG-curious.
 func printSessionLogEntry(m *api.Message, byHash map[string][]string, verbose bool) {
 	marker := ""
 	if names, ok := byHash[m.Hash]; ok {
@@ -220,8 +247,6 @@ func printSessionLogEntry(m *api.Message, byHash map[string][]string, verbose bo
 	}
 }
 
-// formatTokens renders a token count with thousands separators
-// for readability ("22147" → "22,147").
 func formatTokens(n int) string {
 	if n < 1000 {
 		return fmt.Sprintf("%d", n)
@@ -251,121 +276,40 @@ func shortOrEmpty(h string) string {
 	return shortHash(h)
 }
 
-// listMessagesForRef returns messages on a ref. The HTTP API only walks
-// HEAD today; for non-HEAD refs we resolve the ref's hash and assume the
-// caller has set HEAD = that ref via checkout, OR we'd need a server-side
-// ?ref= on GET messages. Phase 5 keeps it simple and walks via HEAD; if
-// --ref is HEAD or empty we just use the existing endpoint.
+func printSessionLogTable(msgs []*api.Message) error {
+	if len(msgs) == 0 {
+		fmt.Println("No messages found.")
+		return nil
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "HASH\tCREATED\tROLE\tTOKENS\tCONTENT")
+	for _, m := range msgs {
+		tokens := ""
+		if m.Usage != nil && m.Usage.TotalTokens > 0 {
+			tokens = fmt.Sprintf("in=%s out=%s",
+				formatTokens(m.Usage.InputTokens),
+				formatTokens(m.Usage.OutputTokens))
+		}
+		content := strings.ReplaceAll(strings.TrimSpace(m.Content), "\n", " ")
+		if len(content) > 80 {
+			content = content[:77] + "..."
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+			shortHash(m.Hash),
+			m.CreatedAt.Local().Format("2006-01-02 15:04:05"),
+			m.Role,
+			tokens,
+			content,
+		)
+	}
+	return w.Flush()
+}
+
 func listMessagesForRef(ctx context.Context, c *api.Client, sessionID, ref string, limit int) ([]*api.Message, error) {
 	if ref == "" || ref == "HEAD" {
 		return c.ListMessages(ctx, sessionID, 0, limit)
 	}
-	// Fall back to walking HEAD; user can check out the branch first.
 	return c.ListMessages(ctx, sessionID, 0, limit)
-}
-
-// --- forge messages edit ---
-
-// NewMessagesCommand builds the `forge messages` tree, currently hosting
-// the editor-driven edit-and-fork flow.
-func NewMessagesCommand() *cobra.Command {
-	var httpAddr, httpToken string
-
-	cmd := &cobra.Command{
-		Use:   "messages",
-		Short: "Inspect and edit session messages",
-	}
-
-	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
-	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token for the forge agent (env: FORGE_HTTP_TOKEN)")
-
-	client := func() *api.Client { return api.New(httpAddr, httpToken) }
-
-	cmd.AddCommand(newMessagesEditCmd(client))
-	return cmd
-}
-
-func newMessagesEditCmd(client func() *api.Client) *cobra.Command {
-	return &cobra.Command{
-		Use:   "edit <session> <msg-hash-prefix>",
-		Short: "Open a message in $EDITOR; submitting forks a new branch from its parent",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			c := client()
-
-			orig, err := c.GetMessage(ctx, args[0], args[1])
-			if err != nil {
-				return err
-			}
-
-			edited, err := openInEditor(orig.Content)
-			if err != nil {
-				return err
-			}
-			if strings.TrimSpace(edited) == "" {
-				return fmt.Errorf("empty content; aborting")
-			}
-			if edited == orig.Content {
-				return fmt.Errorf("no changes; aborting")
-			}
-
-			ch, err := c.SendMessage(ctx, args[0], edited, api.DispatchOptions{
-				ForkFrom: args[1],
-			})
-			if err != nil {
-				return err
-			}
-			for ev := range ch {
-				parsed, err := api.ParseWireEvent(ev)
-				if err != nil {
-					continue
-				}
-				switch e := parsed.(type) {
-				case api.ChunkEvent:
-					fmt.Print(e.Text)
-				case api.ErrorEvent:
-					return fmt.Errorf("dispatch error: %s", e.Message)
-				}
-			}
-			fmt.Println()
-			return nil
-		},
-	}
-}
-
-func openInEditor(initial string) (string, error) {
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "vi"
-	}
-
-	tmp, err := os.CreateTemp("", "forge-edit-*.md")
-	if err != nil {
-		return "", err
-	}
-	path := tmp.Name()
-	defer os.Remove(path)
-
-	if _, err := tmp.WriteString(initial); err != nil {
-		tmp.Close()
-		return "", err
-	}
-	tmp.Close()
-
-	cmd := exec.Command(editor, path)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("editor %q: %w", filepath.Base(editor), err)
-	}
-
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
 
 func shortHash(h string) string {

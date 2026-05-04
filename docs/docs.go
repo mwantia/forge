@@ -632,7 +632,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns whether a resource plugin is bound and which one.",
+                "description": "Returns the active mount table and the catch-all backend.",
                 "produces": [
                     "application/json"
                 ],
@@ -651,28 +651,34 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/resources/{namespace}": {
+        "/v1/resources/{path}": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all resources in a namespace.",
+                "description": "Lists all resources at the given path. Pass ?id=\u003cid\u003e to fetch a single resource.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "resource"
                 ],
-                "summary": "List resources",
+                "summary": "List or get resources",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Namespace",
-                        "name": "namespace",
+                        "description": "Resource path",
+                        "name": "path",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource ID (fetch single)",
+                        "name": "id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -681,6 +687,15 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
@@ -694,13 +709,13 @@ const docTemplate = `{
                     }
                 }
             },
-            "post": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Persists a resource into the given namespace.",
+                "description": "Persists a resource at the path given in the URL.",
                 "consumes": [
                     "application/json"
                 ],
@@ -714,13 +729,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Namespace",
-                        "name": "namespace",
+                        "description": "Resource path (e.g. /sessions/abc123)",
+                        "name": "path",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Resource to store",
+                        "description": "Resource body",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -746,8 +761,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "503": {
-                        "description": "Service Unavailable",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -756,16 +771,17 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/v1/resources/{namespace}/recall": {
-            "get": {
+            },
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Semantic-search a namespace for resources matching q.",
+                "description": "Search resources by path glob, content query, tags, metadata predicates, and time range. Path from URL is the default; body fields override it.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -776,23 +792,19 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Namespace",
-                        "name": "namespace",
+                        "description": "Default path or glob",
+                        "name": "path",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "q",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Max number of results (default 5)",
-                        "name": "limit",
-                        "in": "query"
+                        "description": "RecallQuery overrides (path, query, tags, filter, created_after, created_before, limit)",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 ],
                 "responses": {
@@ -813,57 +825,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/v1/resources/{namespace}/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns the resource at namespace/id.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "resource"
-                ],
-                "summary": "Get a resource by id",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Namespace",
-                        "name": "namespace",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Resource ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             },
             "delete": {
                 "security": [
@@ -871,7 +832,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Removes the resource at namespace/id. Missing IDs are not an error.",
+                "description": "Removes the resource at the given path. Requires ?id=\u003cid\u003e.",
                 "tags": [
                     "resource"
                 ],
@@ -879,8 +840,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Namespace",
-                        "name": "namespace",
+                        "description": "Resource path",
+                        "name": "path",
                         "in": "path",
                         "required": true
                     },
@@ -888,13 +849,22 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Resource ID",
                         "name": "id",
-                        "in": "path",
+                        "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -1219,6 +1189,231 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/sessions/{session_id}/branch": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all refs (HEAD + branches) for a session as a name -\u003e hash map.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "List session branches",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a named branch pointing at a message hash. Fails with 409 when the ref already exists.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Create session branch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Branch to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/session.refCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/sessions/{session_id}/branch/{ref}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a branch ref. Missing refs are not an error.",
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Delete session branch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ref name",
+                        "name": "ref",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atomically advances or renames a branch. Set \"hash\" to move (CAS when \"expected_hash\" is also set). Set \"name\" to rename — returns 409 if the target name already exists.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Move or rename branch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Current ref name",
+                        "name": "ref",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Move or rename payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/session.refUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/sessions/{session_id}/clone": {
             "post": {
                 "security": [
@@ -1445,21 +1640,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/sessions/{session_id}/refs": {
+        "/v1/sessions/{session_id}/system": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all refs (HEAD + branches + tags) for a session as a name -\u003e hash map.",
+                "description": "Returns the system message (root of HEAD chain) for a session.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "sessions"
                 ],
-                "summary": "List session refs",
+                "summary": "Get system message",
                 "parameters": [
                     {
                         "type": "string",
@@ -1488,13 +1683,13 @@ const docTemplate = `{
                     }
                 }
             },
-            "post": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a named branch or tag pointing at a message hash. Fails with 409 when the ref already exists.",
+                "description": "Replaces the system message with template-rendered content. Creates a fork branch if the session already has messages; writes to HEAD directly on a fresh session.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1504,7 +1699,7 @@ const docTemplate = `{
                 "tags": [
                     "sessions"
                 ],
-                "summary": "Create session ref",
+                "summary": "Edit system message",
                 "parameters": [
                     {
                         "type": "string",
@@ -1514,23 +1709,21 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Ref to create",
+                        "description": "New content (template vars like ${session.id} are rendered)",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/session.refCreateRequest"
+                            "$ref": "#/definitions/pipeline.systemEditRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "additionalProperties": true
                         }
                     },
                     "400": {
@@ -1541,50 +1734,6 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/sessions/{session_id}/refs/{ref}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Removes a ref. Missing refs are not an error. Deleting HEAD is allowed but should generally be avoided.",
-                "tags": [
-                    "sessions"
-                ],
-                "summary": "Delete session ref",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Ref name",
-                        "name": "ref",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
                     },
                     "404": {
                         "description": "Not Found",
@@ -1596,14 +1745,16 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "patch": {
+            }
+        },
+        "/v1/sessions/{session_id}/system/regen": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Atomically advances a ref. When expected_hash is set the move only succeeds if the ref currently equals it; on mismatch returns 409 with the actual current value.",
+                "description": "Re-assembles the system prompt from current plugin state and stores it as the new root MessageObj. On a fresh session (empty HEAD) it writes directly to HEAD; on an existing session it creates a fork branch.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1613,7 +1764,7 @@ const docTemplate = `{
                 "tags": [
                     "sessions"
                 ],
-                "summary": "Move ref (CAS)",
+                "summary": "Regenerate system message",
                 "parameters": [
                     {
                         "type": "string",
@@ -1623,19 +1774,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Ref name",
-                        "name": "ref",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "New hash + optional expected",
+                        "description": "Optional overrides",
                         "name": "body",
                         "in": "body",
-                        "required": true,
                         "schema": {
-                            "$ref": "#/definitions/session.refUpdateRequest"
+                            "$ref": "#/definitions/pipeline.systemRegenRequest"
                         }
                     }
                 ],
@@ -1644,22 +1787,11 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2026,6 +2158,34 @@ const docTemplate = `{
                 }
             }
         },
+        "pipeline.systemEditRequest": {
+            "type": "object",
+            "required": [
+                "content"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string"
+                }
+            }
+        },
+        "pipeline.systemRegenRequest": {
+            "type": "object",
+            "properties": {
+                "plugins": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tools_verbosity": {
+                    "type": "string"
+                }
+            }
+        },
         "plugins.PluginDriverInfo": {
             "type": "object",
             "properties": {
@@ -2078,6 +2238,12 @@ const docTemplate = `{
                 "metadata": {
                     "type": "object",
                     "additionalProperties": {}
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2093,7 +2259,7 @@ const docTemplate = `{
                 "messages": {
                     "type": "integer"
                 },
-                "namespace": {
+                "path": {
                     "type": "string"
                 },
                 "ref_name": {
@@ -2163,8 +2329,8 @@ const docTemplate = `{
         "session.SessionMetadata": {
             "type": "object",
             "properties": {
-                "archive_namespace": {
-                    "description": "ArchiveNamespace is the resource namespace the envelope was stored under.",
+                "archive_path": {
+                    "description": "ArchivePath is the resource path the envelope was stored under.",
                     "type": "string"
                 },
                 "archive_resource_id": {
@@ -2193,10 +2359,18 @@ const docTemplate = `{
                 "parent": {
                     "type": "string"
                 },
-                "system": {
-                    "type": "string"
+                "plugins": {
+                    "description": "Plugins restricts which plugin namespaces are active for this session.\nWhen non-empty, only the listed namespaces appear in the system prompt\nand are offered as callable tools. Built-in namespaces (sessions,\nresource) always remain active regardless of this list.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "title": {
+                    "type": "string"
+                },
+                "tools_verbosity": {
+                    "description": "ToolsVerbosity controls how much plugin/tool guidance appears in the\nassembled system prompt: \"full\" (default) includes plugin prose and\nper-tool annotations; \"basic\" includes only plugin-level prose; \"none\"\nomits all plugin and tool blocks entirely.",
                     "type": "string"
                 },
                 "updated_at": {
@@ -2256,10 +2430,16 @@ const docTemplate = `{
                 "parent": {
                     "type": "string"
                 },
-                "system": {
-                    "type": "string"
+                "plugins": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "title": {
+                    "type": "string"
+                },
+                "tools_verbosity": {
                     "type": "string"
                 }
             }
@@ -2281,14 +2461,17 @@ const docTemplate = `{
         },
         "session.refUpdateRequest": {
             "type": "object",
-            "required": [
-                "hash"
-            ],
             "properties": {
+                "checkout": {
+                    "type": "string"
+                },
                 "expected_hash": {
                     "type": "string"
                 },
                 "hash": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }

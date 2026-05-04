@@ -8,8 +8,15 @@ import (
 	"sync"
 )
 
-// HEAD is the conventional ref name for a session's active branch.
-const HEAD = "HEAD"
+const (
+	// HEAD is the symbolic ref that tracks the active branch.
+	HEAD = "HEAD"
+	// MAIN is the default primary branch created with every new session.
+	MAIN = "main"
+	// symrefPrefix is the byte prefix written to a ref file to mark it as a
+	// symbolic pointer (same convention as git). Value: "ref: <branch>".
+	symrefPrefix = "ref: "
+)
 
 // CASConflict is returned by RefStore.CAS when the current value does not
 // match the expected value. Callers retry against Actual or surface a
@@ -62,8 +69,22 @@ func (r *RefStore) lockFor(key string) *sync.Mutex {
 	return m
 }
 
-// Read returns the hash a ref points at, or ErrNotFound if the ref does
-// not exist.
+// resolveRef follows one level of symbolic indirection without acquiring
+// any lock. Returns name unchanged if the ref is absent or is a plain hash.
+func (r *RefStore) resolveRef(ctx context.Context, sessionID, name string) string {
+	b, err := r.Backend.ReadRaw(ctx, refKey(sessionID, name))
+	if err != nil || len(b) == 0 {
+		return name
+	}
+	s := strings.TrimSpace(string(b))
+	if target, ok := strings.CutPrefix(s, symrefPrefix); ok {
+		return target
+	}
+	return name
+}
+
+// Read returns the hash a ref points at, or ErrNotFound if the ref does not
+// exist. Symbolic refs (written by WriteSymRef) are dereferenced one level.
 func (r *RefStore) Read(ctx context.Context, sessionID, name string) (string, error) {
 	b, err := r.Backend.ReadRaw(ctx, refKey(sessionID, name))
 	if err != nil {
@@ -72,15 +93,51 @@ func (r *RefStore) Read(ctx context.Context, sessionID, name string) (string, er
 	if len(b) == 0 {
 		return "", ErrNotFound
 	}
-	return strings.TrimSpace(string(b)), nil
+	s := strings.TrimSpace(string(b))
+	if target, ok := strings.CutPrefix(s, symrefPrefix); ok {
+		return r.Read(ctx, sessionID, target)
+	}
+	return s, nil
 }
 
-// Write unconditionally points name at hash. Use CAS for branch advance.
+// WriteSymRef writes a symbolic ref: the ref file contains "ref: <target>"
+// so that Read/Write/CAS on name are forwarded to target.
+func (r *RefStore) WriteSymRef(ctx context.Context, sessionID, name, target string) error {
+	if name == "" || target == "" {
+		return fmt.Errorf("dag: empty ref name or target in WriteSymRef")
+	}
+	key := refKey(sessionID, name)
+	m := r.lockFor(key)
+	m.Lock()
+	defer m.Unlock()
+	return r.Backend.WriteRaw(ctx, key, []byte(symrefPrefix+target))
+}
+
+// ReadSymRef reports whether name is a symbolic ref and returns its target.
+// Returns ("", false, nil) when name is a plain hash ref or does not exist.
+func (r *RefStore) ReadSymRef(ctx context.Context, sessionID, name string) (target string, isSymref bool, err error) {
+	b, readErr := r.Backend.ReadRaw(ctx, refKey(sessionID, name))
+	if readErr != nil {
+		return "", false, readErr
+	}
+	if len(b) == 0 {
+		return "", false, nil
+	}
+	s := strings.TrimSpace(string(b))
+	if target, ok := strings.CutPrefix(s, symrefPrefix); ok {
+		return target, true, nil
+	}
+	return "", false, nil
+}
+
+// Write unconditionally points name at hash. When name is a symbolic ref,
+// the write is forwarded to the symref target. Use CAS for branch advance.
 func (r *RefStore) Write(ctx context.Context, sessionID, name, hash string) error {
 	if name == "" {
 		return fmt.Errorf("dag: empty ref name")
 	}
-	key := refKey(sessionID, name)
+	target := r.resolveRef(ctx, sessionID, name)
+	key := refKey(sessionID, target)
 	m := r.lockFor(key)
 	m.Lock()
 	defer m.Unlock()
@@ -89,11 +146,13 @@ func (r *RefStore) Write(ctx context.Context, sessionID, name, hash string) erro
 
 // CAS advances ref name from expected to next, or returns CASConflict.
 // An expected value of "" means "ref must not currently exist".
+// When name is a symbolic ref, the CAS is forwarded to the symref target.
 func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next string) error {
 	if name == "" {
 		return fmt.Errorf("dag: empty ref name")
 	}
-	key := refKey(sessionID, name)
+	target := r.resolveRef(ctx, sessionID, name)
+	key := refKey(sessionID, target)
 	m := r.lockFor(key)
 	m.Lock()
 	defer m.Unlock()
@@ -109,7 +168,7 @@ func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next stri
 	if curStr != expected {
 		return &CASConflict{
 			Session:  sessionID,
-			Ref:      name,
+			Ref:      target,
 			Expected: expected,
 			Actual:   curStr,
 		}
@@ -154,4 +213,53 @@ func (r *RefStore) Delete(ctx context.Context, sessionID, name string) error {
 	m.Lock()
 	defer m.Unlock()
 	return r.Backend.DeleteEntry(ctx, key)
+}
+
+// Rename atomically renames oldName to newName: reads old, writes new, deletes
+// old. Returns 409-style error if newName already exists.
+func (r *RefStore) Rename(ctx context.Context, sessionID, oldName, newName string) error {
+	if oldName == "" || newName == "" {
+		return fmt.Errorf("dag: empty ref name in rename")
+	}
+
+	// Lock both keys in lexicographic order to avoid deadlock.
+	oldKey := refKey(sessionID, oldName)
+	newKey := refKey(sessionID, newName)
+	first, second := oldKey, newKey
+	if bytes.Compare([]byte(first), []byte(second)) > 0 {
+		first, second = second, first
+	}
+	r.lockFor(first).Lock()
+	defer r.lockFor(first).Unlock()
+	r.lockFor(second).Lock()
+	defer r.lockFor(second).Unlock()
+
+	// Target must not already exist.
+	existing, err := r.Backend.ReadRaw(ctx, newKey)
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		return &CASConflict{
+			Session:  sessionID,
+			Ref:      newName,
+			Expected: "",
+			Actual:   strings.TrimSpace(string(existing)),
+		}
+	}
+
+	// Read source.
+	hash, err := r.Backend.ReadRaw(ctx, oldKey)
+	if err != nil {
+		return err
+	}
+	if len(hash) == 0 {
+		return fmt.Errorf("dag: ref %q not found", oldName)
+	}
+
+	// Write new, delete old.
+	if err := r.Backend.WriteRaw(ctx, newKey, hash); err != nil {
+		return err
+	}
+	return r.Backend.DeleteEntry(ctx, oldKey)
 }

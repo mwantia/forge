@@ -72,6 +72,24 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  pipeline.systemEditRequest:
+    properties:
+      content:
+        type: string
+    required:
+    - content
+    type: object
+  pipeline.systemRegenRequest:
+    properties:
+      plugins:
+        items:
+          type: string
+        type: array
+      system:
+        type: string
+      tools_verbosity:
+        type: string
+    type: object
   plugins.PluginDriverInfo:
     properties:
       args:
@@ -106,6 +124,10 @@ definitions:
       metadata:
         additionalProperties: {}
         type: object
+      tags:
+        items:
+          type: string
+        type: array
     required:
     - content
     type: object
@@ -117,7 +139,7 @@ definitions:
         type: string
       messages:
         type: integer
-      namespace:
+      path:
         type: string
       ref_name:
         type: string
@@ -163,9 +185,8 @@ definitions:
     type: object
   session.SessionMetadata:
     properties:
-      archive_namespace:
-        description: ArchiveNamespace is the resource namespace the envelope was stored
-          under.
+      archive_path:
+        description: ArchivePath is the resource path the envelope was stored under.
         type: string
       archive_resource_id:
         description: |-
@@ -189,9 +210,23 @@ definitions:
         type: string
       parent:
         type: string
-      system:
-        type: string
+      plugins:
+        description: |-
+          Plugins restricts which plugin namespaces are active for this session.
+          When non-empty, only the listed namespaces appear in the system prompt
+          and are offered as callable tools. Built-in namespaces (sessions,
+          resource) always remain active regardless of this list.
+        items:
+          type: string
+        type: array
       title:
+        type: string
+      tools_verbosity:
+        description: |-
+          ToolsVerbosity controls how much plugin/tool guidance appears in the
+          assembled system prompt: "full" (default) includes plugin prose and
+          per-tool annotations; "basic" includes only plugin-level prose; "none"
+          omits all plugin and tool blocks entirely.
         type: string
       updated_at:
         type: string
@@ -231,9 +266,13 @@ definitions:
         type: string
       parent:
         type: string
-      system:
-        type: string
+      plugins:
+        items:
+          type: string
+        type: array
       title:
+        type: string
+      tools_verbosity:
         type: string
     required:
     - model
@@ -250,12 +289,14 @@ definitions:
     type: object
   session.refUpdateRequest:
     properties:
+      checkout:
+        type: string
       expected_hash:
         type: string
       hash:
         type: string
-    required:
-    - hash
+      name:
+        type: string
     type: object
   tools.executeBody:
     properties:
@@ -671,7 +712,7 @@ paths:
       - provider
   /v1/resources:
     get:
-      description: Returns whether a resource plugin is bound and which one.
+      description: Returns the active mount table and the catch-all backend.
       produces:
       - application/json
       responses:
@@ -685,22 +726,28 @@ paths:
       summary: Resource status
       tags:
       - resource
-  /v1/resources/{namespace}:
-    get:
-      description: Returns all resources in a namespace.
+  /v1/resources/{path}:
+    delete:
+      description: Removes the resource at the given path. Requires ?id=<id>.
       parameters:
-      - description: Namespace
+      - description: Resource path
         in: path
-        name: namespace
+        name: path
         required: true
         type: string
-      produces:
-      - application/json
+      - description: Resource ID
+        in: query
+        name: id
+        required: true
+        type: string
       responses:
-        "200":
-          description: OK
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
         "500":
           description: Internal Server Error
@@ -710,20 +757,95 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: List resources
+      summary: Forget a resource
+      tags:
+      - resource
+    get:
+      description: Lists all resources at the given path. Pass ?id=<id> to fetch a
+        single resource.
+      parameters:
+      - description: Resource path
+        in: path
+        name: path
+        required: true
+        type: string
+      - description: Resource ID (fetch single)
+        in: query
+        name: id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List or get resources
       tags:
       - resource
     post:
       consumes:
       - application/json
-      description: Persists a resource into the given namespace.
+      description: Search resources by path glob, content query, tags, metadata predicates,
+        and time range. Path from URL is the default; body fields override it.
       parameters:
-      - description: Namespace
+      - description: Default path or glob
         in: path
-        name: namespace
+        name: path
         required: true
         type: string
-      - description: Resource to store
+      - description: RecallQuery overrides (path, query, tags, filter, created_after,
+          created_before, limit)
+        in: body
+        name: body
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recall resources
+      tags:
+      - resource
+    put:
+      consumes:
+      - application/json
+      description: Persists a resource at the path given in the URL.
+      parameters:
+      - description: Resource path (e.g. /sessions/abc123)
+        in: path
+        name: path
+        required: true
+        type: string
+      - description: Resource body
         in: body
         name: body
         required: true
@@ -743,34 +865,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "503":
-          description: Service Unavailable
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Store a resource
-      tags:
-      - resource
-  /v1/resources/{namespace}/{id}:
-    delete:
-      description: Removes the resource at namespace/id. Missing IDs are not an error.
-      parameters:
-      - description: Namespace
-        in: path
-        name: namespace
-        required: true
-        type: string
-      - description: Resource ID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
         "500":
           description: Internal Server Error
           schema:
@@ -779,76 +873,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Forget a resource
-      tags:
-      - resource
-    get:
-      description: Returns the resource at namespace/id.
-      parameters:
-      - description: Namespace
-        in: path
-        name: namespace
-        required: true
-        type: string
-      - description: Resource ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get a resource by id
-      tags:
-      - resource
-  /v1/resources/{namespace}/recall:
-    get:
-      description: Semantic-search a namespace for resources matching q.
-      parameters:
-      - description: Namespace
-        in: path
-        name: namespace
-        required: true
-        type: string
-      - description: Search query
-        in: query
-        name: q
-        required: true
-        type: string
-      - description: Max number of results (default 5)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Recall resources
+      summary: Store a resource
       tags:
       - resource
   /v1/sessions:
@@ -1050,6 +1075,155 @@ paths:
       summary: Archive session
       tags:
       - sessions
+  /v1/sessions/{session_id}/branch:
+    get:
+      description: Returns all refs (HEAD + branches) for a session as a name -> hash
+        map.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List session branches
+      tags:
+      - sessions
+    post:
+      consumes:
+      - application/json
+      description: Creates a named branch pointing at a message hash. Fails with 409
+        when the ref already exists.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Branch to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.refCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create session branch
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/branch/{ref}:
+    delete:
+      description: Removes a branch ref. Missing refs are not an error.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Ref name
+        in: path
+        name: ref
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete session branch
+      tags:
+      - sessions
+    patch:
+      consumes:
+      - application/json
+      description: Atomically advances or renames a branch. Set "hash" to move (CAS
+        when "expected_hash" is also set). Set "name" to rename — returns 409 if the
+        target name already exists.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Current ref name
+        in: path
+        name: ref
+        required: true
+        type: string
+      - description: Move or rename payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.refUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Move or rename branch
+      tags:
+      - sessions
   /v1/sessions/{session_id}/clone:
     post:
       consumes:
@@ -1196,10 +1370,9 @@ paths:
       summary: Compact messages
       tags:
       - sessions
-  /v1/sessions/{session_id}/refs:
+  /v1/sessions/{session_id}/system:
     get:
-      description: Returns all refs (HEAD + branches + tags) for a session as a name
-        -> hash map.
+      description: Returns the system message (root of HEAD chain) for a session.
       parameters:
       - description: Session ID
         in: path
@@ -1222,34 +1395,34 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: List session refs
+      summary: Get system message
       tags:
       - sessions
-    post:
+    patch:
       consumes:
       - application/json
-      description: Creates a named branch or tag pointing at a message hash. Fails
-        with 409 when the ref already exists.
+      description: Replaces the system message with template-rendered content. Creates
+        a fork branch if the session already has messages; writes to HEAD directly
+        on a fresh session.
       parameters:
       - description: Session ID
         in: path
         name: session_id
         required: true
         type: string
-      - description: Ref to create
+      - description: New content (template vars like ${session.id} are rendered)
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/session.refCreateRequest'
+          $ref: '#/definitions/pipeline.systemEditRequest'
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
         "400":
           description: Bad Request
@@ -1257,35 +1430,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create session ref
-      tags:
-      - sessions
-  /v1/sessions/{session_id}/refs/{ref}:
-    delete:
-      description: Removes a ref. Missing refs are not an error. Deleting HEAD is
-        allowed but should generally be avoided.
-      parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Ref name
-        in: path
-        name: ref
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
         "404":
           description: Not Found
           schema:
@@ -1294,56 +1438,44 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Delete session ref
+      summary: Edit system message
       tags:
       - sessions
-    patch:
+  /v1/sessions/{session_id}/system/regen:
+    post:
       consumes:
       - application/json
-      description: Atomically advances a ref. When expected_hash is set the move only
-        succeeds if the ref currently equals it; on mismatch returns 409 with the
-        actual current value.
+      description: Re-assembles the system prompt from current plugin state and stores
+        it as the new root MessageObj. On a fresh session (empty HEAD) it writes directly
+        to HEAD; on an existing session it creates a fork branch.
       parameters:
       - description: Session ID
         in: path
         name: session_id
         required: true
         type: string
-      - description: Ref name
-        in: path
-        name: ref
-        required: true
-        type: string
-      - description: New hash + optional expected
+      - description: Optional overrides
         in: body
         name: body
-        required: true
         schema:
-          $ref: '#/definitions/session.refUpdateRequest'
+          $ref: '#/definitions/pipeline.systemRegenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
+            additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
+        "404":
+          description: Not Found
           schema:
             additionalProperties:
               type: string
             type: object
       security:
       - BearerAuth: []
-      summary: Move ref (CAS)
+      summary: Regenerate system message
       tags:
       - sessions
   /v1/tools/:
