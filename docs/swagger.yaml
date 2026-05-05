@@ -434,93 +434,6 @@ paths:
       summary: Health check
       tags:
       - system
-  /v1/pipeline/dispatch:
-    post:
-      consumes:
-      - application/json
-      description: Appends a user message to the given session and streams the pipeline
-        response as NDJSON. Each line is a WireEvent JSON object.
-      parameters:
-      - description: Dispatch request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/pipeline.dispatchRequest'
-      produces:
-      - application/x-ndjson
-      responses:
-        "200":
-          description: NDJSON stream; one event per line
-          schema:
-            $ref: '#/definitions/pipeline.WireEvent'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Dispatch message
-      tags:
-      - pipeline
-  /v1/pipeline/preview:
-    post:
-      consumes:
-      - application/json
-      description: Returns the assembled system prompt and chat-message slice that
-        would be sent to the provider, without persisting the new user message or
-        calling the LLM. Use to debug prompt composition.
-      parameters:
-      - description: Preview request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/pipeline.previewRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/pipeline.previewResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Preview pipeline input
-      tags:
-      - pipeline
   /v1/plugins/:
     get:
       description: Returns info for all loaded plugin drivers
@@ -1478,6 +1391,93 @@ paths:
       summary: Regenerate system message
       tags:
       - sessions
+  /v1/sessions/dispatch:
+    post:
+      consumes:
+      - application/json
+      description: Appends a user message to the given session and streams the pipeline
+        response as NDJSON. Each line is a WireEvent JSON object.
+      parameters:
+      - description: Dispatch request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pipeline.dispatchRequest'
+      produces:
+      - application/x-ndjson
+      responses:
+        "200":
+          description: NDJSON stream; one event per line
+          schema:
+            $ref: '#/definitions/pipeline.WireEvent'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Dispatch message
+      tags:
+      - pipeline
+  /v1/sessions/preview:
+    post:
+      consumes:
+      - application/json
+      description: Returns the assembled system prompt and chat-message slice that
+        would be sent to the provider, without persisting the new user message or
+        calling the LLM. Use to debug prompt composition.
+      parameters:
+      - description: Preview request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pipeline.previewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pipeline.previewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Preview pipeline input
+      tags:
+      - pipeline
   /v1/tools/:
     get:
       description: Returns definitions for all registered tools across all namespaces

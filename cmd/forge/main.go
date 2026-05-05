@@ -13,6 +13,7 @@ import (
 	cliserver "github.com/mwantia/forge/cmd/forge/server"
 	"github.com/mwantia/forge/internal/agent"
 	flog "github.com/mwantia/forge/internal/log"
+	"github.com/mwantia/forge/internal/service/event"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/pipeline"
 	"github.com/mwantia/forge/internal/service/plugins"
@@ -29,6 +30,7 @@ import (
 // Ensure init() registrations run for all service packages.
 var (
 	_ *agent.Agent              = nil
+	_ *event.EventService       = nil
 	_ *metrics.MetricsService   = nil
 	_ *pipeline.PipelineService = nil
 	_ *plugins.PluginsService   = nil
@@ -79,6 +81,7 @@ func main() {
 	cmd.AddCommand(client.NewResourceCommand())
 	cmd.AddCommand(client.NewContextsCommand())
 	cmd.AddCommand(client.NewReplayCommand())
+	cmd.AddCommand(client.NewEventsCommand())
 	//cmd.AddCommand(client.NewChannelsCommand())
 
 	if err := cmd.Execute(); err != nil {

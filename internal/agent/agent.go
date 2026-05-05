@@ -9,6 +9,7 @@ import (
 	"github.com/mwantia/fabric/pkg/container"
 	"github.com/mwantia/forge-sdk/pkg/errors"
 	"github.com/mwantia/forge/internal/config"
+	"github.com/mwantia/forge/internal/service/event"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/pipeline"
 	"github.com/mwantia/forge/internal/service/plugins"
@@ -34,6 +35,7 @@ type Agent struct {
 	res       *resource.ResourceService `fabric:"inject"`
 	providers *provider.ProviderService `fabric:"inject"`
 	toolsSvc  *tools.ToolsService       `fabric:"inject"`
+	events    *event.EventService       `fabric:"inject"`
 }
 
 func init() {
@@ -66,6 +68,11 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 	a.logger.Debug("Binding resource backend...")
 	if err := a.res.Serve(ctx); err != nil {
 		return fmt.Errorf("failed to bind resource backend: %w", err)
+	}
+
+	a.logger.Debug("Binding event service...")
+	if err := a.events.Serve(ctx); err != nil {
+		return fmt.Errorf("failed to bind event service: %w", err)
 	}
 
 	a.mutex.Lock()

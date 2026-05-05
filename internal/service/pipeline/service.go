@@ -39,6 +39,7 @@ func init() {
 	if err := container.Register[*PipelineService](
 		container.AsSingleton(),
 		container.With[PipelineExecutor](),
+		container.With[BackgroundDispatcher](),
 	); err != nil {
 		panic(err)
 	}
@@ -53,8 +54,8 @@ func (s *PipelineService) Init(ctx context.Context) error {
 		s.config.MaxToolIterations = DefaultMaxToolIterations
 	}
 
-	// /v1/pipeline
-	group := s.router.AuthGroup("/pipeline")
+	// /v1/sessions
+	group := s.router.AuthGroup("/sessions")
 	{
 		group.POST("/dispatch", s.handleDispatch())
 		group.POST("/preview", s.handlePreview())

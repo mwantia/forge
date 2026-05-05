@@ -36,7 +36,7 @@ type dispatchRequest struct {
 //	@Failure		404		{object}	map[string]string
 //	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/pipeline/dispatch [post]
+//	@Router			/v1/sessions/dispatch [post]
 func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req dispatchRequest
@@ -243,7 +243,7 @@ func sumUsage(a, b previewUsage) previewUsage {
 //	@Failure		404		{object}	map[string]string
 //	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/pipeline/preview [post]
+//	@Router			/v1/sessions/preview [post]
 func (s *PipelineService) handlePreview() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req previewRequest

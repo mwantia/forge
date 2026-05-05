@@ -2,6 +2,8 @@ package template
 
 import (
 	"bufio"
+	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"runtime"
@@ -9,6 +11,37 @@ import (
 
 	"github.com/zclconf/go-cty/cty"
 )
+
+// WithAnyValue registers a variable whose Go value is automatically converted
+// to a cty string suitable for template interpolation. Strings are used as-is;
+// all other types (maps, slices, numbers, bools) are marshalled to indented
+// JSON. Use this when the value comes from an external source (e.g. a decoded
+// webhook payload) rather than from typed application code.
+//
+//	${name}   — the converted string value
+func WithAnyValue(name string, val any) TemplateOption {
+	return func(t *Template) error {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+
+		var s string
+		switch v := val.(type) {
+		case string:
+			s = v
+		case nil:
+			s = ""
+		default:
+			b, err := json.MarshalIndent(v, "", "  ")
+			if err != nil {
+				return fmt.Errorf("template: WithAnyValue(%q): %w", name, err)
+			}
+			s = string(b)
+		}
+
+		t.vars[name] = cty.StringVal(s)
+		return nil
+	}
+}
 
 // WithValue registers a single variable under the given dot-notated name.
 // Dot segments are expanded into nested cty objects at render/eval time, so

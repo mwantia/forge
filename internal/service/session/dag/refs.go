@@ -36,9 +36,12 @@ func (e *CASConflict) Error() string {
 // RefStore manages mutable session refs (HEAD + branches + tags).
 //
 // Layout: sessions/<session_id>/refs/<ref_name>, value = the message hash
-// as raw ASCII bytes. CAS is enforced via a per-key in-process mutex; this
-// is sufficient for single-process Forge agents and is the contract
-// callers should rely on.
+// as raw ASCII bytes. Ref names may contain "/" to form logical groups
+// (e.g. "event/my-hook-2026-05-05T06:00:00Z"), which the file backend
+// stores as real subdirectories. List walks the tree recursively and
+// returns the full relative name including any "/" segments.
+// CAS is enforced via a per-key in-process mutex; this is sufficient for
+// single-process Forge agents and is the contract callers should rely on.
 type RefStore struct {
 	Backend Storage
 
@@ -177,33 +180,42 @@ func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next stri
 }
 
 // List returns all refs for a session as name -> hash.
+// Ref names containing "/" (e.g. "event/my-hook-...") are returned with
+// their full relative path — the walk is recursive.
 func (r *RefStore) List(ctx context.Context, sessionID string) (map[string]string, error) {
-	prefix := refsPrefix(sessionID)
-	entries, err := r.Backend.ListEntry(ctx, prefix)
-	if err != nil {
+	out := make(map[string]string)
+	if err := r.listRecursive(ctx, sessionID, refsPrefix(sessionID), "", out); err != nil {
 		return nil, err
 	}
-	out := make(map[string]string, len(entries))
+	return out, nil
+}
+
+// listRecursive descends into the storage prefix, prepending relPrefix to
+// every leaf name it finds, and recurses into any subdirectory entries
+// (identified by a trailing "/" from the backend).
+func (r *RefStore) listRecursive(ctx context.Context, sessionID, storagePrefix, relPrefix string, out map[string]string) error {
+	entries, err := r.Backend.ListEntry(ctx, storagePrefix)
+	if err != nil {
+		return err
+	}
 	for _, e := range entries {
-		// Skip sub-prefix entries; refs are flat leaves.
-		if strings.HasSuffix(e, "/") {
+		if sub, ok := strings.CutSuffix(e, "/"); ok {
+			if err := r.listRecursive(ctx, sessionID, storagePrefix+e, relPrefix+sub+"/", out); err != nil {
+				return err
+			}
 			continue
 		}
-		name := strings.TrimPrefix(e, prefix)
-		// Some backends return the bare leaf name; handle both shapes.
-		if name == e {
-			name = e
-		}
+		name := relPrefix + e
 		hash, err := r.Read(ctx, sessionID, name)
 		if err != nil {
 			if err == ErrNotFound {
 				continue
 			}
-			return nil, err
+			return err
 		}
 		out[name] = hash
 	}
-	return out, nil
+	return nil
 }
 
 // Delete removes a ref. Missing refs are not an error.
