@@ -18,8 +18,12 @@ type TemplateRenderer interface {
 	// hcl.EvalContext (e.g. gohcl.DecodeBody) can call Base().Eval().
 	Base() *Template
 
-	// Render evaluates text against the base template.
-	Render(text string) (string, error)
+	// RenderConfig evaluates text using HCL ${...} syntax against the base template.
+	RenderConfig(text string) (string, error)
+
+	// RenderBody evaluates text using Go text/template {{ }} syntax against the
+	// base template. Prefer this for human-authored body text and system prompts.
+	RenderBody(text string) (string, error)
 
 	// Clone returns a new template that inherits from the base with additional
 	// options layered on top. Use for per-scope renders that need extra vars.
@@ -65,8 +69,12 @@ func (s *TemplateService) Base() *Template {
 	return s.base
 }
 
-func (s *TemplateService) Render(text string) (string, error) {
-	return s.base.Render(text)
+func (s *TemplateService) RenderConfig(text string) (string, error) {
+	return s.base.RenderConfig(text)
+}
+
+func (s *TemplateService) RenderBody(text string) (string, error) {
+	return s.base.RenderBody(text)
 }
 
 func (s *TemplateService) Clone(opts ...TemplateOption) (*Template, error) {

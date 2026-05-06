@@ -10,7 +10,7 @@ import (
 
 // dispatchNow creates a new event branch on the target session and runs
 // the pipeline asynchronously. Returns the branch name on success.
-func (s *EventService) dispatchNow(cfg *EventConfig, entries []queueEntry, baseRef string) (string, error) {
+func (s *EventService) dispatchNow(cfg *EventConfig, entries []EventInfo, baseRef string) (string, error) {
 	content, err := assembleUserMessage(s.templates, entries, cfg)
 	if err != nil {
 		return "", fmt.Errorf("event %q: assemble message: %w", cfg.ID, err)

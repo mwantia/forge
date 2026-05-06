@@ -86,7 +86,7 @@ func (s *PipelineService) handleSystemEdit() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "template clone failed: " + err.Error()})
 			return
 		}
-		rendered, err := scoped.Render(req.Content)
+		rendered, err := scoped.RenderBody(req.Content)
 		if err != nil {
 			s.logger.Warn("system edit: template render failed, using raw content", "session", meta.ID, "error", err)
 			rendered = req.Content
@@ -155,7 +155,7 @@ func (s *PipelineService) handleSystemRegen() gin.HandlerFunc {
 
 		// Append the optional session-layer override (template-rendered).
 		if req.System != "" {
-			extra, renderErr := scoped.Render(req.System)
+			extra, renderErr := scoped.RenderBody(req.System)
 			if renderErr != nil {
 				s.logger.Warn("system regen: session layer render failed, using raw", "session", meta.ID, "error", renderErr)
 				extra = req.System

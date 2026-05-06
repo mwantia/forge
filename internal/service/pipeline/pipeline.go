@@ -285,7 +285,7 @@ func marshalResult(v any) string {
 	if v == nil {
 		return ""
 	}
-	b, err := json.Marshal(v)
+	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return fmt.Sprintf("%v", v)
 	}

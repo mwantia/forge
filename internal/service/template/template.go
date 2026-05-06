@@ -65,12 +65,15 @@ func (t *Template) Clone(opts ...TemplateOption) (*Template, error) {
 	return clone, nil
 }
 
-// Render parses text as an HCL template expression and evaluates it
+// RenderConfig parses text as an HCL template expression and evaluates it
 // against the registered functions and variables.
 //
 // Interpolations use the ${...} syntax — e.g. ${session.id}, ${upper(env("USER"))}, ${date("2006-01-02", now())}.
 // Plain text with no interpolations is returned unchanged.
-func (t *Template) Render(text string) (string, error) {
+//
+// For human-authored body text and system prompts, prefer RenderBody (Go
+// text/template {{ }} syntax) which never conflicts with HCL escaping rules.
+func (t *Template) RenderConfig(text string) (string, error) {
 	if text == "" {
 		return text, nil
 	}

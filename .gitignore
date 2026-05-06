@@ -36,3 +36,6 @@ go.work.sum
 # Forge specific generation files
 plugins.yaml
 cmd/forge/plugins.go
+
+# Local-only specific build files
+*.local

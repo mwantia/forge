@@ -21,14 +21,14 @@ const ArchivePath = "/archives"
 // ArchiveEnvelope is the schema-versioned wire form persisted in the resource
 // store and replayed on clone. Locked against docs/03 §7.1.
 type ArchiveEnvelope struct {
-	SchemaVersion int                  `json:"schema_version"`
-	SessionID     string               `json:"session_id"`
-	Name          string               `json:"name"`
-	RefName       string               `json:"ref_name"`
-	HeadHash      string               `json:"head_hash"`
-	Messages      []ArchiveMessage     `json:"messages"`
-	ContextHashes []string             `json:"context_hashes"`
-	Metadata      *SessionMetadata     `json:"metadata"`
+	SchemaVersion int              `json:"schema_version"`
+	SessionID     string           `json:"session_id"`
+	Name          string           `json:"name"`
+	RefName       string           `json:"ref_name"`
+	HeadHash      string           `json:"head_hash"`
+	Messages      []ArchiveMessage `json:"messages"`
+	ContextHashes []string         `json:"context_hashes"`
+	Metadata      *SessionMetadata `json:"metadata"`
 }
 
 type ArchiveMessage struct {
@@ -139,7 +139,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName 
 	for i, m := range messages {
 		hashes[i] = m.Hash
 	}
-	envBytes, err := json.Marshal(envelope)
+	envBytes, err := json.MarshalIndent(envelope, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("encode envelope: %w", err)
 	}

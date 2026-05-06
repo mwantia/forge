@@ -142,7 +142,7 @@ func assembleSystemPrompt(p promptLayers, tmpl *template.Template, logger hclog.
 		if text == "" {
 			return ""
 		}
-		out, err := tmpl.Render(text)
+		out, err := tmpl.RenderBody(text)
 		if err != nil {
 			logger.Warn("Failed to render system prompt fragment", "origin", origin, "error", err)
 			return text

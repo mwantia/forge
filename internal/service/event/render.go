@@ -1,76 +1,65 @@
 package event
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	svctemplate "github.com/mwantia/forge/internal/service/template"
+	"github.com/mwantia/forge/internal/service/template"
 	"github.com/zclconf/go-cty/cty"
 )
 
-// parsePayload tries to unmarshal body as JSON; falls back to raw string.
-func parsePayload(body []byte) any {
-	var v any
-	if json.Unmarshal(body, &v) == nil {
-		return v
-	}
-	return string(body)
-}
-
-// renderPrompt evaluates the HCL template string with event-scoped variables:
+// renderPrompt evaluates the Go template string with event-scoped variables:
 //
-//	${payload}   — pretty-printed JSON (or raw string) body of the event
-//	${event_id}  — ID of the event definition
-//	${fired_at}  — RFC3339 timestamp when the event fired
-//	${method}    — HTTP method used to fire ("GET" or "POST")
-func renderPrompt(renderer svctemplate.TemplateRenderer, tmplSrc string, payload any, eventID string, firedAt time.Time, method string) (string, error) {
-	t, err := renderer.Clone(
-		svctemplate.WithAnyValue("payload", payload),
-		svctemplate.WithValue("event_id", cty.StringVal(eventID)),
-		svctemplate.WithValue("fired_at", cty.StringVal(firedAt.UTC().Format(time.RFC3339))),
-		svctemplate.WithValue("method", cty.StringVal(method)),
+//	{{ .payload }}           — decoded JSON body of the event (fields accessible via dot)
+//	{{ .event.id }}          — ID of the event definition
+//	{{ .event.fired_at }}    — RFC3339 timestamp when the event fired
+//	{{ .event.http.method }} — HTTP method used to fire ("GET" or "POST")
+func RenderPrompt(renderer template.TemplateRenderer, cfg *EventConfig, ev EventInfo) (string, error) {
+	tmpl, err := renderer.Clone(
+		template.WithJsonValue("payload", ev.payload),
+
+		template.WithValue("event.id", cty.StringVal(cfg.ID)),
+		template.WithValue("event.desc", cty.StringVal(cfg.Description)),
+		template.WithValue("event.session", cty.StringVal(cfg.Session)),
+		template.WithValue("event.branch", cty.StringVal(cfg.Branch)),
+		template.WithValue("event.model", cty.StringVal(cfg.Model)),
+		template.WithValue("event.fired_at", cty.StringVal(ev.firedAt.UTC().Format(time.RFC3339))),
+		template.WithValue("event.http.method", cty.StringVal("POST")), // Currently fix
 	)
 	if err != nil {
-		return "", fmt.Errorf("clone event template: %w", err)
+		return "", fmt.Errorf("failed to clone renderer template: %w", err)
 	}
-	result, err := t.Render(tmplSrc)
+
+	body, err := tmpl.RenderBody(cfg.Prompt)
 	if err != nil {
-		return "", fmt.Errorf("render event template: %w", err)
+		return "", fmt.Errorf("failed to render body template: %w", err)
 	}
-	return result, nil
+	return body, nil
 }
 
 // assembleUserMessage renders each entry through the prompt template (or uses
 // the raw payload when no prompt is configured) and joins them with numbered
 // headers for batch dispatches.
-func assembleUserMessage(renderer svctemplate.TemplateRenderer, entries []queueEntry, cfg *EventConfig) (string, error) {
+func assembleUserMessage(renderer template.TemplateRenderer, entries []EventInfo, cfg *EventConfig) (string, error) {
 	n := len(entries)
 	parts := make([]string, 0, n)
 
-	for i, e := range entries {
+	for i, ev := range entries {
 		var msg string
 
 		if cfg.Prompt != "" {
-			rendered, err := renderPrompt(renderer, cfg.Prompt, e.payload, cfg.ID, e.firedAt, "POST")
+			rendered, err := RenderPrompt(renderer, cfg, ev)
 			if err != nil {
 				return "", fmt.Errorf("event %q entry %d: %w", cfg.ID, i+1, err)
 			}
 			msg = rendered
 		} else {
-			// No prompt configured — emit the payload directly.
-			switch v := e.payload.(type) {
-			case string:
-				msg = v
-			default:
-				b, _ := json.MarshalIndent(v, "", "  ")
-				msg = string(b)
-			}
+			msg = string(ev.payload)
 		}
 
 		if n > 1 {
-			header := fmt.Sprintf("[Event %d/%d — %s]", i+1, n, e.firedAt.UTC().Format(time.RFC3339))
+			header := fmt.Sprintf("[Event %d/%d — %s]", i+1, n, ev.firedAt.UTC().Format(time.RFC3339))
 			parts = append(parts, header+"\n"+msg)
 		} else {
 			parts = append(parts, msg)

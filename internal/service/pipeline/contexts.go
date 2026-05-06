@@ -12,10 +12,10 @@ import (
 
 // materializedMessage is the resolved shape returned by /materialized.
 type materializedMessage struct {
-	Hash      string                  `json:"hash"`
-	Role      string                  `json:"role"`
-	Content   string                  `json:"content,omitempty"`
-	ToolCalls []dag.MessageToolCall   `json:"tool_calls,omitempty"`
+	Hash      string                `json:"hash"`
+	Role      string                `json:"role"`
+	Content   string                `json:"content,omitempty"`
+	ToolCalls []dag.MessageToolCall `json:"tool_calls,omitempty"`
 }
 
 type materializedResponse struct {
@@ -195,7 +195,7 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 				s.logger.Error("Failed to convert pipeline event", "error", err)
 				continue
 			}
-			b, _ := json.Marshal(wire)
+			b, _ := json.MarshalIndent(wire, "", "  ")
 			c.Writer.Write(append(b, '\n'))
 			flusher.Flush()
 		}

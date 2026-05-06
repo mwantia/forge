@@ -173,7 +173,7 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 				s.logger.Error("Failed to convert pipeline event", "error", err)
 				continue
 			}
-			b, _ := json.Marshal(wire)
+			b, _ := json.MarshalIndent(wire, "", "  ")
 			c.Writer.Write(append(b, '\n'))
 			flusher.Flush()
 		}

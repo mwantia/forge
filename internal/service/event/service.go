@@ -21,28 +21,28 @@ import (
 type EventService struct {
 	service.UnimplementedService
 
-	logger  hclog.Logger           `fabric:"logger:event"`
-	router  server.HttpRouter      `fabric:"inject"`
-	configs []*EventConfig         `fabric:"config:event"`
+	logger  hclog.Logger      `fabric:"logger:event"`
+	router  server.HttpRouter `fabric:"inject"`
+	configs []*EventConfig    `fabric:"config:event"`
 
-	pipeline  pipeline.BackgroundDispatcher   `fabric:"inject"`
-	sessions  session.SessionManager          `fabric:"inject"`
-	templates svctemplate.TemplateRenderer    `fabric:"inject"`
+	pipeline  pipeline.BackgroundDispatcher `fabric:"inject"`
+	sessions  session.SessionManager        `fabric:"inject"`
+	templates svctemplate.TemplateRenderer  `fabric:"inject"`
 
 	mu     sync.RWMutex
-	states map[string]*windowState
+	states map[string]*EventWindowState
 }
 
-type windowState struct {
+type EventWindowState struct {
 	mu         sync.Mutex
-	queue      []queueEntry
+	queue      []EventInfo
 	timer      *time.Timer
 	expires    time.Time
 	branchBase string
 }
 
-type queueEntry struct {
-	payload any
+type EventInfo struct {
+	payload []byte
 	firedAt time.Time
 }
 
@@ -54,9 +54,9 @@ func init() {
 
 func (s *EventService) Init(_ context.Context) error {
 	s.mu.Lock()
-	s.states = make(map[string]*windowState, len(s.configs))
+	s.states = make(map[string]*EventWindowState, len(s.configs))
 	for _, cfg := range s.configs {
-		s.states[cfg.ID] = &windowState{}
+		s.states[cfg.ID] = &EventWindowState{}
 	}
 	s.mu.Unlock()
 
@@ -69,7 +69,7 @@ func (s *EventService) Init(_ context.Context) error {
 	return nil
 }
 
-func (s *EventService) state(id string) *windowState {
+func (s *EventService) state(id string) *EventWindowState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.states[id]
@@ -85,11 +85,11 @@ func (s *EventService) findConfig(id string) *EventConfig {
 }
 
 // fire implements the fire semantics from §1.3 of the proposal.
-func (s *EventService) fire(cfg *EventConfig, payload any, baseRef string) (FireResponse, int) {
+func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (FireResponse, int) {
 	now := time.Now()
 
 	if cfg.Options == nil || cfg.Options.Timespan == "" {
-		branch, err := s.dispatchNow(cfg, []queueEntry{{payload, now}}, baseRef)
+		branch, err := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
 		if err != nil {
 			s.logger.Error("immediate dispatch failed", "event", cfg.ID, "error", err)
 			return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
@@ -115,7 +115,7 @@ func (s *EventService) fire(cfg *EventConfig, payload any, baseRef string) (Fire
 		ws.timer = time.AfterFunc(dur, func() { s.onWindowExpiry(cfg, logger) })
 
 		ws.mu.Unlock()
-		branch, dispErr := s.dispatchNow(cfg, []queueEntry{{payload, now}}, baseRef)
+		branch, dispErr := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
 		ws.mu.Lock()
 
 		if dispErr != nil {
@@ -152,7 +152,7 @@ func (s *EventService) fire(cfg *EventConfig, payload any, baseRef string) (Fire
 		ws.queue = ws.queue[1:]
 		evicted = true
 	}
-	ws.queue = append(ws.queue, queueEntry{payload, now})
+	ws.queue = append(ws.queue, EventInfo{payload, now})
 
 	return FireResponse{
 		EventID:         cfg.ID,
@@ -242,19 +242,17 @@ func (s *EventService) handleFire() gin.HandlerFunc {
 		}
 
 		baseRef := c.Query("ref")
-		var payload any
+		var payload []byte
 
 		if c.Request.Method == http.MethodGet {
-			payload = c.Query("payload")
+			payload = []byte(c.Query("payload"))
 		} else {
 			body, err := c.GetRawData()
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read body"})
 				return
 			}
-			if len(body) > 0 {
-				payload = parsePayload(body)
-			}
+			payload = body
 		}
 
 		resp, status := s.fire(cfg, payload, baseRef)
