@@ -2,6 +2,14 @@ package event
 
 import "time"
 
+type EventState string
+
+const (
+	EventStateRunning EventState = "running"
+	EventStatePaused  EventState = "paused"
+	EventStateFailed  EventState = "failed"
+)
+
 // FireResponse is the JSON body returned by GET/POST /v1/events/:id/fire.
 type FireResponse struct {
 	EventID         string     `json:"event_id"`
@@ -19,6 +27,7 @@ type EventStatus struct {
 	ID          string      `json:"id"`
 	Description string      `json:"description,omitempty"`
 	Session     string      `json:"session"`
+	State       EventState  `json:"state"`
 	Options     *queueOpts  `json:"options,omitempty"`
 	Queue       *queueState `json:"queue,omitempty"`
 	LastBranch  string      `json:"last_branch,omitempty"`

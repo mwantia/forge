@@ -39,6 +39,8 @@ type EventWindowState struct {
 	timer      *time.Timer
 	expires    time.Time
 	branchBase string
+	paused     bool
+	lastErr    error
 }
 
 type EventInfo struct {
@@ -65,6 +67,8 @@ func (s *EventService) Init(_ context.Context) error {
 	g.GET("/:id", s.handleGet())
 	g.GET("/:id/fire", s.handleFire())
 	g.POST("/:id/fire", s.handleFire())
+	g.POST("/:id/pause", s.handlePause())
+	g.POST("/:id/resume", s.handleResume())
 
 	return nil
 }
@@ -88,12 +92,28 @@ func (s *EventService) findConfig(id string) *EventConfig {
 func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (FireResponse, int) {
 	now := time.Now()
 
+	if ws := s.state(cfg.ID); func() bool {
+		ws.mu.Lock()
+		defer ws.mu.Unlock()
+		return ws.paused
+	}() {
+		return FireResponse{EventID: cfg.ID, Status: "paused", FiredAt: now}, http.StatusServiceUnavailable
+	}
+
 	if cfg.Options == nil || cfg.Options.Timespan == "" {
 		branch, err := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
 		if err != nil {
 			s.logger.Error("immediate dispatch failed", "event", cfg.ID, "error", err)
+			ws := s.state(cfg.ID)
+			ws.mu.Lock()
+			ws.lastErr = err
+			ws.mu.Unlock()
 			return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
 		}
+		ws := s.state(cfg.ID)
+		ws.mu.Lock()
+		ws.lastErr = nil
+		ws.mu.Unlock()
 		return FireResponse{EventID: cfg.ID, Status: "dispatched", FiredAt: now, Branch: branch}, http.StatusOK
 	}
 
@@ -122,9 +142,11 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 			ws.timer.Stop()
 			ws.timer = nil
 			ws.expires = time.Time{}
+			ws.lastErr = dispErr
 			s.logger.Error("first-fire dispatch failed", "event", cfg.ID, "error", dispErr)
 			return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
 		}
+		ws.lastErr = nil
 		exp := ws.expires
 		return FireResponse{
 			EventID:         cfg.ID,
@@ -170,6 +192,8 @@ func (s *EventService) buildStatus(ctx context.Context, cfg *EventConfig) EventS
 	ws.mu.Lock()
 	size := len(ws.queue)
 	expires := ws.expires
+	paused := ws.paused
+	lastErr := ws.lastErr
 	ws.mu.Unlock()
 
 	var opts *queueOpts
@@ -185,10 +209,19 @@ func (s *EventService) buildStatus(ctx context.Context, cfg *EventConfig) EventS
 		expiresPtr = &expires
 	}
 
+	state := EventStateRunning
+	switch {
+	case lastErr != nil:
+		state = EventStateFailed
+	case paused:
+		state = EventStatePaused
+	}
+
 	status := EventStatus{
 		ID:          cfg.ID,
 		Description: cfg.Description,
 		Session:     cfg.Session,
+		State:       state,
 		Options:     opts,
 		Queue:       &queueState{Size: size, WindowExpiresAt: expiresPtr},
 	}
@@ -257,6 +290,36 @@ func (s *EventService) handleFire() gin.HandlerFunc {
 
 		resp, status := s.fire(cfg, payload, baseRef)
 		c.JSON(status, resp)
+	}
+}
+
+func (s *EventService) handlePause() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		cfg := s.findConfig(c.Param("id"))
+		if cfg == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "unknown event"})
+			return
+		}
+		ws := s.state(cfg.ID)
+		ws.mu.Lock()
+		ws.paused = true
+		ws.mu.Unlock()
+		c.JSON(http.StatusOK, s.buildStatus(c.Request.Context(), cfg))
+	}
+}
+
+func (s *EventService) handleResume() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		cfg := s.findConfig(c.Param("id"))
+		if cfg == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "unknown event"})
+			return
+		}
+		ws := s.state(cfg.ID)
+		ws.mu.Lock()
+		ws.paused = false
+		ws.mu.Unlock()
+		c.JSON(http.StatusOK, s.buildStatus(c.Request.Context(), cfg))
 	}
 }
 
