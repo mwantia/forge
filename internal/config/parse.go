@@ -34,11 +34,6 @@ func Parse(path string, tmpl *template.Template) (*AgentConfig, error) {
 		return cfg, fmt.Errorf("error parsing config '%s': %w", path, err)
 	}
 
-	// TODO :: Find a solution to dynamically register 'meta' for sub-blocks
-	/* if !eval.RegisterBodyAsVariables("meta", cfg.Meta.Body) {
-		return cfg, fmt.Errorf("failed to register meta as accessor variables")
-	} */
-
 	return cfg, nil
 }
 

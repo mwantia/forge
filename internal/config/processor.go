@@ -72,14 +72,16 @@ func (p *ConfigTagProcessor) Process(_ context.Context, _ *container.ServiceCont
 
 	// Slice field → collect all matching blocks.
 	if field.Type.Kind() == reflect.Slice {
-		return decodeBlockSlice(field.Type, findBlocks(cfg.Remain, blockName), tmpl)
+		elemBase := indirectType(field.Type.Elem())
+		blocks := findBlocks(cfg.Remain, blockName, countLabelFields(elemBase))
+		return decodeBlockSlice(field.Type, blocks, tmpl)
 	}
 
 	// Scalar field → first matching block, or zero value if absent.
 	targetType := indirectType(field.Type)
 	target := reflect.New(targetType).Interface()
 
-	blocks := findBlocks(cfg.Remain, blockName)
+	blocks := findBlocks(cfg.Remain, blockName, countLabelFields(targetType))
 	if len(blocks) > 0 {
 		injectLabels(reflect.ValueOf(target).Elem(), blocks[0].Labels)
 		if diags := gohcl.DecodeBody(blocks[0].Body, tmpl.Eval(), target); diags.HasErrors() {
@@ -94,7 +96,7 @@ func (p *ConfigTagProcessor) Process(_ context.Context, _ *container.ServiceCont
 }
 
 // decodeBlockSlice decodes each block into an element of sliceType ([]T or []*T).
-func decodeBlockSlice(sliceType reflect.Type, blocks []*hclsyntax.Block, tmpl *template.Template) (any, error) {
+func decodeBlockSlice(sliceType reflect.Type, blocks []*hcl.Block, tmpl *template.Template) (any, error) {
 	elemType := sliceType.Elem()
 	isPtr := elemType.Kind() == reflect.Pointer
 	baseType := indirectType(elemType)
@@ -115,19 +117,50 @@ func decodeBlockSlice(sliceType reflect.Type, blocks []*hclsyntax.Block, tmpl *t
 	return result.Interface(), nil
 }
 
-// findBlocks returns all blocks matching name in body.
-func findBlocks(body hcl.Body, name string) []*hclsyntax.Block {
-	syn, ok := body.(*hclsyntax.Body)
-	if !ok {
+// findBlocks returns all blocks matching name in body, working with both native
+// HCL syntax bodies and JSON-parsed bodies.
+func findBlocks(body hcl.Body, name string, labelCount int) []*hcl.Block {
+	if syn, ok := body.(*hclsyntax.Body); ok {
+		var result []*hcl.Block
+		for _, block := range syn.Blocks {
+			if strings.EqualFold(block.Type, name) {
+				result = append(result, &hcl.Block{
+					Type:   block.Type,
+					Labels: block.Labels,
+					Body:   block.Body,
+				})
+			}
+		}
+		return result
+	}
+
+	labelNames := make([]string, labelCount)
+	for i := range labelNames {
+		labelNames[i] = fmt.Sprintf("label%d", i)
+	}
+	schema := &hcl.BodySchema{
+		Blocks: []hcl.BlockHeaderSchema{{
+			Type:       name,
+			LabelNames: labelNames,
+		}},
+	}
+	content, _, _ := body.PartialContent(schema)
+	if content == nil {
 		return nil
 	}
-	var result []*hclsyntax.Block
-	for _, block := range syn.Blocks {
-		if strings.EqualFold(block.Type, name) {
-			result = append(result, block)
+	return content.Blocks
+}
+
+// countLabelFields counts hcl:"...,label" fields in t to determine block label arity.
+func countLabelFields(t reflect.Type) int {
+	count := 0
+	for field := range t.Fields() {
+		_, kind, _ := strings.Cut(field.Tag.Get("hcl"), ",")
+		if strings.TrimSpace(kind) == "label" {
+			count++
 		}
 	}
-	return result
+	return count
 }
 
 // injectLabels sets struct fields tagged hcl:"...,label" from labels in order.

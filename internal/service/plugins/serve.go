@@ -162,7 +162,38 @@ func (s *PluginsService) GetPluginDriverInfo(cfg PluginConfig) (PluginDriverInfo
 	return info, nil
 }
 
+func buildPluginEnv(name string, overrides map[string]any) []string {
+	home := filepath.Join(os.TempDir(), "forge", "plugins", name)
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		home = os.TempDir()
+	}
+
+	env := map[string]string{
+		"HOME": home,
+		"PATH": "/usr/local/bin:/usr/bin:/bin",
+	}
+
+	for _, key := range []string{"TZ", "LANG", "LC_ALL", "LC_CTYPE"} {
+		if val := os.Getenv(key); val != "" {
+			env[key] = val
+		}
+	}
+
+	for k, v := range overrides {
+		env[strings.ToUpper(k)] = fmt.Sprintf("%s", v)
+	}
+
+	result := make([]string, 0, len(env))
+	for k, v := range env {
+		result = append(result, k+"="+v)
+	}
+	return result
+}
+
 func (s *PluginsService) runPlugin(ctx context.Context, logger hclog.Logger, info PluginDriverInfo) (plugins.Driver, *goplugin.Client, error) {
+	cmd := exec.Command(info.Path, info.Args...)
+	cmd.Env = buildPluginEnv(info.Name, info.Env)
+
 	config := &goplugin.ClientConfig{
 		HandshakeConfig: pluginsgrpc.Handshake,
 		Plugins:         pluginsgrpc.Plugins,
@@ -172,17 +203,9 @@ func (s *PluginsService) runPlugin(ctx context.Context, logger hclog.Logger, inf
 		StartTimeout: info.Timeout,
 		MinPort:      info.MinPort,
 		MaxPort:      info.MaxPort,
-		Cmd:          exec.Command(info.Path, info.Args...),
+		Cmd:          cmd,
 		Logger:       logger,
 		SkipHostEnv:  true,
-	}
-
-	if len(info.Env) > 0 {
-		env := make([]string, 0)
-		for k, v := range info.Env {
-			env = append(env, strings.ToUpper(k)+"="+fmt.Sprintf("%s", v))
-		}
-		config.Cmd.Env = env
 	}
 
 	client := goplugin.NewClient(config)
