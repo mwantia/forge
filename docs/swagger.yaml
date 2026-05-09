@@ -239,6 +239,8 @@ definitions:
     type: object
   session.archiveRequest:
     properties:
+      name:
+        type: string
       ref:
         type: string
     type: object
@@ -296,6 +298,17 @@ definitions:
       hash:
         type: string
       name:
+        type: string
+    type: object
+  session.updateSessionRequest:
+    properties:
+      description:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      title:
         type: string
     type: object
   tools.executeBody:
@@ -791,7 +804,8 @@ paths:
       - resource
   /v1/sessions:
     get:
-      description: Returns all sessions, optionally filtered by parent ID
+      description: Returns all sessions, optionally filtered by parent ID. Archived
+        sessions are excluded by default.
       parameters:
       - description: Pagination offset
         in: query
@@ -805,6 +819,10 @@ paths:
         in: query
         name: parent
         type: string
+      - description: Include archived sessions instead of active ones
+        in: query
+        name: archived
+        type: boolean
       produces:
       - application/json
       responses:
@@ -887,34 +905,6 @@ paths:
       tags:
       - sessions
   /v1/sessions/{session_id}:
-    delete:
-      description: Deletes a session and all its messages
-      parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete session
-      tags:
-      - sessions
     get:
       description: Returns metadata for a single session by ID or name
       parameters:
@@ -939,6 +929,59 @@ paths:
       security:
       - BearerAuth: []
       summary: Get session
+      tags:
+      - sessions
+    patch:
+      consumes:
+      - application/json
+      description: Patches mutable metadata on a session. Only provided fields are
+        updated.
+      parameters:
+      - description: Session ID or name
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/session.updateSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/session.SessionMetadata'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update session
       tags:
       - sessions
   /v1/sessions/{session_id}/archive:

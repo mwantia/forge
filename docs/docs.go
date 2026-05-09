@@ -753,7 +753,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all sessions, optionally filtered by parent ID",
+                "description": "Returns all sessions, optionally filtered by parent ID. Archived sessions are excluded by default.",
                 "produces": [
                     "application/json"
                 ],
@@ -778,6 +778,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by parent session ID",
                         "name": "parent",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include archived sessions instead of active ones",
+                        "name": "archived",
                         "in": "query"
                     }
                 ],
@@ -1072,32 +1078,68 @@ const docTemplate = `{
                     }
                 }
             },
-            "delete": {
+            "patch": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Deletes a session and all its messages",
+                "description": "Patches mutable metadata on a session. Only provided fields are updated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "sessions"
                 ],
-                "summary": "Delete session",
+                "summary": "Update session",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
+                        "description": "Session ID or name",
                         "name": "session_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/session.updateSessionRequest"
+                        }
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content"
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/session.SessionMetadata"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2385,6 +2427,9 @@ const docTemplate = `{
         "session.archiveRequest": {
             "type": "object",
             "properties": {
+                "name": {
+                    "type": "string"
+                },
                 "ref": {
                     "type": "string"
                 }
@@ -2472,6 +2517,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "session.updateSessionRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 }
             }

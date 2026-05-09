@@ -13,14 +13,9 @@ var ToolsDefinitions = []plugins.ToolDefinition{
 		Annotations: plugins.ToolAnnotations{
 			CostHint: plugins.ToolCostCheap,
 			System: `
-Persist information that future turns or future sessions may need:
-user preferences, project facts, decisions made, things the user
-explicitly asked to remember. Skip transient turn details — those
-already live in message history. Use tags to make recall easier
-(e.g. ["preference","ui"]). Pass structured metadata when it helps
-later filter calls (e.g. {"kind":"decision","topic":"auth"}).
-Path defaults to the caller session; pass it explicitly only when
-storing shared or cross-session information (e.g. "/global").
+Persist information that future turns or future sessions may need: user preferences, project facts, decisions made, things the user explicitly asked to remember. 
+Skip transient turn details — those already live in message history. Use tags to make recall easier (e.g. ["preference","ui"]). 
+Pass structured metadata when it helps later filter calls (e.g. {"kind":"decision","topic":"auth"}). Path defaults to the caller session; pass it explicitly only when storing shared or cross-session information (e.g. "/global").
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -55,22 +50,18 @@ storing shared or cross-session information (e.g. "/global").
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `
-Search over previously stored resources. Reach for this when the user
-references prior knowledge ("the thing we decided last week", "my
-preferences") that is not in the current message history.
+Search over previously stored resources. Reach for this when the user references prior knowledge ("the thing we decided last week", "my preferences") that is not in the current message history.
 
-Path supports glob patterns: * matches a single path segment, ** matches
-any number of segments. Examples:
-  "/sessions/abc123"       — exact session
-  "/sessions/**"           — all sessions
-  "/archives/**/consul*"   — any archive whose path segment starts with "consul"
+Path supports glob patterns: * matches a single path segment, ** matches any number of segments. Examples:
+    "/sessions/abc123"       — exact session
+    "/sessions/**"           — all sessions
+    "/archives/**/consul*"   — any archive whose path segment starts with "consul"
 
 filter is a list of {key, op, value} objects (AND semantics):
-  op values: eq | prefix | contains | gte | lte
-  Example: [{"key":"kind","op":"eq","value":"decision"}]
+    op values: eq | prefix | contains | gte | lte
+    Example: [{"key":"kind","op":"eq","value":"decision"}]
 
-tags is an AND filter: resource must carry all listed tags.
-created_after / created_before accept RFC3339 timestamps.
+tags is an AND filter: resource must carry all listed tags. created_after / created_before accept RFC3339 timestamps.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -115,10 +106,8 @@ created_after / created_before accept RFC3339 timestamps.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `
-Use when the user asks to remove a stored memory, or when a prior recall
-surfaced information that is no longer correct. Pair with recall first
-to find the right ID; do not loop forget over many IDs without
-confirmation.
+Use when the user asks to remove a stored memory, or when a prior recall surfaced information that is no longer correct. 
+Pair with recall first to find the right ID; do not loop forget over many IDs without confirmation.
 `,
 		},
 		Parameters: plugins.ToolParameters{

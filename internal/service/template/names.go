@@ -62,7 +62,7 @@ func GenerateUniqueName() string {
 	adj := adjectives[rand.Intn(len(adjectives))]
 	noun := nouns[rand.Intn(len(nouns))]
 	suffix := greek[rand.Intn(len(greek))]
-	return adj + "_" + noun + "_" + suffix
+	return adj + "-" + noun + "-" + suffix
 }
 
 func GenerateNumberedUniqueName() string {

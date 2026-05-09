@@ -1,6 +1,6 @@
 module github.com/mwantia/forge
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
@@ -10,12 +10,12 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/mwantia/forge-plugin-consul v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-nomad v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-ollama v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-openai v1.0.0
 	github.com/mwantia/forge-plugin-plane v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-unifi v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-sdk v0.0.0-20260330200809-ad49c3efa981
+	github.com/mwantia/forge-sdk v0.1.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
@@ -29,7 +29,9 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.20.0 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
@@ -50,8 +52,11 @@ require (
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/spec v0.20.4 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
+	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
+	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
@@ -69,8 +74,9 @@ require (
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
-	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.17 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
@@ -87,6 +93,7 @@ require (
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
@@ -95,11 +102,11 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
 	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/term v0.41.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260504160031-60b97b32f348 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
@@ -119,45 +126,30 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mwantia/fabric v1.2.0
+	github.com/mwantia/fabric v1.3.0
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/cobra v1.9.1
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	golang.org/x/arch v0.21.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/net v0.51.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-// Add other dependencies as needed
-replace github.com/mwantia/fabric => ../../fabric
-
 replace github.com/mwantia/forge-sdk => ../shared
-
-replace github.com/mwantia/forge-plugin-ollama => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/ollama
-
-replace github.com/mwantia/forge-plugin-mcp => ../plugins/mcp
-
-replace github.com/mwantia/forge-plugin-nomad => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/nomad
 
 replace github.com/mwantia/forge-plugin-searxng => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/searxng
 
 replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills
 
-replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
+replace github.com/mwantia/forge-plugin-unifi => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
 
 replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane
 
-replace github.com/mwantia/forge-plugin-discord => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/discord
+replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
 
-replace github.com/mwantia/forge-plugin-unifi => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
-
-replace github.com/mwantia/forge-plugin-unifiYX => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
-
-replace github.com/mwantia/forge-plugin-bifrost => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/bifrost
-
-replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
+replace github.com/mwantia/forge-plugin-nomad => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/nomad
