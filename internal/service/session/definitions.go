@@ -12,10 +12,8 @@ var ToolsDefinitions = []plugins.ToolDefinition{
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-Set once the topic is clear (usually after the first 1–2 user turns).
-Aim for under 60 characters — this title appears in session lists.
-Don't keep retitling on every turn; only update if the topic shifts
-substantively.
+Set once the topic is clear (usually after the first 1–2 user turns). Aim for under 60 characters — this title appears in session lists.
+Don't keep retitling on every turn; only update if the topic shifts substantively.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -36,10 +34,8 @@ substantively.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-The description is injected as the session-layer system prompt on
-every subsequent turn — keep it concise and durable. Use for
-constraints/goals that should stick across the whole conversation, not
-for one-turn details.
+The description is injected as the session-layer system prompt on every subsequent turn — keep it concise and durable. 
+Use for constraints/goals that should stick across the whole conversation, not for one-turn details.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -60,9 +56,7 @@ for one-turn details.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-Use to inspect another session's metadata (e.g. a sub-session you
-spawned). Skip this for the current session — its metadata is already
-implicit in the system prompt.
+Use to inspect another session's metadata (e.g. a sub-session you spawned). Skip this for the current session — its metadata is already implicit in the system prompt.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -82,10 +76,8 @@ implicit in the system prompt.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `
-Defaults to the current session as the parent. Use when the user asks
-"what did we delegate?" or before dispatching to an existing
-sub-session. Pagination defaults are sane — only override if the user
-asks for older entries.
+Defaults to the current session as the parent. Use when the user asks "what did we delegate?" or before dispatching to an existing sub-session. 
+Pagination defaults are sane — only override if the user asks for older entries.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -106,16 +98,12 @@ asks for older entries.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-Spawn a focused sub-session for a specific delegated task. Always scope
-the sub-session to only the plugins it actually needs:
+Spawn a focused sub-session for a specific delegated task. Always scope the sub-session to only the plugins it actually needs:
 
-- Set "plugins" to the minimal list of plugin namespaces required
-  (e.g. ["skills"] for a file task, ["consul"] for a service-discovery
-  lookup). Built-in namespaces (sessions, resource) are always available
-  regardless of this list.
+- Set "plugins" to the minimal list of plugin namespaces required (e.g. ["skills"] for a file task, ["consul"] for a service-discovery lookup). 
+  Built-in namespaces (sessions, resource) are always available regardless of this list.
 
-Narrowing plugins and verbosity keeps the context window small and the
-model focused. Pair with dispatch_session to drive the sub-session.
+Narrowing plugins and verbosity keeps the context window small and the model focused. Pair with dispatch_session to drive the sub-session.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -138,10 +126,8 @@ model focused. Pair with dispatch_session to drive the sub-session.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostModerate,
 			System: `
-Synchronous: blocks until the target session finishes its full
-tool-loop. Use sparingly — every dispatch is a nested LLM run with its
-own token cost. Frame the message tightly so the sub-session can
-answer and return without further round-trips.
+Synchronous: blocks until the target session finishes its full tool-loop. Use sparingly — every dispatch is a nested LLM run with its own token cost. 
+Frame the message tightly so the sub-session can answer and return without further round-trips.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -162,9 +148,7 @@ answer and return without further round-trips.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `
-Use for inspecting a different session's transcript — the current
-session's history is already in your context. Pair with read_message
-when you need the full body of a specific entry the list returns.
+Use for inspecting a different session's transcript — the current session's history is already in your context. Pair with read_message when you need the full body of a specific entry the list returns.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -184,10 +168,8 @@ when you need the full body of a specific entry the list returns.
 		Annotations: plugins.ToolAnnotations{
 			CostHint: plugins.ToolCostModerate,
 			System: `
-Archive a session when the user signals it's done — wrap-up phrasing,
-"save this for later", or before a long pause. The session becomes
-immutable: no further commits or ref moves succeed. Pair with
-clone_archived_session to fork a live successor off the archive.
+Archive a session when the user signals it's done — wrap-up phrasing, "save this for later", or before a long pause. The session becomes immutable: no further commits or ref moves succeed. 
+Pair with clone_archived_session to fork a live successor off the archive.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -205,10 +187,8 @@ clone_archived_session to fork a live successor off the archive.
 		Annotations: plugins.ToolAnnotations{
 			CostHint: plugins.ToolCostModerate,
 			System: `
-Use to revive an archived session as a new live conversation — e.g.
-the user wants to "pick up where we left off" on a session that was
-archived. The clone has its own ID and ref set; lineage to the source
-is recorded as parent_session_id.
+Use to revive an archived session as a new live conversation — e.g. the user wants to "pick up where we left off" on a session that was archived. 
+The clone has its own ID and ref set; lineage to the source is recorded as parent_session_id.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -229,9 +209,7 @@ is recorded as parent_session_id.
 			Idempotent: true,
 			CostHint:   plugins.ToolCostFree,
 			System: `
-Use after list_message_history when you've identified one entry worth
-reading in full. Don't loop read_message across many IDs to rebuild a
-transcript — list_message_history already returns enough metadata.
+Use after list_message_history when you've identified one entry worth reading in full. Don't loop read_message across many IDs to rebuild a transcript — list_message_history already returns enough metadata.
 `,
 		},
 		Parameters: plugins.ToolParameters{

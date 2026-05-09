@@ -29,14 +29,15 @@ type compactResult struct {
 // handleListSessions godoc
 //
 //	@Summary		List sessions
-//	@Description	Returns all sessions, optionally filtered by parent ID
+//	@Description	Returns all sessions, optionally filtered by parent ID. Archived sessions are excluded by default.
 //	@Tags			sessions
 //	@Produce		json
-//	@Param			offset	query		int		false	"Pagination offset"
-//	@Param			limit	query		int		false	"Max results (default 20)"
-//	@Param			parent	query		string	false	"Filter by parent session ID"
-//	@Success		200		{object}	map[string][]SessionMetadata
-//	@Failure		500		{object}	map[string]string
+//	@Param			offset		query		int		false	"Pagination offset"
+//	@Param			limit		query		int		false	"Max results (default 20)"
+//	@Param			parent		query		string	false	"Filter by parent session ID"
+//	@Param			archived	query		bool	false	"Include archived sessions instead of active ones"
+//	@Success		200			{object}	map[string][]SessionMetadata
+//	@Failure		500			{object}	map[string]string
 //	@Security		BearerAuth
 //	@Router			/v1/sessions [get]
 func (s *SessionService) handleListSessions() gin.HandlerFunc {
@@ -44,11 +45,12 @@ func (s *SessionService) handleListSessions() gin.HandlerFunc {
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 		parentID := c.Query("parent")
+		archived := c.Query("archived") == "true"
 
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 
-		sessions, err := s.store.ListParentSessions(c.Request.Context(), parentID, offset, limit)
+		sessions, err := s.store.ListParentSessions(c.Request.Context(), parentID, archived, offset, limit)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -151,36 +153,73 @@ func (s *SessionService) handleGetSession() gin.HandlerFunc {
 	}
 }
 
-// handleDeleteSession godoc
+type updateSessionRequest struct {
+	Name        *string `json:"name"`
+	Title       *string `json:"title"`
+	Description *string `json:"description"`
+	Model       *string `json:"model"`
+}
+
+// handleUpdateSession godoc
 //
-//	@Summary		Delete session
-//	@Description	Deletes a session and all its messages
+//	@Summary		Update session
+//	@Description	Patches mutable metadata on a session. Only provided fields are updated.
 //	@Tags			sessions
-//	@Param			session_id	path	string	true	"Session ID"
-//	@Success		204
-//	@Failure		404	{object}	map[string]string
-//	@Failure		500	{object}	map[string]string
+//	@Accept			json
+//	@Produce		json
+//	@Param			session_id	path		string				true	"Session ID or name"
+//	@Param			body		body		updateSessionRequest	true	"Fields to update"
+//	@Success		200			{object}	SessionMetadata
+//	@Failure		400			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		409			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id} [delete]
-func (s *SessionService) handleDeleteSession() gin.HandlerFunc {
+//	@Router			/v1/sessions/{session_id} [patch]
+func (s *SessionService) handleUpdateSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("session_id")
+		var req updateSessionRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		meta, err := s.resolveSessionLocked(c.Request.Context(), id)
+		meta, err := s.resolveSessionLocked(c.Request.Context(), c.Param("session_id"))
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		if err := s.store.DeleteSession(c.Request.Context(), meta.ID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if meta.ArchivedAt != nil {
+			c.JSON(http.StatusConflict, gin.H{"error": ErrSessionArchived.Error()})
 			return
 		}
 
-		SessionsTotal.WithLabelValues("delete").Inc()
-		c.Status(http.StatusNoContent)
+		if req.Name != nil && *req.Name != meta.Name {
+			if existing, err := s.store.FindSessionByName(c.Request.Context(), *req.Name); err == nil && existing != nil {
+				c.JSON(http.StatusConflict, gin.H{"error": "session name already exists: " + *req.Name})
+				return
+			}
+			meta.Name = *req.Name
+		}
+		if req.Title != nil {
+			meta.Title = *req.Title
+		}
+		if req.Description != nil {
+			meta.Description = *req.Description
+		}
+		if req.Model != nil {
+			meta.Model = *req.Model
+		}
+
+		meta.UpdatedAt = time.Now()
+		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, meta)
 	}
 }
 

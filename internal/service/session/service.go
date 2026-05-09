@@ -75,7 +75,7 @@ func (s *SessionService) Init(ctx context.Context) error {
 		group.POST("", s.handleCreateSession())
 		// /v1/sessions/:session_id
 		group.GET("/:session_id", s.handleGetSession())
-		group.DELETE("/:session_id", s.handleDeleteSession())
+		group.PATCH("/:session_id", s.handleUpdateSession())
 		// /v1/sessions/:session_id/messages
 		group.GET("/:session_id/messages", s.handleListMessages())
 		// /v1/sessions/:session_id/messages/:msg_id

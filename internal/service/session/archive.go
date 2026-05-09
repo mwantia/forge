@@ -67,7 +67,8 @@ func (s *SessionService) ensureNotArchived(ctx context.Context, sessionID string
 // ArchiveSession walks ref (default HEAD) to root, builds an envelope, and
 // stores it through the resource layer. On success the session is flipped
 // to immutable and the resource ID is recorded on the metadata.
-func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName string) (*ArchiveResult, error) {
+// If name is non-empty the session is renamed before archiving.
+func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName, name string) (*ArchiveResult, error) {
 	if s.resources == nil {
 		return nil, fmt.Errorf("resource service unavailable; cannot archive")
 	}
@@ -84,6 +85,9 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName 
 	}
 	if meta.ArchivedAt != nil {
 		return nil, ErrSessionArchived
+	}
+	if name != "" {
+		meta.Name = name
 	}
 
 	d, ok := s.store.(*dagSessionStore)

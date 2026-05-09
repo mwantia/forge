@@ -42,7 +42,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		offset := ArgInt(request.Arguments, "offset", 0)
 		limit := ArgInt(request.Arguments, "limit", 20)
 		s.mu.RLock()
-		sessions, err := s.store.ListParentSessions(ctx, parent, offset, limit)
+		sessions, err := s.store.ListParentSessions(ctx, parent, false, offset, limit)
 		s.mu.RUnlock()
 		if err != nil {
 			return nil, fmt.Errorf("failed to list sub-sessions: %w", err)
@@ -82,7 +82,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 			return nil, err
 		}
 		ref, _ := ArgString(request.Arguments, "ref")
-		res, err := s.ArchiveSession(ctx, sessionID, ref)
+		res, err := s.ArchiveSession(ctx, sessionID, ref, "")
 		if err != nil {
 			return nil, err
 		}

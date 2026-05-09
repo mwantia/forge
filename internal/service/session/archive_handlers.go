@@ -8,7 +8,8 @@ import (
 )
 
 type archiveRequest struct {
-	Ref string `json:"ref"`
+	Ref  string `json:"ref"`
+	Name string `json:"name"`
 }
 
 type cloneRequest struct {
@@ -43,7 +44,7 @@ func (s *SessionService) handleArchiveSession() gin.HandlerFunc {
 			return
 		}
 
-		res, err := s.ArchiveSession(c.Request.Context(), meta.ID, req.Ref)
+		res, err := s.ArchiveSession(c.Request.Context(), meta.ID, req.Ref, req.Name)
 		if err != nil {
 			if errors.Is(err, ErrSessionArchived) {
 				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

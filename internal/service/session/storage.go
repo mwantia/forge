@@ -19,8 +19,8 @@ type sessionBackend interface {
 	LoadSession(ctx context.Context, id string) (*SessionMetadata, error)
 	SaveSession(ctx context.Context, s *SessionMetadata) error
 	DeleteSession(ctx context.Context, id string) error
-	ListParentSessions(ctx context.Context, parentID string, offset, limit int) ([]*SessionMetadata, error)
-	ListSessions(ctx context.Context, offset, limit int) ([]*SessionMetadata, error)
+	ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error)
+	ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error)
 	FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error)
 
 	LoadMessage(ctx context.Context, sessionID, hashOrPrefix string) (*Message, error)
@@ -86,7 +86,7 @@ func (m *dagSessionStore) DeleteSession(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *dagSessionStore) ListParentSessions(ctx context.Context, parentID string, offset, limit int) ([]*SessionMetadata, error) {
+func (m *dagSessionStore) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
 	entries, err := m.storage.ListEntry(ctx, "sessions/")
 	if err != nil {
 		return nil, err
@@ -102,6 +102,9 @@ func (m *dagSessionStore) ListParentSessions(ctx context.Context, parentID strin
 			continue
 		}
 		if parentID != "" && meta.Parent != parentID {
+			continue
+		}
+		if archived != (meta.ArchivedAt != nil) {
 			continue
 		}
 		sessions = append(sessions, meta)
@@ -121,8 +124,8 @@ func (m *dagSessionStore) ListParentSessions(ctx context.Context, parentID strin
 	return sessions, nil
 }
 
-func (m *dagSessionStore) ListSessions(ctx context.Context, offset, limit int) ([]*SessionMetadata, error) {
-	return m.ListParentSessions(ctx, "", offset, limit)
+func (m *dagSessionStore) ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+	return m.ListParentSessions(ctx, "", archived, offset, limit)
 }
 
 func (m *dagSessionStore) FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error) {
