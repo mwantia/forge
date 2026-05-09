@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -65,6 +64,7 @@ func main() {
 				Output:      flog.LogWrapper(os.Stdout, !NoLogColorFlag),
 				JSONFormat:  false,
 			})
+
 			hclog.SetDefault(logger)
 			log.SetOutput(io.Discard)
 
@@ -80,12 +80,9 @@ func main() {
 	cmd.AddCommand(client.NewSessionsCommand())
 	cmd.AddCommand(client.NewResourceCommand())
 	cmd.AddCommand(client.NewContextsCommand())
-	cmd.AddCommand(client.NewReplayCommand())
 	cmd.AddCommand(client.NewEventsCommand())
-	//cmd.AddCommand(client.NewChannelsCommand())
 
 	if err := cmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }

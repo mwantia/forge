@@ -7,6 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/mwantia/forge-sdk/pkg/api"
+	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
@@ -89,7 +90,7 @@ func newResourcePreviewCmd(client func() *api.Client) *cobra.Command {
 			result := sb.String()
 
 			if render {
-				markdown := renderMarkdown(result, false)
+				markdown := helpers.RenderMarkdown(result, false)
 				fmt.Println(markdown)
 			} else {
 				fmt.Println(result)
