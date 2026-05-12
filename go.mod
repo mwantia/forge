@@ -8,6 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mwantia/forge-plugin-consul v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-nomad v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-openai v1.0.0
@@ -20,6 +21,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	github.com/zclconf/go-cty v1.18.1
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -73,6 +75,9 @@ require (
 	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
@@ -153,3 +158,5 @@ replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-p
 replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
 
 replace github.com/mwantia/forge-plugin-nomad => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/nomad
+
+replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai

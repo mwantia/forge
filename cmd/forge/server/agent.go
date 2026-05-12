@@ -8,6 +8,7 @@ import (
 	"github.com/mwantia/fabric/pkg/container"
 	"github.com/mwantia/forge/internal/agent"
 	forgeconfig "github.com/mwantia/forge/internal/config"
+	forgelog "github.com/mwantia/forge/internal/log"
 	"github.com/mwantia/forge/internal/service/template"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,7 @@ func NewAgentCommand() *cobra.Command {
 			}
 
 			forgeconfig.SetConfig(cfg, tmpl.Base())
+			forgelog.SetupLumberjack(cfg.Log)
 
 			agent, err := container.Resolve[*agent.Agent](ctx)
 			if err != nil {
