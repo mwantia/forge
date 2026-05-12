@@ -1,4 +1,4 @@
-package messages
+package sessions
 
 import (
 	"encoding/json"
@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func SessionsMessagesViewCmd(client func() *api.Client) *cobra.Command {
+func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 	var noRender bool
 
 	cmd := &cobra.Command{
-		Use:   "view <session-id> <message-id>",
-		Short: "View the content of a single message",
+		Use:   "show <session-id> <message-id>",
+		Short: "Show the content of a single message",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg, err := client().GetMessage(cmd.Context(), args[0], args[1])

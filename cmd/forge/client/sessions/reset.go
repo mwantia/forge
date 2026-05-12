@@ -1,4 +1,4 @@
-package system
+package sessions
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func SystemResetCmd(client func() *api.Client) *cobra.Command {
+func SessionsResetCmd(client func() *api.Client) *cobra.Command {
 	var systemPrompt string
 	var toolsVerbosity string
 	var plugins []string
@@ -33,8 +33,8 @@ func SystemResetCmd(client func() *api.Client) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&systemPrompt, "system", "", "Session-layer system prompt template (rendered and appended to the assembled prompt)")
-	cmd.Flags().StringVar(&toolsVerbosity, "tools-verbosity", "", "Override tools verbosity for this regen (full|basic|none)")
+	cmd.Flags().StringVar(&systemPrompt, "system", "", "Session-layer system prompt template (rendered and appended)")
+	cmd.Flags().StringVar(&toolsVerbosity, "tools-verbosity", "", "Override tools verbosity (full|basic|none)")
 	cmd.Flags().StringSliceVar(&plugins, "plugins", nil, "Plugin namespaces to include")
 
 	return cmd

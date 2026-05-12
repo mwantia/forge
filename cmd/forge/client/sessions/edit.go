@@ -1,4 +1,4 @@
-package messages
+package sessions
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func SessionsMessagesEditCmd(client func() *api.Client) *cobra.Command {
+func SessionsEditCmd(client func() *api.Client) *cobra.Command {
 	var branch string
 
 	cmd := &cobra.Command{
 		Use:   "edit <session> <msg-hash-prefix>",
-		Short: "Open a message in $EDITOR; submitting forks a new branch from its parent",
+		Short: "Open a message in $EDITOR and re-commit from its parent",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -36,7 +36,7 @@ func SessionsMessagesEditCmd(client func() *api.Client) *cobra.Command {
 				return fmt.Errorf("no changes; aborting")
 			}
 
-			activeRef, events, err := c.SendMessage(ctx, args[0], edited, api.DispatchOptions{
+			activeRef, events, err := c.SendMessage(ctx, args[0], edited, api.CommitOptions{
 				ForkFrom: args[1],
 			})
 			if err != nil {
@@ -51,7 +51,7 @@ func SessionsMessagesEditCmd(client func() *api.Client) *cobra.Command {
 				case api.ChunkEvent:
 					fmt.Print(e.Text)
 				case api.ErrorEvent:
-					return fmt.Errorf("dispatch error: %s", e.Message)
+					return fmt.Errorf("commit error: %s", e.Message)
 				}
 			}
 			fmt.Println()
@@ -65,6 +65,6 @@ func SessionsMessagesEditCmd(client func() *api.Client) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&branch, "branch", "", "Rename the auto-created fork-* ref to this name after dispatch")
+	cmd.Flags().StringVar(&branch, "branch", "", "Rename the auto-created fork-* ref to this name after commit")
 	return cmd
 }

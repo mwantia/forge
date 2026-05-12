@@ -9,19 +9,19 @@ import (
 )
 
 func SessionsLogCmd(client func() *api.Client) *cobra.Command {
-	var ref string
+	var branch string
 	var limit, offset int
 	var verbose, detailed, table bool
 
 	cmd := &cobra.Command{
 		Use:   "log <session>",
-		Short: "Walk a ref's parent chain (HEAD by default)",
+		Short: "Walk a branch's parent chain (HEAD by default)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c := client()
 			ctx := cmd.Context()
 
-			msgs, err := c.ListMessagesForRef(ctx, args[0], ref, limit)
+			msgs, err := c.ListMessagesForRef(ctx, args[0], branch, limit)
 			if err != nil {
 				return err
 			}
@@ -53,7 +53,7 @@ func SessionsLogCmd(client func() *api.Client) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&ref, "ref", "HEAD", "Ref to walk")
+	cmd.Flags().StringVarP(&branch, "branch", "b", "", "Branch to walk (default HEAD)")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Max entries (0 = all)")
 	cmd.Flags().IntVar(&offset, "offset", 0, "Number of messages to skip (table mode only)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Include full hashes, parent, and context_hash")
