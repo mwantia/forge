@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,14 +13,112 @@ import (
 	"github.com/mwantia/forge-sdk/pkg/api"
 )
 
-func PrintSession(s *api.SessionMetadata) {
+const (
+	colorReset  = "\033[0m"
+	colorWhite  = "\033[97m"
+	colorGreen  = "\033[32m"
+	colorBlue   = "\033[34m"
+	colorCyan   = "\033[36m"
+	colorYellow = "\033[33m"
+)
+
+func roleColor(role string) string {
+	switch role {
+	case "system":
+		return colorBlue
+	case "assistant":
+		return colorCyan
+	case "user":
+		return colorGreen
+	case "tool_result", "tool_call":
+		return colorYellow
+	default:
+		return ""
+	}
+}
+
+func PrintEventStatus(ev *api.EventStatus) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "ID\t= %s\n", ev.ID)
+	fmt.Fprintf(w, "State\t= %s\n", ev.State)
+	if ev.LastBranch != "" {
+		fmt.Fprintf(w, "Last Branch\t= %s\n", ev.LastBranch)
+	}
+	if ev.Description != "" {
+		fmt.Fprintf(w, "Description\t= %s\n", ev.Description)
+	}
+
+	return w.Flush()
+}
+
+func PrintEventOptions(ev *api.EventStatus) error {
+	if ev.Options == nil {
+		return nil
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Options")
+	if ev.Options.Timespan != "" {
+		fmt.Fprintf(w, "  Timespan\t= %s\n", ev.Options.Timespan)
+	}
+	if ev.Options.MaxQueue > 0 {
+		fmt.Fprintf(w, "  Max Queue\t= %d\n", ev.Options.MaxQueue)
+	}
+
+	return w.Flush()
+}
+
+func PrintEventQueue(ev *api.EventStatus) error {
+	if ev.Queue == nil {
+		return nil
+	}
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	if ev.Queue != nil {
+		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "Queue")
+		fmt.Fprintf(w, "  Size\t= %d\n", ev.Queue.Size)
+		if ev.Queue.WindowExpiresAt != nil {
+			fmt.Fprintf(w, "  Window Expires\t= %s\n", FormatTime(*ev.Queue.WindowExpiresAt))
+		}
+	}
+
+	return w.Flush()
+}
+
+func PrintEventBranches(branches []api.EventBranch) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+	if len(branches) > 0 {
+		fmt.Fprintf(w, "%-55s\t%-21s\t%s\n", "NAME", "FIRED AT", "HASH")
+		for _, b := range branches {
+			hash := b.Hash
+			if len(hash) > 8 {
+				hash = hash[:8]
+			}
+
+			fmt.Fprintf(w, "%-55s\t%-21s\t%s\n", b.Name, b.FiredAt.Local().Format(time.DateTime), hash)
+		}
+	} else {
+		fmt.Fprintln(w, "  No branches allocated")
+	}
+
+	return w.Flush()
+}
+
+func PrintSession(s *api.SessionMetadata) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
 	fmt.Fprintf(w, "ID\t= %s\n", s.ID)
 	fmt.Fprintf(w, "Name\t= %s\n", s.Name)
 	fmt.Fprintf(w, "Model\t= %s\n", s.Model)
 	fmt.Fprintf(w, "Created\t= %s\n", s.CreatedAt.Format(time.DateTime))
 	fmt.Fprintf(w, "Updated\t= %s\n", s.UpdatedAt.Format(time.DateTime))
-	w.Flush()
+
+	return w.Flush()
 }
 
 func PrintSessionLogTable(msgs []*api.Message) error {
@@ -112,93 +211,87 @@ func PrintSessionLogHeader(meta *api.SessionMetadata, msgs []*api.Message) {
 }
 
 func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, detailed bool) {
-	marker := ""
-	if names, ok := byHash[m.Hash]; ok {
-		sort.Strings(names)
-		marker = "(" + strings.Join(names, ", ") + ") "
-	}
+	role := displayRole(m)
 
-	stamp := ""
-	if !m.CreatedAt.IsZero() {
-		stamp = m.CreatedAt.Local().Format("15:04:05") + "  "
-	}
-
+	// "message <hash> (<branches>)"
 	hash := FormatShortHash(m.Hash)
-	if detailed {
+	if detailed || verbose {
 		hash = m.Hash
 	}
+	branchStr := ""
+	if names, ok := byHash[m.Hash]; ok && len(names) > 0 {
+		sort.Strings(names)
+		branchStr = fmt.Sprintf(" (%s%s%s)", colorGreen, strings.Join(names, ", "), colorReset)
+	}
+	fmt.Printf("%smessage %s%s%s\n", colorWhite, hash, colorReset, branchStr)
 
-	usage := ""
+	fmt.Printf("Role:   %s%s%s\n", roleColor(role), role, colorReset)
+	if !m.CreatedAt.IsZero() {
+		fmt.Printf("Date:   %s\n", m.CreatedAt.Local().Format("Mon Jan 02 15:04:05 2006 -0700"))
+	}
 	if m.Usage != nil && m.Usage.TotalTokens > 0 {
-		usage = fmt.Sprintf("  [in=%s out=%s]", FormatTokens(m.Usage.InputTokens), FormatTokens(m.Usage.OutputTokens))
+		fmt.Printf("Tokens: in=%s out=%s\n", FormatTokens(m.Usage.InputTokens), FormatTokens(m.Usage.OutputTokens))
+	}
+	if verbose {
+		fmt.Printf("Parent: %s\n", m.ParentHash)
+		if m.ContextHash != "" {
+			fmt.Printf("Ctx:    %s\n", m.ContextHash)
+		}
 	}
 
-	role := displayRole(m)
-	fmt.Printf("%s%s  %s%-12s%s\n", stamp, hash, marker, role, usage)
+	fmt.Println()
 
+	// Content block — indented 4 spaces, capped at 6 lines unless detailed.
+	var lines []string
 	switch role {
 	case "tool_call":
 		for _, tc := range m.ToolCalls {
-			if detailed {
-				fmt.Printf("    → %s\n", tc.Name)
-				if len(tc.Arguments) > 0 {
-					b, _ := json.MarshalIndent(tc.Arguments, "      ", "  ")
-					fmt.Printf("      %s\n", b)
+			line := "→ " + tc.Name
+			if len(tc.Arguments) > 0 {
+				line += formatArgPreview(tc.Arguments, 80-len(line))
+			}
+			lines = append(lines, line)
+			if detailed && len(tc.Arguments) > 0 {
+				b, _ := json.MarshalIndent(tc.Arguments, "  ", "  ")
+				for _, al := range strings.Split(string(b), "\n") {
+					lines = append(lines, "  "+al)
 				}
-			} else {
-				line := "→ " + tc.Name
-				if len(tc.Arguments) > 0 {
-					line += formatArgPreview(tc.Arguments, 80-len(line))
-				}
-				fmt.Printf("    %s\n", line)
 			}
 		}
 	case "tool_result":
-		prefix := ""
-		if len(m.ToolCalls) > 0 {
-			prefix = "← " + m.ToolCalls[0].Name + "  "
-		}
-		if detailed {
-			fmt.Printf("    %s\n", prefix)
-			if m.Content != "" {
-				for _, line := range strings.Split(strings.TrimSpace(m.Content), "\n") {
-					fmt.Printf("    %s\n", line)
+		if m.Content != "" {
+			var buf bytes.Buffer
+			if err := json.Compact(&buf, []byte(m.Content)); err == nil {
+				s := buf.String()
+				if !detailed && len(s) > 160 {
+					lines = []string{s[:157] + fmt.Sprintf("... (%d more characters)", len(s)-157)}
+				} else {
+					lines = []string{s}
 				}
-			}
-		} else {
-			preview := strings.ReplaceAll(strings.TrimSpace(m.Content), "\n", " ")
-			cap := 80 - len(prefix)
-			if cap < 20 {
-				cap = 20
-			}
-			if len(preview) > cap {
-				preview = preview[:cap-3] + "..."
-			}
-			if preview != "" || prefix != "" {
-				fmt.Printf("    %s%s\n", prefix, preview)
+			} else {
+				lines = strings.Split(strings.TrimSpace(m.Content), "\n")
 			}
 		}
 	default:
-		if detailed {
-			if m.Content != "" {
-				for _, line := range strings.Split(strings.TrimSpace(m.Content), "\n") {
-					fmt.Printf("    %s\n", line)
-				}
-			}
-		} else {
-			preview := strings.ReplaceAll(strings.TrimSpace(m.Content), "\n", " ")
-			if len(preview) > 100 {
-				preview = preview[:97] + "..."
-			}
-			if preview != "" {
-				fmt.Printf("    %s\n", preview)
-			}
+		if m.Content != "" {
+			lines = strings.Split(strings.TrimSpace(m.Content), "\n")
 		}
 	}
 
-	if verbose {
-		fmt.Printf("    hash=%s parent=%s ctx=%s\n", m.Hash, FormatShortHash(m.ParentHash), FormatShortHash(m.ContextHash))
+	const maxLines = 6
+	shown := lines
+	truncated := 0
+	if !detailed && len(lines) > maxLines {
+		shown = lines[:maxLines]
+		truncated = len(lines) - maxLines
 	}
+	for _, l := range shown {
+		fmt.Printf("    %s\n", l)
+	}
+	if truncated > 0 {
+		fmt.Printf("    ... (%d more lines)\n", truncated)
+	}
+
 	fmt.Println()
 }
 

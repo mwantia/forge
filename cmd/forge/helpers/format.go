@@ -3,12 +3,22 @@ package helpers
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mwantia/forge-sdk/pkg/api"
 )
 
 func FormatUsage(u api.PreviewUsage) string {
 	return fmt.Sprintf("%d bytes, %d runes, ~%d tokens", u.Bytes, u.Runes, u.EstTokens)
+}
+
+func FormatTime(t time.Time) string {
+	d := time.Until(t)
+	if d < 0 {
+		return t.Local().Format(time.RFC3339) + " (expired)"
+	}
+
+	return fmt.Sprintf("%s (%s remaining)", t.Local().Format(time.RFC3339), d.Round(time.Second))
 }
 
 func FormatTokens(n int) string {
