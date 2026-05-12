@@ -11,7 +11,8 @@ import (
 	"github.com/mwantia/forge/cmd/forge/client"
 	cliserver "github.com/mwantia/forge/cmd/forge/server"
 	"github.com/mwantia/forge/internal/agent"
-	flog "github.com/mwantia/forge/internal/log"
+	_ "github.com/mwantia/forge/internal/config"
+	forgelog "github.com/mwantia/forge/internal/log"
 	"github.com/mwantia/forge/internal/service/event"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/pipeline"
@@ -21,6 +22,7 @@ import (
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/session"
 	"github.com/mwantia/forge/internal/service/storage"
+	"github.com/mwantia/forge/internal/service/system"
 	"github.com/mwantia/forge/internal/service/template"
 	"github.com/mwantia/forge/internal/service/tools"
 	"github.com/spf13/cobra"
@@ -38,6 +40,7 @@ var (
 	_ *server.ServerService     = nil
 	_ *session.SessionService   = nil
 	_ *storage.StorageService   = nil
+	_ *system.SystemService     = nil
 	_ *template.TemplateService = nil
 	_ *tools.ToolsService       = nil
 )
@@ -57,15 +60,8 @@ func main() {
 		Use:   "forge",
 		Short: "System for forging",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			logger := hclog.New(&hclog.LoggerOptions{
-				Name:        "forge",
-				DisableTime: true,
-				Level:       hclog.LevelFromString(LogLevelFlag),
-				Output:      flog.LogWrapper(os.Stdout, !NoLogColorFlag),
-				JSONFormat:  false,
-			})
-
-			hclog.SetDefault(logger)
+			lvl := hclog.LevelFromString(LogLevelFlag)
+			forgelog.Bootstrap(lvl, !NoLogColorFlag)
 			log.SetOutput(io.Discard)
 
 			return nil
@@ -81,6 +77,7 @@ func main() {
 	cmd.AddCommand(client.NewResourceCommand())
 	cmd.AddCommand(client.NewContextsCommand())
 	cmd.AddCommand(client.NewEventsCommand())
+	cmd.AddCommand(client.NewSystemCommand())
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)

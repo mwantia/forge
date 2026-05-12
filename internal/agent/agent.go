@@ -17,6 +17,7 @@ import (
 	"github.com/mwantia/forge/internal/service/resource"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/session"
+	"github.com/mwantia/forge/internal/service/system"
 	"github.com/mwantia/forge/internal/service/tools"
 )
 
@@ -36,6 +37,7 @@ type Agent struct {
 	providers *provider.ProviderService `fabric:"inject"`
 	toolsSvc  *tools.ToolsService       `fabric:"inject"`
 	events    *event.EventService       `fabric:"inject"`
+	sysSvc    *system.SystemService     `fabric:"inject"`
 }
 
 func init() {
