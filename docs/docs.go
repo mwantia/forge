@@ -119,7 +119,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Re-dispatches a stored PromptContext to a provider and streams the response as NDJSON. The original session is not modified; this is purely a debugging surface.",
+                "description": "Re-commits a stored PromptContext to a provider and streams the response as NDJSON. The original session is not modified; this is purely a debugging surface.",
                 "consumes": [
                     "application/json"
                 ],
@@ -867,7 +867,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/sessions/dispatch": {
+        "/v1/sessions/commit": {
             "post": {
                 "security": [
                     {
@@ -884,15 +884,15 @@ const docTemplate = `{
                 "tags": [
                     "pipeline"
                 ],
-                "summary": "Dispatch message",
+                "summary": "Commit message",
                 "parameters": [
                     {
-                        "description": "Dispatch request",
+                        "description": "Commit request",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pipeline.dispatchRequest"
+                            "$ref": "#/definitions/pipeline.commitRequest"
                         }
                     }
                 ],
@@ -1844,6 +1844,74 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/system/gc": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Walks every session ref, marks reachable objects, and deletes everything else from the object store.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Garbage-collect unreachable objects",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/system/monitor": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens a long-lived connection and streams formatted log lines, one per chunk. ?level= filters (trace/debug/info/warn/error). Disconnect to stop.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Stream server logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Minimum log level (default: info)",
+                        "name": "level",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "newline-delimited log lines",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/tools/": {
             "get": {
                 "description": "Returns definitions for all registered tools across all namespaces",
@@ -2099,7 +2167,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pipeline.dispatchRequest": {
+        "pipeline.commitRequest": {
             "type": "object",
             "required": [
                 "content",
@@ -2419,7 +2487,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "description": "Usage aggregates provider-reported token consumption across every\nturn dispatched against this session. Updated atomically with each\nassistant message that carries a usage report.",
+                    "description": "Usage aggregates provider-reported token consumption across every\nturn commited against this session. Updated atomically with each\nassistant message that carries a usage report.",
                     "type": "object"
                 }
             }

@@ -39,7 +39,7 @@ tasks:
         desc: Run the agent with the test configuration
         cmds:
         - task: build
-        - ${BUILD_PATH} agent --config ${TEST_CONFIG_PATH} --log-level TRACE
+        - ${BUILD_PATH} agent --config ${TEST_CONFIG_PATH}
         ignore_error: true
 
     release:

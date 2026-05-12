@@ -6,7 +6,7 @@ definitions:
       type:
         type: string
     type: object
-  pipeline.dispatchRequest:
+  pipeline.commitRequest:
     properties:
       content:
         type: string
@@ -233,7 +233,7 @@ definitions:
       usage:
         description: |-
           Usage aggregates provider-reported token consumption across every
-          turn dispatched against this session. Updated atomically with each
+          turn commited against this session. Updated atomically with each
           assistant message that carries a usage report.
         type: object
     type: object
@@ -388,9 +388,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Re-dispatches a stored PromptContext to a provider and streams
-        the response as NDJSON. The original session is not modified; this is purely
-        a debugging surface.
+      description: Re-commits a stored PromptContext to a provider and streams the
+        response as NDJSON. The original session is not modified; this is purely a
+        debugging surface.
       parameters:
       - description: PromptContext hash
         in: path
@@ -1434,19 +1434,19 @@ paths:
       summary: Regenerate system message
       tags:
       - sessions
-  /v1/sessions/dispatch:
+  /v1/sessions/commit:
     post:
       consumes:
       - application/json
       description: Appends a user message to the given session and streams the pipeline
         response as NDJSON. Each line is a WireEvent JSON object.
       parameters:
-      - description: Dispatch request
+      - description: Commit request
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/pipeline.dispatchRequest'
+          $ref: '#/definitions/pipeline.commitRequest'
       produces:
       - application/x-ndjson
       responses:
@@ -1474,7 +1474,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Dispatch message
+      summary: Commit message
       tags:
       - pipeline
   /v1/sessions/preview:
@@ -1521,6 +1521,51 @@ paths:
       summary: Preview pipeline input
       tags:
       - pipeline
+  /v1/system/gc:
+    post:
+      description: Walks every session ref, marks reachable objects, and deletes everything
+        else from the object store.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Garbage-collect unreachable objects
+      tags:
+      - system
+  /v1/system/monitor:
+    get:
+      description: Opens a long-lived connection and streams formatted log lines,
+        one per chunk. ?level= filters (trace/debug/info/warn/error). Disconnect to
+        stop.
+      parameters:
+      - description: 'Minimum log level (default: info)'
+        in: query
+        name: level
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: newline-delimited log lines
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Stream server logs
+      tags:
+      - system
   /v1/tools/:
     get:
       description: Returns definitions for all registered tools across all namespaces

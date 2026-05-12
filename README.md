@@ -36,8 +36,14 @@ The SDK (`forge-sdk`) and plugin modules are published separately. This reposito
   `${env(...)}`, `${now()}`, `${uuid()}`, …
 - **Prometheus metrics** on a separate HTTP listener, with optional bearer auth.
 - **Embedded Swagger UI** for the REST API.
-- **CLI** — `forge sessions list|branch|branches|checkout|log`,
-  `forge messages edit`, `forge contexts show`, `forge replay`.
+- **Object-store GC** — `forge system gc` walks every session ref, marks
+  reachable `MessageObj` / `PromptContext` / `ToolCatalog` blobs, and sweeps
+  the rest. Explicit invocation only; never runs automatically.
+- **Live log streaming** — `forge system monitor [--log-level <level>]` opens
+  a long-lived connection and tails server logs in real time via a registered
+  `hclog.SinkAdapter`.
+- **CLI** — `forge sessions branch|checkout|edit|show|reset|log`,
+  `forge system monitor|gc`, `forge contexts show`, `forge replay`.
 
 ## Architecture Overview
 
@@ -260,6 +266,10 @@ POST   /v1/pipeline/preview                 # render the prompt without sending 
 GET    /v1/contexts/:hash                   /v1/contexts/:hash/materialized
 POST   /v1/contexts/:hash/replay            # NDJSON; no persistence
 
+# System: observability + maintenance
+GET    /v1/system/monitor                   # stream server logs; ?level=trace|debug|info|warn|error
+POST   /v1/system/gc                        # GC pass; returns {total, kept, swept}
+
 # Resources: long-term memory + archive sink
 GET    /v1/resources                        # backend status
 POST   /v1/resources/:ns                    # store
@@ -376,15 +386,28 @@ expose the same flows to the LLM.
 ### CLI cheatsheet
 
 ```bash
-forge sessions list
-forge sessions branches <id>
-forge sessions branch    <id> --name foo --hash <msg-hash>
-forge sessions checkout  <id> --ref foo
-forge sessions log       <id> --graph
+forge sessions status                               # list all sessions
+forge sessions create   --name foo --model forge/assistant
+forge sessions dispatch <id> "hello"               # stream a turn
 
-forge messages edit      <id> <msg-hash>            # opens $EDITOR; submits as fork_from
-forge contexts show      <ctx-hash>
-forge replay             <ctx-hash> --model forge/other
+forge sessions branch   <id>                       # list branches
+forge sessions branch   <id> <name>                # create at HEAD
+forge sessions branch   <id> -m <old> <new>        # rename
+forge sessions branch   <id> -d <name>             # delete
+forge sessions checkout <id> <branch>              # switch HEAD
+forge sessions checkout <id> -b <new-branch>       # create + switch
+
+forge sessions log      <id>                       # walk HEAD chain
+forge sessions edit     <id> <msg-hash>            # open $EDITOR; re-dispatch as fork_from
+forge sessions show     <id> <msg-hash>            # print a single message
+forge sessions reset    <id>                       # regenerate system message from plugins
+forge sessions messages compact <id>               # strip tool turns from HEAD
+
+forge system monitor    --log-level debug          # tail server logs
+forge system gc                                    # sweep unreachable objects
+
+forge contexts show     <ctx-hash>
+forge contexts replay   <ctx-hash> --model forge/other
 ```
 
 ## Project Layout
@@ -415,6 +438,7 @@ internal/
     ├── sessionctx/        # caller-session context-key carrier (no deps)
     ├── resource/          # ResourceRegistar (Store/Recall/Forget) + archive sink
     ├── pipeline/          # Dispatch loop, contexts API, NDJSON streaming
+    ├── system/            # /v1/system/monitor (log sink SSE) + /v1/system/gc
     └── sandbox/           # (stub)
 tools/plugins/             # plugins.yaml -> cmd/forge/plugins.go codegen
 tests/                     # compose.yml + HCL fixtures
@@ -430,8 +454,7 @@ build/                     # output
 1. **Sandbox is a stub.** `SandboxService` implements `Service` but does nothing. The SDK still exports `SandboxPlugin`. Either wire it up or delete it.
 2. **No channel subsystem.** `ChannelPlugin` exists in the SDK but there is no `internal/service/channel/` — the old dispatcher lives in `old_code/channel`.
 3. **`dispatch_session` and `summarize` are stubs.** `sessions__dispatch_session` returns "not yet implemented"; `PATCH /v1/sessions/:id/messages/summarize` returns 501. Compaction works.
-4. **No `forge system gc`.** Compaction and forks leave orphaned objects in `objects/<aa>/...`. Disk usage grows monotonically. A `forge system gc` pass that walks every ref and reaps unreferenced blobs is the planned escape hatch.
-5. **OpenViking adapter not in this repo.** `docs/03 §7.3` references it as the canonical archive-storage `ResourcePlugin`; until it lands, archives go to the built-in file fallback under `resources/archives/`.
+4. **OpenViking adapter not in this repo.** `docs/03 §7.3` references it as the canonical archive-storage `ResourcePlugin`; until it lands, archives go to the built-in file fallback under `resources/archives/`.
 7. **Config processor caveat.** `internal/config/processor.go` holds `TODO :: Find a solution to dynamically register 'meta' for sub-blocks` — `meta {}` is parsed but not yet exposed as `meta.*` inside other blocks (only the top-level eval has it via the template engine, not gohcl's decode context).
 8. **Cleanup chain is partial.** `Agent.Cleanup` only calls `plugins.Cleanup`, `srv.Cleanup`, `met.Cleanup`. The new services (`SessionService`, `ResourceService`) aren't awaited. Nothing holds long-lived resources beyond what plugins own, but the invariant is fragile.
 9. **Locking is cargo-culted.** Several services take `mu.Lock()` around read-only operations. No deadlock today but worth a pass.
