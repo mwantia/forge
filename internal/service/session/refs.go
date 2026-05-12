@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mwantia/forge/internal/service/session/dag"
@@ -46,6 +47,15 @@ func (s *SessionService) handleListRefs() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
+		}
+		if prefix := c.Query("prefix"); prefix != "" {
+			filtered := make(map[string]string, len(refs))
+			for name, hash := range refs {
+				if strings.HasPrefix(name, prefix) {
+					filtered[name] = hash
+				}
+			}
+			refs = filtered
 		}
 		symrefs := map[string]string{}
 		if d, ok := s.store.(*dagSessionStore); ok {

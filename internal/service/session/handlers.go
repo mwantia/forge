@@ -241,6 +241,7 @@ func (s *SessionService) handleListMessages() gin.HandlerFunc {
 		id := c.Param("session_id")
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+		branch := c.Query("branch")
 
 		s.mu.RLock()
 		defer s.mu.RUnlock()
@@ -250,7 +251,13 @@ func (s *SessionService) handleListMessages() gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		messages, err := s.store.ListMessages(c.Request.Context(), meta.ID, offset, limit)
+
+		var messages []*Message
+		if branch != "" && branch != "HEAD" {
+			messages, err = s.store.ListMessagesFromRef(c.Request.Context(), meta.ID, branch, offset, limit)
+		} else {
+			messages, err = s.store.ListMessages(c.Request.Context(), meta.ID, offset, limit)
+		}
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -27,6 +27,7 @@ type sessionBackend interface {
 	// SaveMessage writes msg and advances ref. An empty ref defaults to HEAD.
 	SaveMessage(ctx context.Context, sessionID, ref string, msg *Message) (string, error)
 	ListMessages(ctx context.Context, sessionID string, offset, limit int) ([]*Message, error)
+	ListMessagesFromRef(ctx context.Context, sessionID, branch string, offset, limit int) ([]*Message, error)
 	CountMessages(ctx context.Context, sessionID string) (int, error)
 	CompactToolsMessages(ctx context.Context, sessionID string) (int, error)
 
@@ -238,6 +239,31 @@ func (m *dagSessionStore) ListMessages(ctx context.Context, sessionID string, of
 	}
 
 	entries, err := dag.Walk(ctx, m.objects, m.refs, sessionID, head, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	metaByHash, _ := m.loadAllMetas(ctx, sessionID)
+	out := make([]*Message, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, fromDagMessageObj(e.Hash, e.Message, metaByHash[e.Hash]))
+	}
+	return out, nil
+}
+
+func (m *dagSessionStore) ListMessagesFromRef(ctx context.Context, sessionID, branch string, offset, limit int) ([]*Message, error) {
+	tip, err := m.refs.Read(ctx, sessionID, branch)
+	if err != nil {
+		if errors.Is(err, dag.ErrNotFound) {
+			return []*Message{}, nil
+		}
+		return nil, err
+	}
+	if tip == "" {
+		return []*Message{}, nil
+	}
+
+	entries, err := dag.Walk(ctx, m.objects, m.refs, sessionID, tip, limit, offset)
 	if err != nil {
 		return nil, err
 	}
