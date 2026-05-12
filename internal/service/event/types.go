@@ -24,13 +24,13 @@ type FireResponse struct {
 
 // EventStatus is the JSON body returned by GET /v1/events and GET /v1/events/:id.
 type EventStatus struct {
-	ID          string      `json:"id"`
-	Description string      `json:"description,omitempty"`
-	Session     string      `json:"session"`
-	State       EventState  `json:"state"`
+	ID          string     `json:"id"`
+	Description string     `json:"description,omitempty"`
+	Session     string     `json:"session"`
+	State       EventState `json:"state"`
 	Options     *queueOpts  `json:"options,omitempty"`
 	Queue       *queueState `json:"queue,omitempty"`
-	LastBranch  string      `json:"last_branch,omitempty"`
+	LastBranch  string     `json:"last_branch,omitempty"`
 }
 
 type queueOpts struct {

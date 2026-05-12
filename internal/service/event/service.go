@@ -3,7 +3,6 @@ package event
 import (
 	"context"
 	"net/http"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -229,15 +228,20 @@ func (s *EventService) buildStatus(ctx context.Context, cfg *EventConfig) EventS
 	if meta, err := s.sessions.ResolveSession(ctx, cfg.Session); err == nil {
 		if refs, err := s.sessions.ListRefs(ctx, meta.ID); err == nil {
 			prefix := "event/" + cfg.ID + "-"
-			var branches []string
+			var latest time.Time
 			for name := range refs {
-				if strings.HasPrefix(name, prefix) {
-					branches = append(branches, name)
+				if !strings.HasPrefix(name, prefix) {
+					continue
 				}
-			}
-			if len(branches) > 0 {
-				sort.Strings(branches)
-				status.LastBranch = branches[len(branches)-1]
+				ts := strings.TrimPrefix(name, prefix)
+				t, err := time.Parse(time.RFC3339, ts)
+				if err != nil {
+					continue
+				}
+				if t.After(latest) {
+					latest = t
+					status.LastBranch = name
+				}
 			}
 		}
 	}
