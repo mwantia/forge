@@ -21,8 +21,7 @@ func NewEventsCommand() *cobra.Command {
 		return api.New(httpAddr, httpToken)
 	}
 
-	cmd.AddCommand(events.EventsListCmd(client))
-	cmd.AddCommand(events.EventsGetCmd(client))
+	cmd.AddCommand(events.EventsStatusCmd(client))
 	cmd.AddCommand(events.EventsFireCmd(client))
 	cmd.AddCommand(events.EventsPauseCmd(client))
 	cmd.AddCommand(events.EventsResumeCmd(client))
