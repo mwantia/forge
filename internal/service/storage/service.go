@@ -12,6 +12,7 @@ import (
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/storage/file"
+	"github.com/mwantia/forge/internal/service/storage/postgres"
 	"github.com/mwantia/forge/internal/service/template"
 )
 
@@ -51,6 +52,12 @@ func (s *StorageService) Init(ctx context.Context) error {
 			return fmt.Errorf("storage file config: %w", err)
 		}
 		backend = file.NewFileStorageBackend(logger, cfg.Path)
+	case "postgres":
+		cfg, err := config.Decode[PostgresConfig](s.config.Body, s.tmpl.Base())
+		if err != nil {
+			return fmt.Errorf("storage postgres config: %w", err)
+		}
+		backend = postgres.NewPostgresBackend(logger, cfg.DSN, cfg.MaxConns)
 	default:
 		return fmt.Errorf("unknown storage backend %q", s.config.Type)
 	}

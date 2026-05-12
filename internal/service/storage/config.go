@@ -10,3 +10,8 @@ type StorageConfig struct {
 type FileConfig struct {
 	Path string `hcl:"path,optional"`
 }
+
+type PostgresConfig struct {
+	DSN      string `hcl:"dsn"`
+	MaxConns int32  `hcl:"max_conns,optional"`
+}
