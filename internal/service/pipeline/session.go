@@ -5,7 +5,7 @@ import (
 	"github.com/mwantia/forge/internal/service/session"
 )
 
-// Session is the runtime dispatch request handed to RunSessionPipeline.
+// Session is the runtime commit request handed to RunSessionPipeline.
 // It carries the resolved metadata, the materialized chat history (system +
 // prior turns + the current user message), the available tool catalog, and
 // the per-request output policy.
@@ -19,12 +19,12 @@ type Session struct {
 	Plugins   []string
 	NoStore   bool
 
-	// Ref is the session branch to advance during this dispatch. Empty
+	// Ref is the session branch to advance during this commit. Empty
 	// means HEAD.
 	Ref string
 
 	// ContextHash is the hash of the PromptContext recorded for this
-	// dispatch (docs/03 §1.2). Stamped onto every assistant + tool message
+	// commit (docs/03 §1.2). Stamped onto every assistant + tool message
 	// produced during the run so the turn can be replayed later.
 	ContextHash string
 

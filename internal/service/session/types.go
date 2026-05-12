@@ -7,14 +7,14 @@ import (
 )
 
 type SessionMetadata struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Title       string     `json:"title,omitempty"`
-	Description string     `json:"description,omitempty"`
-	Parent      string     `json:"parent,omitempty"`
-	Model     string    `json:"model"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Title       string    `json:"title,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Parent      string    `json:"parent,omitempty"`
+	Model       string    `json:"model"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 	// ArchivedAt is non-nil when the session has been archived. Archived
 	// sessions are immutable: ref/commit writes return 409.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -24,7 +24,7 @@ type SessionMetadata struct {
 	// ArchivePath is the resource path the envelope was stored under.
 	ArchivePath string `json:"archive_path,omitempty"`
 	// Usage aggregates provider-reported token consumption across every
-	// turn dispatched against this session. Updated atomically with each
+	// turn commited against this session. Updated atomically with each
 	// assistant message that carries a usage report.
 	Usage *sdkplugins.TokenUsage `json:"usage,omitempty" swaggertype:"object"`
 	// ToolsVerbosity controls how much plugin/tool guidance appears in the
@@ -44,13 +44,13 @@ type SessionMetadata struct {
 // ContextHash come from the per-session log entry, never from the
 // hashed object.
 type Message struct {
-	Hash        string            `json:"hash"`
-	ParentHash  string            `json:"parent_hash,omitempty"`
-	Role        string            `json:"role"`
-	Content     string            `json:"content"`
-	ToolCalls   []MessageToolCall `json:"tool_calls,omitempty"`
-	CreatedAt   time.Time         `json:"created_at"`
-	ContextHash string            `json:"context_hash,omitempty"`
+	Hash        string                 `json:"hash"`
+	ParentHash  string                 `json:"parent_hash,omitempty"`
+	Role        string                 `json:"role"`
+	Content     string                 `json:"content"`
+	ToolCalls   []MessageToolCall      `json:"tool_calls,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
+	ContextHash string                 `json:"context_hash,omitempty"`
 	Usage       *sdkplugins.TokenUsage `json:"usage,omitempty" swaggertype:"object"`
 }
 

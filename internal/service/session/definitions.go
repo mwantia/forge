@@ -76,7 +76,7 @@ Use to inspect another session's metadata (e.g. a sub-session you spawned). Skip
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `
-Defaults to the current session as the parent. Use when the user asks "what did we delegate?" or before dispatching to an existing sub-session. 
+Defaults to the current session as the parent. Use when the user asks "what did we delegate?" or before committing to an existing sub-session.
 Pagination defaults are sane — only override if the user asks for older entries.
 `,
 		},
@@ -103,7 +103,7 @@ Spawn a focused sub-session for a specific delegated task. Always scope the sub-
 - Set "plugins" to the minimal list of plugin namespaces required (e.g. ["skills"] for a file task, ["consul"] for a service-discovery lookup). 
   Built-in namespaces (sessions, resource) are always available regardless of this list.
 
-Narrowing plugins and verbosity keeps the context window small and the model focused. Pair with dispatch_session to drive the sub-session.
+Narrowing plugins and verbosity keeps the context window small and the model focused. Pair with commit_session to drive the sub-session.
 `,
 		},
 		Parameters: plugins.ToolParameters{
@@ -118,22 +118,22 @@ Narrowing plugins and verbosity keeps the context window small and the model foc
 		},
 	},
 	{
-		Name:        "dispatch_session",
+		Name:        "commit_session",
 		Description: `Send a message to a session and wait for the full response. Blocks until the sub-session finishes processing.`,
-		Tags:        []string{"session", "dispatch"},
+		Tags:        []string{"session", "commit"},
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
 			CostHint:   plugins.ToolCostModerate,
 			System: `
-Synchronous: blocks until the target session finishes its full tool-loop. Use sparingly — every dispatch is a nested LLM run with its own token cost. 
+Synchronous: blocks until the target session finishes its full tool-loop. Use sparingly — every commit is a nested LLM run with its own token cost.
 Frame the message tightly so the sub-session can answer and return without further round-trips.
 `,
 		},
 		Parameters: plugins.ToolParameters{
 			Type: "object",
 			Properties: map[string]plugins.ToolProperty{
-				"session_id": {Type: "string", Description: "The ID of the session to dispatch to."},
+				"session_id": {Type: "string", Description: "The ID of the session to commit to."},
 				"content":    {Type: "string", Description: "The message content to send."},
 			},
 			Required: []string{"session_id", "content"},

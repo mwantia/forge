@@ -17,29 +17,29 @@ import (
 	"github.com/mwantia/forge/internal/service/tools"
 )
 
-type dispatchRequest struct {
+type commitRequest struct {
 	SessionID string `json:"session_id" binding:"required"`
 	Content   string `json:"content"    binding:"required"`
 	NoStore   bool   `json:"no_store"`
 }
 
-// handleDispatch godoc
+// handleCommit godoc
 //
-//	@Summary		Dispatch message
+//	@Summary		Commit message
 //	@Description	Appends a user message to the given session and streams the pipeline response as NDJSON. Each line is a WireEvent JSON object.
 //	@Tags			pipeline
 //	@Accept			json
 //	@Produce		application/x-ndjson
-//	@Param			body	body		dispatchRequest		true	"Dispatch request"
+//	@Param			body	body		commitRequest		true	"Commit request"
 //	@Success		200		{object}	WireEvent			"NDJSON stream; one event per line"
 //	@Failure		400		{object}	map[string]string
 //	@Failure		404		{object}	map[string]string
 //	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/dispatch [post]
-func (s *PipelineService) handleDispatch() gin.HandlerFunc {
+//	@Router			/v1/sessions/commit [post]
+func (s *PipelineService) handleCommit() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req dispatchRequest
+		var req commitRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -54,9 +54,9 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 		}
 
 		// Resolve target ref. ?fork_from=<msg-hash-or-prefix> auto-creates
-		// a new branch off that message's parent and dispatches there. ?ref=
-		// dispatches on an existing non-HEAD branch.
-		ref, err := s.resolveDispatchRef(ctx, meta.ID, c.Query("ref"), c.Query("fork_from"))
+		// a new branch off that message's parent and commits there. ?ref=
+		// commits on an existing non-HEAD branch.
+		ref, err := s.resolveCommitRef(ctx, meta.ID, c.Query("ref"), c.Query("fork_from"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -125,7 +125,7 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			output = rawOverride()
 		}
 
-		// Materialize PromptContext for this dispatch (docs/03 §1.2). The
+		// Materialize PromptContext for this commit (docs/03 §1.2). The
 		// hash is stamped onto every assistant + tool message produced
 		// during the run so the turn is replayable later.
 		ctxHash, err := s.recordPromptContext(ctx, meta, history, userHash, toolCalls)
@@ -153,7 +153,7 @@ func (s *PipelineService) handleDispatch() gin.HandlerFunc {
 			}
 		}()
 
-		PipelineMessagesTotal.WithLabelValues("dispatched").Inc()
+		PipelineMessagesTotal.WithLabelValues("commited").Inc()
 
 		// Stream NDJSON response.
 		c.Writer.Header().Set("Content-Type", "application/x-ndjson")
@@ -313,7 +313,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 // recallRelevantResources queries the resource service for items that
 // match the user's input on the session's namespace and renders them as
 // the <relevant-resources> prompt block. Returns "" on any error or when
-// the resource registar is unbound — the dispatch must never break
+// the resource registar is unbound — the commit must never break
 // because of a memory layer failure.
 func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID, query string) string {
 	if s.resources == nil || strings.TrimSpace(query) == "" {
@@ -339,11 +339,11 @@ func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID
 	return renderResourcesBlock(items)
 }
 
-// resolveDispatchRef interprets the ?ref= and ?fork_from= dispatch query
+// resolveCommitRef interprets the ?ref= and ?fork_from= commit query
 // params (docs/03 §3.2). Precedence: fork_from beats ref. fork_from auto-
 // creates a branch named "fork-<8hex>[-N]" off the parent of the named
 // message. ref must already exist when supplied.
-func (s *PipelineService) resolveDispatchRef(ctx context.Context, sessionID, ref, forkFrom string) (string, error) {
+func (s *PipelineService) resolveCommitRef(ctx context.Context, sessionID, ref, forkFrom string) (string, error) {
 	if forkFrom != "" {
 		full, err := s.sessions.ResolveMessageHash(ctx, sessionID, forkFrom)
 		if err != nil {

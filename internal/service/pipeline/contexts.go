@@ -107,7 +107,7 @@ type replayRequest struct {
 // handleReplayContext godoc
 //
 //	@Summary		Replay prompt context
-//	@Description	Re-dispatches a stored PromptContext to a provider and streams the response as NDJSON. The original session is not modified; this is purely a debugging surface.
+//	@Description	Re-commits a stored PromptContext to a provider and streams the response as NDJSON. The original session is not modified; this is purely a debugging surface.
 //	@Tags			contexts
 //	@Accept			json
 //	@Produce		application/x-ndjson

@@ -86,7 +86,7 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 		s.persistMessage(ctx, sess, assistantMsg)
 
 		messages = append(messages, sdkplugins.ChatMessage{
-			Role:    finalChunk.Role,
+			Role:    "assistant",
 			Content: content,
 			ToolCalls: &sdkplugins.ChatMessageToolCalls{
 				ToolCalls: toolCalls,

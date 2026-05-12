@@ -29,10 +29,10 @@ type PipelineService struct {
 	config  PipelineConfig            `fabric:"config:pipeline"`
 	logger  hclog.Logger              `fabric:"logger:pipeline"`
 
-	sessions  session.SessionManager     `fabric:"inject"`
-	tools     tools.ToolsRegistar        `fabric:"inject"`
-	provider  provider.ProviderRegistar  `fabric:"inject"`
-	resources resource.ResourceRegistar  `fabric:"inject"`
+	sessions  session.SessionManager    `fabric:"inject"`
+	tools     tools.ToolsRegistar       `fabric:"inject"`
+	provider  provider.ProviderRegistar `fabric:"inject"`
+	resources resource.ResourceRegistar `fabric:"inject"`
 }
 
 func init() {
@@ -57,11 +57,11 @@ func (s *PipelineService) Init(ctx context.Context) error {
 	// /v1/sessions
 	group := s.router.AuthGroup("/sessions")
 	{
-		group.POST("/dispatch", s.handleDispatch())
+		group.POST("/commit", s.handleCommit())
 		group.POST("/preview", s.handlePreview())
 	}
 
-	// /v1/contexts — debug/observability surface for the dispatched
+	// /v1/contexts — debug/observability surface for the commited
 	// PromptContext blobs that the pipeline records each turn.
 	contexts := s.router.AuthGroup("/contexts")
 	{

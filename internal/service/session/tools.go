@@ -55,8 +55,8 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 	case "create_session":
 		return s.execCreateSession(ctx, request.Arguments)
 
-	case "dispatch_session":
-		return nil, fmt.Errorf("dispatch_session: not yet implemented")
+	case "commit_session":
+		return nil, fmt.Errorf("commit_session: not yet implemented")
 
 	case "list_message_history":
 		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
