@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/pkg/container"
@@ -98,6 +99,7 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 			a.logger.Error("error serving pipeline server", "error", err)
 		}
 	})
+
 	a.mutex.Unlock()
 
 	if !once {
@@ -106,24 +108,55 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 
 	a.logger.Debug("Shutting down agent...")
 
-	if err := a.Cleanup(ctx); err != nil {
-		return fmt.Errorf("failed to complete agent cleanup: %w", err)
+	globalTimeout, err := time.ParseDuration(a.config.ShutdownTimeout)
+	if err != nil {
+		a.logger.Warn("Invalid duration defined for 'shutdown_timeout': %v", err)
+		globalTimeout = 30 * time.Second
 	}
 
-	a.wait.Wait()
-	return nil
-}
+	// Use a global background context with timeout for fan-out cleanup
+	globalCtx, globalCancel := context.WithTimeout(context.Background(), globalTimeout)
+	defer globalCancel()
 
-func (a *Agent) Cleanup(ctx context.Context) error {
 	errs := &errors.Errors{}
-	if err := a.plugins.Cleanup(ctx); err != nil {
-		errs.Add(fmt.Errorf("plugins cleanup: %w", err))
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	// Dedicated service list for all cleanup calls
+	services := []interface{ Cleanup(context.Context) error }{
+		a.pipe,
+		a.events,
+		a.sysSvc,
+		a.sess,
+		a.res,
+		a.toolsSvc,
+		a.providers,
+		a.srv,
+		a.met,
+		a.plugins, // last: kills subprocesses after all gRPC callers are done
 	}
-	if err := a.srv.Cleanup(ctx); err != nil {
-		errs.Add(fmt.Errorf("server cleanup: %w", err))
+
+	for _, svc := range services {
+		wg.Add(1)
+		// Performing fan-out cleanup with global timeout and per-service timeout of 5sec.
+		go func(interface{ Cleanup(context.Context) error }) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(globalCtx, 5*time.Second)
+			defer cancel()
+
+			if err := svc.Cleanup(ctx); err != nil {
+				a.logger.Error("Failed to perform service cleanup for type '%T': %v", svc, err)
+
+				mu.Lock()
+				errs.Add(err)
+				mu.Unlock()
+			}
+		}(svc)
 	}
-	if err := a.met.Cleanup(ctx); err != nil {
-		errs.Add(fmt.Errorf("metrics cleanup: %w", err))
-	}
+
+	wg.Wait()
+	a.wait.Wait()
+
 	return errs.Errors()
 }
