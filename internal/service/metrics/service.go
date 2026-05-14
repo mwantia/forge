@@ -74,9 +74,6 @@ func (r *MetricsService) Cleanup(ctx context.Context) error {
 }
 
 func (r *MetricsService) Serve(context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	r.logger.Info("Serving metrics server", "address", r.config.Address)
 	if err := r.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err

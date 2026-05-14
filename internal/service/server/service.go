@@ -100,9 +100,6 @@ func (s *ServerService) Cleanup(ctx context.Context) error {
 }
 
 func (s *ServerService) Serve(context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.logger.Info("Serving http server", "address", s.config.Address)
 	if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
