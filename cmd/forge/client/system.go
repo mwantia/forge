@@ -12,6 +12,8 @@ func NewSystemCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "system",
 		Short: "System operations for the forge agent",
+		Long: "Low-level operations on the running forge agent: log monitoring,\n" +
+			"object-store garbage collection, and DAG inspection tools.",
 	}
 
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
@@ -23,6 +25,7 @@ func NewSystemCommand() *cobra.Command {
 
 	cmd.AddCommand(system.SystemMonitorCmd(client))
 	cmd.AddCommand(system.SystemGCCmd(client))
+	cmd.AddCommand(system.SystemDagCmd(client))
 
 	return cmd
 }

@@ -30,5 +30,15 @@ func (s *SystemService) Init(ctx context.Context) error {
 	group := s.router.AuthGroup("/system")
 	group.GET("/monitor", s.handleMonitor())
 	group.POST("/gc", s.handleGC())
+
+	dag := group.Group("/dag")
+	dag.GET("/objects", s.handleDagObjects())
+	dag.GET("/objects/:hash", s.handleDagCat())
+	dag.GET("/objects/:hash/type", s.handleDagType())
+	dag.GET("/sessions/:id/log", s.handleDagLog())
+	dag.GET("/diff", s.handleDagDiff())
+	dag.POST("/verify", s.handleDagVerify())
+	dag.POST("/gc", s.handleDagGC())
+
 	return nil
 }
