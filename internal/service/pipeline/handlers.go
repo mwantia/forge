@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -20,7 +21,6 @@ import (
 type commitRequest struct {
 	SessionID string `json:"session_id" binding:"required"`
 	Content   string `json:"content"    binding:"required"`
-	NoStore   bool   `json:"no_store"`
 }
 
 // handleCommit godoc
@@ -85,7 +85,12 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			}
 		}
 
-		// Append per-turn resources block to system content without persisting it.
+		if scoped, err := s.tmpl.Clone(session.SessionVars(meta)); err == nil {
+			if rendered, err := scoped.RenderBody(req.Content); err == nil {
+				req.Content = rendered
+			}
+		}
+
 		chatMessages := buildChatMessages(history)
 		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
 			chatMessages[0].Content += "\n\n" + resources
@@ -98,13 +103,10 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			CreatedAt: time.Now(),
 		}
 		var userHash string
-		if !req.NoStore {
-			h, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, userMsg)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save message: " + err.Error()})
-				return
-			}
-			userHash = h
+		userHash, err = s.sessions.AppendMessageToRef(ctx, meta.ID, ref, userMsg)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save message: " + err.Error()})
+			return
 		}
 
 		chatMessages = append(chatMessages, sdkplugins.ChatMessage{
@@ -138,7 +140,6 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			Metadata:    meta,
 			Messages:    chatMessages,
 			ToolCalls:   toolCalls,
-			NoStore:     req.NoStore,
 			Ref:         ref,
 			ContextHash: ctxHash,
 			Output:      output,
@@ -173,6 +174,7 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 				s.logger.Error("Failed to convert pipeline event", "error", err)
 				continue
 			}
+
 			b, _ := json.Marshal(wire)
 			c.Writer.Write(append(b, '\n'))
 			flusher.Flush()
@@ -270,6 +272,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
 			chatMessages[0].Content += "\n\n" + resources
 		}
+
 		if req.Content != "" {
 			chatMessages = append(chatMessages, sdkplugins.ChatMessage{
 				Role:    "user",
@@ -290,6 +293,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			ToolCount:   len(toolCalls),
 			EstAccuracy: "±20%",
 		}
+
 		for _, m := range chatMessages {
 			usage := estimateUsage(m.Content)
 			if m.Role == "system" {
@@ -298,6 +302,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 				resp.Total = sumUsage(resp.Total, usage)
 				continue
 			}
+
 			resp.Messages = append(resp.Messages, previewResponseMessage{
 				Role:    m.Role,
 				Content: m.Content,
@@ -319,23 +324,28 @@ func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID
 	if s.resources == nil || strings.TrimSpace(query) == "" {
 		return ""
 	}
+
 	const resourceRecallLimit = 5
 	hits, err := s.resources.Recall(ctx, sdkplugins.RecallQuery{
 		Path:  "/sessions/" + sessionID,
 		Query: query,
 		Limit: resourceRecallLimit,
 	})
+
 	if err != nil {
 		s.logger.Debug("resource recall failed", "session", sessionID, "error", err)
 		return ""
 	}
+
 	if len(hits) == 0 {
 		return ""
 	}
+
 	items := make([]resourceItem, 0, len(hits))
 	for _, h := range hits {
 		items = append(items, resourceItem{ID: h.ID, Content: h.Content})
 	}
+
 	return renderResourcesBlock(items)
 }
 
@@ -349,38 +359,45 @@ func (s *PipelineService) resolveCommitRef(ctx context.Context, sessionID, ref, 
 		if err != nil {
 			return "", fmt.Errorf("fork_from: %w", err)
 		}
+
 		obj, err := s.sessions.GetMessageObj(ctx, full)
 		if err != nil {
 			return "", fmt.Errorf("fork_from load: %w", err)
 		}
+
 		base := "fork-" + full[:8]
 		name := base
 		for i := 2; ; i++ {
-			existing, err := s.sessions.ReadRef(ctx, sessionID, name)
-			if err != nil {
-				return "", err
-			}
-			if existing == "" {
+			err := s.sessions.CASRef(ctx, sessionID, name, "", obj.ParentHash)
+			if err == nil {
 				break
 			}
-			name = fmt.Sprintf("%s-%d", base, i)
+
+			var conflict *dag.CASConflict
+			if errors.As(err, &conflict) {
+				name = fmt.Sprintf("%s-%d", base, i)
+				continue
+			}
+
+			return "", fmt.Errorf("failed to create fork ref: %w", err)
 		}
-		if err := s.sessions.WriteRef(ctx, sessionID, name, obj.ParentHash); err != nil {
-			return "", fmt.Errorf("create fork ref: %w", err)
-		}
+
 		return name, nil
 	}
 
 	if ref == "" || ref == dag.HEAD {
 		return dag.HEAD, nil
 	}
+
 	hash, err := s.sessions.ReadRef(ctx, sessionID, ref)
 	if err != nil {
 		return "", err
 	}
+
 	if hash == "" {
 		return "", fmt.Errorf("ref %q does not exist", ref)
 	}
+
 	return ref, nil
 }
 
@@ -388,13 +405,7 @@ func (s *PipelineService) resolveCommitRef(ctx context.Context, sessionID, ref, 
 // provider is about to receive and stores it in the global object pool.
 // Returns the resulting hash, which is stamped onto every assistant + tool
 // message produced during the run. history must include the system message.
-func (s *PipelineService) recordPromptContext(
-	ctx context.Context,
-	meta *session.SessionMetadata,
-	history []*session.Message,
-	userHash string,
-	tools []sdkplugins.ToolCall,
-) (string, error) {
+func (s *PipelineService) recordPromptContext(ctx context.Context, meta *session.SessionMetadata, history []*session.Message, userHash string, tools []sdkplugins.ToolCall) (string, error) {
 	provider, model, _ := s.splitModelName(meta.Model)
 
 	hashes := make([]string, 0, len(history)+1)
@@ -403,6 +414,7 @@ func (s *PipelineService) recordPromptContext(
 			hashes = append(hashes, m.Hash)
 		}
 	}
+
 	if userHash != "" {
 		hashes = append(hashes, userHash)
 	}
@@ -414,6 +426,7 @@ func (s *PipelineService) recordPromptContext(
 		Model:         model,
 		MessageHashes: hashes,
 	}
+
 	return s.sessions.PutPromptContext(ctx, pc)
 }
 
@@ -424,10 +437,12 @@ func (s *PipelineService) fetchModelSystem(ctx context.Context, modelRef string)
 	if !ok {
 		return ""
 	}
+
 	m, err := s.provider.GetModel(ctx, providerName, modelName)
 	if err != nil {
 		return ""
 	}
+
 	return m.System
 }
 
@@ -439,11 +454,13 @@ func (s *PipelineService) initSystemMessage(ctx context.Context, meta *session.S
 	if err != nil {
 		return history, err
 	}
+
 	modelSystem := s.fetchModelSystem(ctx, meta.Model)
 	agentSystem := s.config.System
 	if agentSystem == "" {
 		agentSystem = DefaultAgentSystem
 	}
+
 	layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
 	content := assembleSystemPrompt(layers, scoped, s.logger)
 
@@ -451,6 +468,7 @@ func (s *PipelineService) initSystemMessage(ctx context.Context, meta *session.S
 	if _, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, sysMsg); err != nil {
 		return history, err
 	}
+
 	return append([]*session.Message{sysMsg}, history...), nil
 }
 
@@ -464,6 +482,7 @@ func builtinNamespaceSetFromRegistar(r tools.ToolsRegistar) map[string]struct{} 
 			set[strings.ToLower(n.Namespace)] = struct{}{}
 		}
 	}
+
 	return set
 }
 
@@ -477,6 +496,7 @@ func buildChatMessages(history []*session.Message) []sdkplugins.ChatMessage {
 			Role:    msg.Role,
 			Content: msg.Content,
 		}
+
 		switch msg.Role {
 		case "assistant":
 			if len(msg.ToolCalls) > 0 {
@@ -490,6 +510,7 @@ func buildChatMessages(history []*session.Message) []sdkplugins.ChatMessage {
 				}
 				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{ToolCalls: calls}
 			}
+
 		case "tool":
 			if len(msg.ToolCalls) > 0 {
 				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{

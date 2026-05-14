@@ -12,6 +12,9 @@ func NewEventsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "events",
 		Short: "Manage forge event endpoints",
+		Long: "Event endpoints are named webhooks that external tools (cron, CI, monitoring)\n" +
+			"can fire to trigger pipeline runs. Use these commands to inspect, pause,\n" +
+			"resume, and manually fire event endpoints.",
 	}
 
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")

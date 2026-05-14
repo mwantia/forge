@@ -14,7 +14,10 @@ func ContextsGetCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <hash>",
 		Short: "Print a stored PromptContext (raw or materialized)",
-		Args:  cobra.ExactArgs(1),
+		Long: "Fetch a stored PromptContext blob by its hash.\n\n" +
+			"By default the raw JSON is printed. Pass --materialized to resolve all message hashes\n" +
+			"into the full rendered chat slice, including the assembled system prompt.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()

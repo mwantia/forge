@@ -46,6 +46,7 @@ func (s *PipelineService) handleGetContext() gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
+
 		c.JSON(http.StatusOK, gin.H{"hash": hash, "context": pc})
 	}
 }
@@ -81,12 +82,14 @@ func (s *PipelineService) handleMaterializeContext() gin.HandlerFunc {
 			Options:         pc.Options,
 			Messages:        make([]materializedMessage, 0, len(pc.MessageHashes)),
 		}
+
 		for _, mh := range pc.MessageHashes {
 			obj, err := s.sessions.GetMessageObj(ctx, mh)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("resolve %s: %v", mh, err)})
 				return
 			}
+
 			resp.Messages = append(resp.Messages, materializedMessage{
 				Hash:      mh,
 				Role:      obj.Role,
@@ -148,6 +151,7 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("resolve %s: %v", mh, err)})
 				return
 			}
+
 			messages = append(messages, sdkplugins.ChatMessage{
 				Role:    obj.Role,
 				Content: obj.Content,
@@ -164,16 +168,19 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 		policy := s.config.Output.resolve()
 		go func() {
 			defer close(out)
+
 			content, _, finalChunk, err := s.streamFromProvider(ctx, stream, out, policy)
 			if err != nil {
 				out <- ErrorEvent{Message: err.Error()}
 				return
 			}
+
 			done := DoneEvent{}
 			if finalChunk != nil {
 				done.Usage = finalChunk.Usage
 				done.Metadata = finalChunk.Metadata
 			}
+
 			_ = content
 			out <- done
 		}()
@@ -195,7 +202,9 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 				s.logger.Error("Failed to convert pipeline event", "error", err)
 				continue
 			}
-			b, _ := json.MarshalIndent(wire, "", "  ")
+
+			b, _ := json.Marshal(wire)
+
 			c.Writer.Write(append(b, '\n'))
 			flusher.Flush()
 		}

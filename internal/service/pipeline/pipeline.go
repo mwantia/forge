@@ -50,16 +50,23 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 			out <- ErrorEvent{Message: fmt.Sprintf("provider error (iteration %d): %s", i+1, err)}
 			return fmt.Errorf("provider chat error (iteration %d): %w", i+1, err)
 		}
+
 		s.logger.Debug("Pipeline iteration completed", "iteration", i+1, "session", sess.SessionID, "content_len", len(content), "tool_calls", len(toolCalls))
 
 		if len(toolCalls) == 0 {
-			s.persistMessage(ctx, sess, &session.Message{
+			msg := &session.Message{
 				Role:        "assistant",
 				Content:     content,
 				CreatedAt:   time.Now(),
 				ContextHash: sess.ContextHash,
 				Usage:       finalChunk.Usage,
-			})
+			}
+
+			if err := s.persistMessage(ctx, sess, msg); err != nil {
+				out <- ErrorEvent{Message: fmt.Sprintf("storage error (iteration %d): %s", i+1, err)}
+				return err
+			}
+
 			out <- DoneEvent{
 				Usage:    finalChunk.Usage,
 				Metadata: finalChunk.Metadata,
@@ -75,15 +82,23 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 			ContextHash: sess.ContextHash,
 			Usage:       finalChunk.Usage,
 		}
+
 		for _, tc := range toolCalls {
 			assistantMsg.ToolCalls = append(assistantMsg.ToolCalls, session.MessageToolCall{
 				ID:        tc.ID,
 				Name:      tc.Name,
 				Arguments: tc.Arguments,
 			})
-			out <- ToolCallEvent{CallID: tc.ID, Name: tc.Name, Args: tc.Arguments}
+			out <- ToolCallEvent{
+				CallID: tc.ID,
+				Name:   tc.Name,
+				Args:   tc.Arguments,
+			}
 		}
-		s.persistMessage(ctx, sess, assistantMsg)
+		if err := s.persistMessage(ctx, sess, assistantMsg); err != nil {
+			out <- ErrorEvent{Message: fmt.Sprintf("storage error (iteration %d): %s", i+1, err)}
+			return err
+		}
 
 		messages = append(messages, sdkplugins.ChatMessage{
 			Role:    "assistant",
@@ -99,15 +114,24 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 			result  any
 			isError bool
 		}
+
 		results := make([]toolResult, len(toolCalls))
 		var wg sync.WaitGroup
-		execCtx := session.WithCallerSession(ctx, sess.SessionID)
+		ctx := session.WithCallerSession(ctx, sess.SessionID)
+
 		for idx, tc := range toolCalls {
 			wg.Add(1)
+
 			go func(idx int, tc sdkplugins.ChatToolCall) {
 				defer wg.Done()
-				result, isError := s.executeToolCall(execCtx, tc)
-				results[idx] = toolResult{tc: tc, result: result, isError: isError}
+
+				result, isError := s.executeToolCall(ctx, tc)
+				results[idx] = toolResult{
+					tc:      tc,
+					result:  result,
+					isError: isError,
+				}
+
 			}(idx, tc)
 		}
 		wg.Wait()
@@ -120,28 +144,35 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 				IsError: r.isError,
 			}
 
-			resultStr := marshalResult(r.result)
-			s.persistMessage(ctx, sess, &session.Message{
+			res := marshalResult(r.result)
+			msg := &session.Message{
 				Role:    "tool",
-				Content: resultStr,
+				Content: res,
 				ToolCalls: []session.MessageToolCall{{
 					ID:      r.tc.ID,
 					Name:    r.tc.Name,
-					Result:  resultStr,
+					Result:  res,
 					IsError: r.isError,
 				}},
 				CreatedAt:   time.Now(),
 				ContextHash: sess.ContextHash,
-			})
+			}
+
+			if err := s.persistMessage(ctx, sess, msg); err != nil {
+				out <- ErrorEvent{Message: fmt.Sprintf("storage error (iteration %d): %s", i+1, err)}
+				return err
+			}
+
 			messages = append(messages, sdkplugins.ChatMessage{
 				Role:    "tool",
-				Content: resultStr,
+				Content: res,
 				ToolCalls: &sdkplugins.ChatMessageToolCalls{
 					ID:   r.tc.ID,
 					Name: r.tc.Name,
 				},
 			})
 		}
+
 	}
 
 	out <- ErrorEvent{Message: fmt.Sprintf("max tool iterations (%d) reached without final response", s.config.MaxToolIterations)}
@@ -157,6 +188,7 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 	ch := newChunker(out, policy)
 	var buf strings.Builder
 	var calls []sdkplugins.ChatToolCall
+
 	for {
 		chunk, recvErr := stream.Recv()
 		if recvErr == io.EOF {
@@ -165,6 +197,7 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 			}
 			return buf.String(), calls, &sdkplugins.ChatChunk{Done: true}, nil
 		}
+
 		if recvErr != nil {
 			return "", nil, nil, recvErr
 		}
@@ -218,11 +251,13 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 		if err != nil {
 			lastErr = err
 			s.logger.Warn("provider chat failed", "iteration", iteration, "attempt", attempt, "error", err)
+
 		} else {
 			content, toolCalls, finalChunk, streamErr := s.streamFromProvider(ctx, stream, out, policy)
 			if streamErr == nil {
 				return content, toolCalls, finalChunk, nil
 			}
+
 			lastErr = streamErr
 			// Tokens already on the wire — replay would duplicate. Bail.
 			if len(content) > 0 || len(toolCalls) > 0 {
@@ -230,13 +265,14 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 					"iteration", iteration, "attempt", attempt, "error", streamErr)
 				return "", nil, nil, streamErr
 			}
-			s.logger.Warn("stream error before any output; will retry",
-				"iteration", iteration, "attempt", attempt, "error", streamErr)
+
+			s.logger.Warn("stream error before any output; will retry", "iteration", iteration, "attempt", attempt, "error", streamErr)
 		}
 
 		if attempt == attempts {
 			break
 		}
+
 		backoff := min(baseRetry*(1<<(attempt-1)), maxRetry)
 		select {
 		case <-ctx.Done():
@@ -244,6 +280,7 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 		case <-time.After(backoff):
 		}
 	}
+
 	return "", nil, nil, lastErr
 }
 
@@ -266,18 +303,16 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 	return resp.Result, resp.IsError
 }
 
-// persistMessage saves a message to storage via the session manager, logging
-// on failure (non-fatal). It is a no-op when sess.NoStore is true.
-//
+// persistMessage saves a message to storage via the session manager.
 // On success the new content-hash is set on msg.Hash and msg.ParentHash
 // is filled in by the store (the existing HEAD before this write).
-func (s *PipelineService) persistMessage(ctx context.Context, sess *Session, msg *session.Message) {
-	if sess.NoStore {
-		return
-	}
-	if _, err := s.sessions.AppendMessageToRef(ctx, sess.SessionID, sess.Ref, msg); err != nil {
+func (s *PipelineService) persistMessage(ctx context.Context, sess *Session, msg *session.Message) error {
+	_, err := s.sessions.AppendMessageToRef(ctx, sess.SessionID, sess.Ref, msg)
+	if err != nil {
 		s.logger.Error("Failed to persist message", "session", sess.SessionID, "role", msg.Role, "error", err)
+		return fmt.Errorf("failed to persist message: %w", err)
 	}
+	return nil
 }
 
 // marshalResult converts a tool result to a string for storage and LLM feed-back.
@@ -285,10 +320,12 @@ func marshalResult(v any) string {
 	if v == nil {
 		return ""
 	}
-	b, err := json.MarshalIndent(v, "", "  ")
+
+	b, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Sprintf("%v", v)
 	}
+
 	return string(b)
 }
 
@@ -297,6 +334,7 @@ func (s *PipelineService) splitModelName(modelName string) (string, string, bool
 	if len(parts) != 2 {
 		return "", "", false
 	}
+
 	return strings.ToLower(parts[0]), strings.ToLower(parts[1]), true
 }
 

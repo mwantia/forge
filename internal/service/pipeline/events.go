@@ -92,7 +92,7 @@ func ToWireEvent(ev PipelineEvent) (WireEvent, error) {
 		return WireEvent{}, fmt.Errorf("unknown pipeline event type: %T", ev)
 	}
 
-	d, err := json.MarshalIndent(ev, "", "  ")
+	d, err := json.Marshal(ev)
 	if err != nil {
 		return WireEvent{}, fmt.Errorf("failed to marshal %T: %w", ev, err)
 	}

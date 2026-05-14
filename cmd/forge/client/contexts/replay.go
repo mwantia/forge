@@ -13,7 +13,11 @@ func ContextsReplayCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "replay <hash>",
 		Short: "Replay a stored PromptContext through a provider and stream the response",
-		Args:  cobra.ExactArgs(1),
+		Long: "Re-dispatch a stored PromptContext through the provider without persisting anything.\n\n" +
+			"The original session is untouched. Useful for diffing model behaviour across providers\n" +
+			"or reproducing a bug. Optionally override the recorded model with --model.\n" +
+			"Output is streamed to stdout.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()

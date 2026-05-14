@@ -15,7 +15,10 @@ func EventsFireCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "fire <id>",
 		Short: "Fire an event",
-		Args:  cobra.ExactArgs(1),
+		Long: "Trigger an event endpoint immediately, optionally supplying a JSON payload.\n\n" +
+			"The payload is forwarded to the event's pipeline session as context.\n" +
+			"Use --payload for an inline string/JSON value or --payload-file to read from a file.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var body any
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/pkg/container"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/provider"
@@ -18,6 +19,7 @@ import (
 
 const (
 	DefaultMaxToolIterations = 25
+	ServiceNamespace         = "pipeline"
 )
 
 type PipelineService struct {
@@ -54,28 +56,35 @@ func (s *PipelineService) Init(ctx context.Context) error {
 		s.config.MaxToolIterations = DefaultMaxToolIterations
 	}
 
-	// /v1/sessions
-	group := s.router.AuthGroup("/sessions")
+	metadata := tools.NamespaceMetadata{
+		Description: "Pipeline dispatch tools for driving sub-sessions synchronously.",
+		Builtin:     true,
+		System:      `Use pipeline tools to send a message to a sub-session and collect its full response before continuing. Each call is a complete nested LLM run — use sparingly and frame messages tightly to minimise token cost.`,
+	}
+	if err := s.tools.RegisterNamespaceMetadata(ServiceNamespace, metadata); err != nil {
+		return fmt.Errorf("failed to register namespace metadata for %q: %w", ServiceNamespace, err)
+	}
+
+	for _, definition := range ToolsDefinitions {
+		captured := definition
+		exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+			req.Tool = captured.Name
+			return s.ExecuteTool(ctx, req)
+		}
+		if err := s.tools.RegisterTool(ServiceNamespace, definition, exec); err != nil {
+			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, ServiceNamespace, err)
+		}
+	}
+
+	// /v1/pipeline
+	group := s.router.AuthGroup("/" + ServiceNamespace)
 	{
 		group.POST("/commit", s.handleCommit())
 		group.POST("/preview", s.handlePreview())
-	}
 
-	// /v1/contexts — debug/observability surface for the commited
-	// PromptContext blobs that the pipeline records each turn.
-	contexts := s.router.AuthGroup("/contexts")
-	{
-		contexts.GET("/:hash", s.handleGetContext())
-		contexts.GET("/:hash/materialized", s.handleMaterializeContext())
-		contexts.POST("/:hash/replay", s.handleReplayContext())
-	}
-
-	// /v1/sessions/:session_id/system — system prompt snapshot management.
-	sessions := s.router.AuthGroup("/sessions")
-	{
-		sessions.GET("/:session_id/system", s.handleSystemShow())
-		sessions.PATCH("/:session_id/system", s.handleSystemEdit())
-		sessions.POST("/:session_id/system/regen", s.handleSystemRegen())
+		group.GET("/contexts/:hash", s.handleGetContext())
+		group.GET("/contexts/:hash/materialized", s.handleMaterializeContext())
+		group.POST("/contexts/:hash/replay", s.handleReplayContext())
 	}
 
 	return nil

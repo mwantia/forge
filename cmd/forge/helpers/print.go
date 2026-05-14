@@ -109,14 +109,40 @@ func PrintEventBranches(branches []api.EventBranch) error {
 	return w.Flush()
 }
 
-func PrintSession(s *api.SessionMetadata) error {
+func PrintSession(meta *api.SessionMetadata, skipEmpty bool) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
-	fmt.Fprintf(w, "ID\t= %s\n", s.ID)
-	fmt.Fprintf(w, "Name\t= %s\n", s.Name)
-	fmt.Fprintf(w, "Model\t= %s\n", s.Model)
-	fmt.Fprintf(w, "Created\t= %s\n", s.CreatedAt.Format(time.DateTime))
-	fmt.Fprintf(w, "Updated\t= %s\n", s.UpdatedAt.Format(time.DateTime))
+	plugins := strings.Join(meta.Plugins, ",")
+	if plugins == "" {
+		plugins = "all"
+	}
+
+	fmt.Fprintf(w, "ID\t= %s\n", meta.ID)
+	fmt.Fprintf(w, "Name\t= %s\n", meta.Name)
+	if skipEmpty && meta.Title != "" {
+		fmt.Fprintf(w, "Title\t= %s\n", meta.Title)
+	}
+	if skipEmpty && meta.Description != "" {
+		fmt.Fprintf(w, "Description\t= %s\n", meta.Description)
+	}
+	fmt.Fprintf(w, "Plugins\t= %s\n", plugins)
+	fmt.Fprintf(w, "Model\t= %s\n", meta.Model)
+	if skipEmpty && meta.Parent != "" {
+		fmt.Fprintf(w, "Parent\t= %s\n", meta.Parent)
+	}
+	fmt.Fprintf(w, "Created\t= %s\n", meta.CreatedAt.Format(time.DateTime))
+	fmt.Fprintf(w, "Updated\t= %s\n", meta.UpdatedAt.Format(time.DateTime))
+
+	if meta.Usage != nil {
+		fmt.Fprint(w, "\nUSAGE\n")
+		fmt.Fprintf(w, "  Total Cost\t= %f\n", meta.Usage.TotalCost)
+		fmt.Fprintf(w, "  Total Tokens\t= %d\n\n", meta.Usage.TotalTokens)
+
+		fmt.Fprintf(w, "  Input Cost\t= %f\n", meta.Usage.InputCost)
+		fmt.Fprintf(w, "  Input Tokens\t= %d\n", meta.Usage.InputTokens)
+		fmt.Fprintf(w, "  Output Cost\t= %f\n", meta.Usage.OutputCost)
+		fmt.Fprintf(w, "  Output Tokens\t= %d\n", meta.Usage.OutputTokens)
+	}
 
 	return w.Flush()
 }
@@ -223,15 +249,18 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 		sort.Strings(names)
 		branchStr = fmt.Sprintf(" (%s%s%s)", colorGreen, strings.Join(names, ", "), colorReset)
 	}
+
 	fmt.Printf("%smessage %s%s%s\n", colorWhite, hash, colorReset, branchStr)
 
 	fmt.Printf("Role:   %s%s%s\n", roleColor(role), role, colorReset)
 	if !m.CreatedAt.IsZero() {
 		fmt.Printf("Date:   %s\n", m.CreatedAt.Local().Format("Mon Jan 02 15:04:05 2006 -0700"))
 	}
+
 	if m.Usage != nil && m.Usage.TotalTokens > 0 {
 		fmt.Printf("Tokens: in=%s out=%s\n", FormatTokens(m.Usage.InputTokens), FormatTokens(m.Usage.OutputTokens))
 	}
+
 	if verbose {
 		fmt.Printf("Parent: %s\n", m.ParentHash)
 		if m.ContextHash != "" {
@@ -250,6 +279,7 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 			if len(tc.Arguments) > 0 {
 				line += formatArgPreview(tc.Arguments, 80-len(line))
 			}
+
 			lines = append(lines, line)
 			if detailed && len(tc.Arguments) > 0 {
 				b, _ := json.MarshalIndent(tc.Arguments, "  ", "  ")
@@ -258,6 +288,7 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 				}
 			}
 		}
+
 	case "tool_result":
 		if m.Content != "" {
 			var buf bytes.Buffer
@@ -272,6 +303,7 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 				lines = strings.Split(strings.TrimSpace(m.Content), "\n")
 			}
 		}
+
 	default:
 		if m.Content != "" {
 			lines = strings.Split(strings.TrimSpace(m.Content), "\n")

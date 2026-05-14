@@ -17,7 +17,6 @@ type Session struct {
 	Messages  []sdkplugins.ChatMessage
 	ToolCalls []sdkplugins.ToolCall
 	Plugins   []string
-	NoStore   bool
 
 	// Ref is the session branch to advance during this commit. Empty
 	// means HEAD.

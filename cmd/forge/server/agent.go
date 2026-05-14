@@ -48,7 +48,7 @@ func NewAgentCommand() *cobra.Command {
 				return err
 			}
 
-			return agent.Cleanup(ctx)
+			return nil
 		},
 	}
 

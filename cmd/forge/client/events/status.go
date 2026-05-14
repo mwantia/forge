@@ -16,7 +16,11 @@ func EventsStatusCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status [id]",
 		Short: "Show event status and allocation history, or list all events",
-		Args:  cobra.MaximumNArgs(1),
+		Long: "Without an argument, lists all configured event endpoints as a table.\n" +
+			"With an event ID, shows the full status including the associated session,\n" +
+			"queue state, and the webhook URL to use for external triggers.\n" +
+			"Pass --detailed to include the full allocation history.",
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()
@@ -55,7 +59,7 @@ func EventsStatusCmd(client func() *api.Client) *cobra.Command {
 					return err
 				}
 
-				helpers.PrintSession(session)
+				helpers.PrintSession(session, true)
 			} else {
 				fmt.Println("  No session configured")
 

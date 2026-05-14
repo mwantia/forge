@@ -17,6 +17,9 @@ func NewResourceCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resource",
 		Short: "Inspect forge resources",
+		Long: "Resources are key-value entries stored by the resource backend, used for\n" +
+			"long-term memory and session archives. Use these commands to list and inspect\n" +
+			"resources by namespace.",
 	}
 
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
@@ -34,6 +37,7 @@ func newResourceListCmd(client func() *api.Client) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list <namespace>",
 		Short: "List resources in a namespace",
+		Long:  "List all resource entries in the given namespace, showing ID and a truncated content preview.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resources, err := client().ListResources(cmd.Context(), args[0])
@@ -64,7 +68,10 @@ func newResourcePreviewCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview <namespace> <id>",
 		Short: "Preview a memory resource by id",
-		Args:  cobra.ExactArgs(2),
+		Long: "Fetch and print the full content of a resource by namespace and ID.\n" +
+			"Metadata fields are printed as a YAML front-matter header.\n" +
+			"Pass --render to apply markdown rendering to the content.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r, err := client().GetResource(cmd.Context(), args[0], args[1])
 			if err != nil {

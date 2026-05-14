@@ -13,7 +13,9 @@ func SystemMonitorCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "monitor",
 		Short: "Stream server logs to the terminal",
-		Args:  cobra.NoArgs,
+		Long: "Connect to the agent's log stream and print lines to stdout as they arrive.\n" +
+			"Use --log-level to filter by severity. Press Ctrl+C to disconnect.",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ch, err := client().SystemMonitor(ctx, logLevel)

@@ -16,7 +16,9 @@ func EventsPauseCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pause <id>",
 		Short: "Pause an event (fires return 503 while paused)",
-		Args:  cobra.ExactArgs(1),
+		Long: "Pause an event endpoint so that incoming fire requests return 503.\n\n" +
+			"With --hold, the command blocks until Ctrl+C, then automatically resumes the endpoint.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
 			c := client()
