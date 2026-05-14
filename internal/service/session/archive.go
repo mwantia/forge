@@ -58,9 +58,11 @@ func (s *SessionService) ensureNotArchived(ctx context.Context, sessionID string
 	if err != nil {
 		return err
 	}
+
 	if meta.ArchivedAt != nil {
 		return ErrSessionArchived
 	}
+
 	return nil
 }
 
@@ -83,14 +85,16 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 	if err != nil {
 		return nil, err
 	}
+
 	if meta.ArchivedAt != nil {
 		return nil, ErrSessionArchived
 	}
+
 	if name != "" {
 		meta.Name = name
 	}
 
-	d, ok := s.store.(*dagSessionStore)
+	d, ok := s.store.(*DagSessionStore)
 	if !ok {
 		return nil, fmt.Errorf("dag store unavailable")
 	}
@@ -102,6 +106,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 		}
 		return nil, err
 	}
+
 	entries, err := dag.Walk(ctx, d.objects, d.refs, sessionID, tip, 0, 0)
 	if err != nil {
 		return nil, err
@@ -111,6 +116,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 	messages := make([]ArchiveMessage, 0, len(entries))
 	contextHashes := make([]string, 0, len(entries))
 	seenCtx := make(map[string]struct{})
+
 	for _, e := range entries {
 		messages = append(messages, ArchiveMessage{
 			Hash:       e.Hash,
@@ -119,6 +125,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 			ToolCalls:  e.Message.ToolCalls,
 			ParentHash: e.Message.ParentHash,
 		})
+
 		if m := metaByHash[e.Hash]; m != nil && m.ContextHash != "" {
 			if _, dup := seenCtx[m.ContextHash]; !dup {
 				seenCtx[m.ContextHash] = struct{}{}
@@ -143,10 +150,12 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 	for i, m := range messages {
 		hashes[i] = m.Hash
 	}
-	envBytes, err := json.MarshalIndent(envelope, "", "  ")
+
+	envBytes, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, fmt.Errorf("encode envelope: %w", err)
 	}
+
 	resMeta := map[string]any{
 		"forge_session_id":     sessionID,
 		"forge_message_hashes": hashes,
@@ -194,7 +203,7 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 		return nil, err
 	}
 
-	d, ok := s.store.(*dagSessionStore)
+	d, ok := s.store.(*DagSessionStore)
 	if !ok {
 		return nil, fmt.Errorf("dag store unavailable")
 	}
@@ -208,10 +217,12 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 			ToolCalls:  m.ToolCalls,
 			ParentHash: m.ParentHash,
 		}
+
 		hash, err := d.objects.PutMessage(ctx, obj)
 		if err != nil {
 			return nil, fmt.Errorf("replay message %s: %w", m.Hash, err)
 		}
+
 		if hash != m.Hash {
 			return nil, fmt.Errorf("hash mismatch on replay: archived %s, recomputed %s", m.Hash, hash)
 		}
@@ -222,6 +233,7 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 	if cloneName == "" {
 		cloneName = uniqueCloneName(ctx, s.store, envelope.Name)
 	}
+
 	if existing, _ := s.store.FindSessionByName(ctx, cloneName); existing != nil {
 		return nil, fmt.Errorf("session name already exists: %s", cloneName)
 	}
@@ -259,6 +271,7 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 	if err := d.refs.Write(ctx, clone.ID, dag.MAIN, envelope.HeadHash); err != nil {
 		return nil, fmt.Errorf("write clone main: %w", err)
 	}
+
 	if err := d.refs.WriteSymRef(ctx, clone.ID, dag.HEAD, dag.MAIN); err != nil {
 		return nil, fmt.Errorf("write clone HEAD symref: %w", err)
 	}
@@ -274,6 +287,7 @@ func (s *SessionService) loadArchiveEnvelope(ctx context.Context, sourceID strin
 	if meta, err := s.store.LoadSession(ctx, sourceID); err == nil && meta.ArchivedAt != nil && meta.ArchiveResourceID != "" {
 		return s.fetchEnvelope(ctx, meta.ArchivePath, meta.ArchiveResourceID)
 	}
+
 	return s.fetchEnvelope(ctx, ArchivePath, sourceID)
 }
 
@@ -281,24 +295,29 @@ func (s *SessionService) fetchEnvelope(ctx context.Context, path, id string) (*A
 	if path == "" {
 		path = ArchivePath
 	}
+
 	res, err := s.resources.Get(ctx, path, id)
 	if err != nil {
 		return nil, fmt.Errorf("fetch archive %s/%s: %w", path, id, err)
 	}
+
 	env := &ArchiveEnvelope{}
 	if err := json.Unmarshal([]byte(res.Content), env); err != nil {
 		return nil, fmt.Errorf("decode archive envelope: %w", err)
 	}
+
 	if env.SchemaVersion != 1 {
 		return nil, fmt.Errorf("unsupported archive schema_version %d", env.SchemaVersion)
 	}
+
 	return env, nil
 }
 
-func uniqueCloneName(ctx context.Context, store sessionBackend, base string) string {
+func uniqueCloneName(ctx context.Context, store SessionBackend, base string) string {
 	if base == "" {
 		base = "session"
 	}
+
 	for i := 1; ; i++ {
 		candidate := fmt.Sprintf("%s-clone-%d", base, i)
 		if existing, _ := store.FindSessionByName(ctx, candidate); existing == nil {

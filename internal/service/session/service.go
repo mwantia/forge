@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/resource"
@@ -16,11 +16,13 @@ import (
 	"github.com/mwantia/forge/internal/service/tools"
 )
 
+const ServiceNamespace = "sessions"
+
 type SessionService struct {
 	service.UnimplementedService
 
 	mu    sync.RWMutex
-	store sessionBackend
+	store SessionBackend
 
 	metrics   metrics.MetricsRegistar   `fabric:"inject"`
 	router    server.HttpRouter         `fabric:"inject"`
@@ -47,35 +49,37 @@ func (s *SessionService) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to register metrics: %w", err)
 	}
 
-	s.store = newDagSessionStore(s.storage)
+	s.store = NewDagSessionStore(s.storage)
 
-	const namespace = "sessions"
-	if err := s.tools.RegisterNamespaceMetadata(namespace, tools.NamespaceMetadata{
+	metadata := tools.NamespaceMetadata{
 		Description: "Built-in session bookkeeping: title/description, sub-session creation, message history.",
 		Builtin:     true,
-		System: `Built-in session tools manage the conversation's own metadata and any sub-sessions you spawn. Update title/description when the topic crystallises so the user can navigate session lists. Read message history only when context truly requires it — the active conversation is already in your context window.`,
-	}); err != nil {
-		return fmt.Errorf("failed to register namespace metadata for %q: %w", namespace, err)
+		System:      `Built-in session tools manage the conversation's own metadata and any sub-sessions you spawn. Update title/description when the topic crystallises so the user can navigate session lists. Read message history only when context truly requires it — the active conversation is already in your context window.`,
 	}
+	if err := s.tools.RegisterNamespaceMetadata(ServiceNamespace, metadata); err != nil {
+		return fmt.Errorf("failed to register namespace metadata for %q: %w", ServiceNamespace, err)
+	}
+
 	for _, definition := range ToolsDefinitions {
-		capturedDef := definition
-		exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
-			req.Tool = capturedDef.Name
+		captured := definition
+		exec := func(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+			req.Tool = captured.Name
 			return s.ExecuteTool(ctx, req)
 		}
-		if err := s.tools.RegisterTool(namespace, definition, exec); err != nil {
-			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, namespace, err)
+		if err := s.tools.RegisterTool(ServiceNamespace, definition, exec); err != nil {
+			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, ServiceNamespace, err)
 		}
 	}
 
 	// /v1/sessions
-	group := s.router.AuthGroup("/sessions")
+	group := s.router.AuthGroup("/" + ServiceNamespace)
 	{
 		group.GET("", s.handleListSessions())
 		group.POST("", s.handleCreateSession())
 		// /v1/sessions/:session_id
 		group.GET("/:session_id", s.handleGetSession())
 		group.PATCH("/:session_id", s.handleUpdateSession())
+		group.DELETE("/:session_id", s.handleDeleteSession())
 		// /v1/sessions/:session_id/messages
 		group.GET("/:session_id/messages", s.handleListMessages())
 		// /v1/sessions/:session_id/messages/:msg_id

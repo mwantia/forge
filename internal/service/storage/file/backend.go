@@ -70,8 +70,13 @@ func (b *FileStorageBackend) WriteRaw(ctx context.Context, key string, value []b
 		return fmt.Errorf("failed to create directories for path %q: %w", key, err)
 	}
 
-	if err := os.WriteFile(path, value, 0644); err != nil {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, value, 0644); err != nil {
 		return fmt.Errorf("failed to write raw data to path %q: %w", key, err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("failed to commit write for path %q: %w", key, err)
 	}
 
 	return nil
@@ -79,7 +84,7 @@ func (b *FileStorageBackend) WriteRaw(ctx context.Context, key string, value []b
 
 // WriteJSON JSON-marshals val and writes it at key.
 func (b *FileStorageBackend) WriteJson(ctx context.Context, key string, v any) error {
-	data, err := json.MarshalIndent(v, "", "  ")
+	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal data for key %q: %w", key, err)
 	}

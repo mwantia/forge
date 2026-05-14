@@ -9,7 +9,6 @@ import (
 	"github.com/mwantia/forge/internal/service/session/dag"
 )
 
-
 type refCreateRequest struct {
 	Name string `json:"name" binding:"required"`
 	Hash string `json:"hash" binding:"required"`
@@ -58,7 +57,7 @@ func (s *SessionService) handleListRefs() gin.HandlerFunc {
 			refs = filtered
 		}
 		symrefs := map[string]string{}
-		if d, ok := s.store.(*dagSessionStore); ok {
+		if d, ok := s.store.(*DagSessionStore); ok {
 			for name := range refs {
 				if target, isSym, _ := d.refs.ReadSymRef(ctx, meta.ID, name); isSym {
 					symrefs[name] = target

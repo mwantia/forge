@@ -1,10 +1,13 @@
 package dag
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/mwantia/forge-sdk/pkg/contenthash"
 )
@@ -20,6 +23,31 @@ type Storage interface {
 
 // ErrNotFound is returned when a hash or ref has no value.
 var ErrNotFound = errors.New("dag: not found")
+
+func compressBlob(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	w := gzip.NewWriter(&buf)
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func decompressBlob(data []byte) ([]byte, error) {
+	r, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		// not gzip (legacy uncompressed object) — return as-is
+		if errors.Is(err, gzip.ErrHeader) {
+			return data, nil
+		}
+		return nil, err
+	}
+	defer r.Close()
+	return io.ReadAll(r)
+}
 
 // ObjectStore is the global, content-addressed object pool.
 //
@@ -51,12 +79,18 @@ func (s *ObjectStore) Has(ctx context.Context, hash string) (bool, error) {
 	return len(b) > 0, nil
 }
 
-// Put writes blob unconditionally at the key for hash.
+// Put writes blob unconditionally at the key for hash. The blob is
+// gzip-compressed before storage; identity (hash) is unchanged because
+// the hash was computed on the uncompressed canonical bytes by the caller.
 func (s *ObjectStore) Put(ctx context.Context, hash string, blob []byte) error {
 	if hash == "" {
 		return fmt.Errorf("dag: empty hash")
 	}
-	return s.Backend.WriteRaw(ctx, ObjectKey(hash), blob)
+	compressed, err := compressBlob(blob)
+	if err != nil {
+		return fmt.Errorf("dag: compress %s: %w", hash, err)
+	}
+	return s.Backend.WriteRaw(ctx, ObjectKey(hash), compressed)
 }
 
 // PutIfAbsent writes blob at the key for hash only if no value already
@@ -72,7 +106,7 @@ func (s *ObjectStore) PutIfAbsent(ctx context.Context, hash string, blob []byte)
 	return s.Put(ctx, hash, blob)
 }
 
-// GetRaw returns the canonical bytes for hash, or ErrNotFound.
+// GetRaw returns the canonical (uncompressed) bytes for hash, or ErrNotFound.
 func (s *ObjectStore) GetRaw(ctx context.Context, hash string) ([]byte, error) {
 	b, err := s.Backend.ReadRaw(ctx, ObjectKey(hash))
 	if err != nil {
@@ -80,6 +114,10 @@ func (s *ObjectStore) GetRaw(ctx context.Context, hash string) ([]byte, error) {
 	}
 	if len(b) == 0 {
 		return nil, ErrNotFound
+	}
+	b, err = decompressBlob(b)
+	if err != nil {
+		return nil, fmt.Errorf("dag: decompress %s: %w", hash, err)
 	}
 	return b, nil
 }

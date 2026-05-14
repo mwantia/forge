@@ -16,7 +16,11 @@ func SessionsLogCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "log <session>",
 		Short: "Walk a branch's parent chain (HEAD by default)",
-		Args:  cobra.ExactArgs(1),
+		Long: "Walk a session's message chain from the tip of HEAD (or --branch) back to the root.\n\n" +
+			"Pass --verbose for full hashes and context hashes, --detailed for full message\n" +
+			"content without truncation. --table renders a flat table suitable for scripting.\n\n" +
+			"<session> accepts an ID or name.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c := client()
 			ctx := cmd.Context()

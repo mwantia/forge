@@ -17,7 +17,10 @@ func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show <session-id> <message-id>",
 		Short: "Show the content of a single message",
-		Args:  cobra.ExactArgs(2),
+		Long: "Fetch a single message by session ID/name and message hash (or prefix) and\n" +
+			"print its content, role, and timestamp. Tool call arguments and results are\n" +
+			"rendered inline. Pass --no-render to skip markdown rendering.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			msg, err := client().GetMessage(cmd.Context(), args[0], args[1])
 			if err != nil {
@@ -30,17 +33,21 @@ func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 			fmt.Fprintf(&sb, "Role:    %s\n", msg.Role)
 			fmt.Fprintf(&sb, "Created: %s\n", msg.CreatedAt.Format(time.DateTime))
 			sb.WriteString("---\n")
+
 			if msg.Content != "" {
 				sb.WriteString("\n")
 				sb.WriteString(msg.Content)
 			}
+
 			for _, tc := range msg.ToolCalls {
 				sb.WriteString("\n---\n")
+
 				if tc.Result != "" {
 					fmt.Fprintf(&sb, "tool_result  %s\n", tc.Name)
 					if tc.IsError {
 						sb.WriteString("(error)\n")
 					}
+
 					sb.WriteString(tc.Result)
 				} else {
 					fmt.Fprintf(&sb, "tool_call  %s\n", tc.Name)
@@ -51,6 +58,7 @@ func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 					}
 				}
 			}
+
 			fmt.Println(helpers.RenderMarkdown(sb.String(), noRender))
 			return nil
 		},

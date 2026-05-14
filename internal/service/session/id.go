@@ -14,9 +14,11 @@ func DeriveSessionID(name string, createdAtUnixNano int64, parent string) string
 		"created_at_unix_nano": createdAtUnixNano,
 		"parent_session_id":    parent,
 	})
+
 	if err != nil {
 		// Hashing a fixed shape can only fail on programmer error.
 		panic("session: contenthash failed on session-id derivation: " + err.Error())
 	}
+
 	return full[:32]
 }

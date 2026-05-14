@@ -16,7 +16,8 @@ const schema = `
 CREATE TABLE IF NOT EXISTS forge_kv (
 	key  TEXT  PRIMARY KEY,
 	data BYTEA NOT NULL DEFAULT ''::bytea
-)`
+);
+CREATE INDEX IF NOT EXISTS forge_kv_prefix ON forge_kv (key text_pattern_ops)`
 
 type PostgresBackend struct {
 	dsn      string
@@ -105,7 +106,7 @@ func (b *PostgresBackend) WriteRaw(ctx context.Context, key string, value []byte
 }
 
 func (b *PostgresBackend) WriteJson(ctx context.Context, key string, v any) error {
-	data, err := json.MarshalIndent(v, "", "  ")
+	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("postgres: marshal %q: %w", key, err)
 	}

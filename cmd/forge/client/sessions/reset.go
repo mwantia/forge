@@ -15,7 +15,12 @@ func SessionsResetCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset <session>",
 		Short: "Re-assemble the system message from current plugin state",
-		Args:  cobra.ExactArgs(1),
+		Long: "Re-assemble the system prompt from the current state of all loaded plugins\n" +
+			"and store it as a new root message. If the session already has a HEAD chain,\n" +
+			"a new fork branch is created to preserve the existing history.\n\n" +
+			"Use --system to append a session-layer template, --tools-verbosity to control\n" +
+			"how tool docs are rendered, and --plugins to restrict which namespaces contribute.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()

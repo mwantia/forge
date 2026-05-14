@@ -12,7 +12,9 @@ func SessionsUpdateCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <id>",
 		Short: "Update session metadata (name, title, description, model)",
-		Args:  cobra.ExactArgs(1),
+		Long: "Patch mutable fields on a session. Only the flags you explicitly pass are\n" +
+			"applied; omitted flags leave the existing values unchanged.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			req := api.UpdateSessionRequest{}
 			if cmd.Flags().Changed("name") {
@@ -31,7 +33,7 @@ func SessionsUpdateCmd(client func() *api.Client) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			helpers.PrintSession(meta)
+			helpers.PrintSession(meta, false)
 			return nil
 		},
 	}

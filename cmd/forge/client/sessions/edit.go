@@ -15,7 +15,10 @@ func SessionsEditCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "edit <session> <msg-hash-prefix>",
 		Short: "Open a message in $EDITOR and re-commit from its parent",
-		Args:  cobra.ExactArgs(2),
+		Long: "Fetch the message at <msg-hash-prefix>, open its content in $EDITOR, then\n" +
+			"commit the edited text using fork_from to branch off the message's parent.\n\n" +
+			"The auto-created fork-* branch can be renamed with --branch.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()

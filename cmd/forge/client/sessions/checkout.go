@@ -13,7 +13,10 @@ func BranchCheckoutCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "checkout [-b] <session> <branch>",
 		Short: "Switch HEAD to a branch; -b creates and switches in one step",
-		Args:  cobra.ExactArgs(2),
+		Long: "Move HEAD to the named branch. With -b, the branch is created at the current\n" +
+			"HEAD tip first, then HEAD is moved to it.\n\n" +
+			"Equivalent to 'git checkout [-b] <branch>'.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()

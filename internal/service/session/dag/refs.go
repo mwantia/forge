@@ -154,9 +154,11 @@ func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next stri
 	if name == "" {
 		return fmt.Errorf("dag: empty ref name")
 	}
+
 	target := r.resolveRef(ctx, sessionID, name)
 	key := refKey(sessionID, target)
 	m := r.lockFor(key)
+
 	m.Lock()
 	defer m.Unlock()
 
@@ -164,10 +166,12 @@ func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next stri
 	if err != nil {
 		return err
 	}
+
 	curStr := ""
 	if cur != nil {
 		curStr = string(bytes.TrimSpace(cur))
 	}
+
 	if curStr != expected {
 		return &CASConflict{
 			Session:  sessionID,
@@ -176,6 +180,7 @@ func (r *RefStore) CAS(ctx context.Context, sessionID, name, expected, next stri
 			Actual:   curStr,
 		}
 	}
+
 	return r.Backend.WriteRaw(ctx, key, []byte(next))
 }
 
@@ -187,6 +192,7 @@ func (r *RefStore) List(ctx context.Context, sessionID string) (map[string]strin
 	if err := r.listRecursive(ctx, sessionID, refsPrefix(sessionID), "", out); err != nil {
 		return nil, err
 	}
+
 	return out, nil
 }
 

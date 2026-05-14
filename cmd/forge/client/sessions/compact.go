@@ -11,7 +11,10 @@ func SessionsMessagesCompactCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compact <id>",
 		Short: "Compact messages in a session by removing tool call entries",
-		Args:  cobra.ExactArgs(1),
+		Long: "Rewrite the active branch removing all tool-call and tool-result messages.\n\n" +
+			"The original chain is left intact as orphaned objects; run 'forge system gc'\n" +
+			"to reclaim the space.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := client().CompactMessages(cmd.Context(), args[0])
 			if err != nil {

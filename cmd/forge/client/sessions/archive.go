@@ -15,7 +15,11 @@ func SessionsArchiveCmd(client func() *api.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archive <id>",
 		Short: "Archive a session",
-		Args:  cobra.ExactArgs(1),
+		Long: "Walk the named ref (default HEAD), build an archive envelope, and store it\n" +
+			"through the resource backend. The session becomes immutable after archiving;\n" +
+			"further commits and ref moves return 409.\n\n" +
+			"Use 'forge sessions clone' to create a new live session from the archive.",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if rename != "" && renameRandom {
 				return fmt.Errorf("--rename and --rename-random are mutually exclusive")

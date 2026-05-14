@@ -12,6 +12,9 @@ func NewSessionsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sessions",
 		Short: "Manage forge sessions",
+		Long: "Sessions are content-addressed Merkle DAG chains of immutable messages.\n" +
+			"Each session has a HEAD ref and optional named branches. Use these commands\n" +
+			"to create, inspect, branch, commit, archive, and restore sessions.",
 	}
 
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
@@ -22,6 +25,7 @@ func NewSessionsCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(sessions.SessionsArchiveCmd(client))
+	cmd.AddCommand(sessions.SessionsDeleteCmd(client))
 	cmd.AddCommand(sessions.SessionsCreateCmd(client))
 	cmd.AddCommand(sessions.SessionsCommitCmd(client))
 	cmd.AddCommand(sessions.SessionsStatusCmd(client))
