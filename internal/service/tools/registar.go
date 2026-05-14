@@ -91,11 +91,15 @@ func (s *ToolsService) getToolNamespace(namespace, name string) (*ToolsNamespace
 }
 
 func (s *ToolsService) RegisterTool(namespace string, definition plugins.ToolDefinition, exec ToolsExecution) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	key := strings.ToLower(namespace)
 	bare := strings.ToLower(definition.Name)
 	if strings.Contains(bare, "__") {
 		return fmt.Errorf("tool name %q must not contain %q; the namespace %q is prepended by the registry", definition.Name, "__", namespace)
 	}
+
 	name := key + "__" + bare
 	definition.Name = name
 
@@ -138,6 +142,9 @@ func (s *ToolsService) ExecuteTool(ctx context.Context, namespace, name string, 
 }
 
 func (s *ToolsService) GetToolDefinition(namespace, name string) (plugins.ToolDefinition, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	tool, ok := s.getToolNamespace(namespace, name)
 	if ok {
 		return tool.ToolDefinition, nil
@@ -147,6 +154,9 @@ func (s *ToolsService) GetToolDefinition(namespace, name string) (plugins.ToolDe
 }
 
 func (s *ToolsService) GetToolDefinitionsByNamespace(namespace string) ([]plugins.ToolDefinition, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	tools, ok := s.namespaces[strings.ToLower(namespace)]
 	if ok {
 		definitions := make([]plugins.ToolDefinition, 0, len(tools))
@@ -161,6 +171,9 @@ func (s *ToolsService) GetToolDefinitionsByNamespace(namespace string) ([]plugin
 }
 
 func (s *ToolsService) GetAllToolDefinitions() ([]plugins.ToolDefinition, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	definitions := make([]plugins.ToolDefinition, 0)
 	for _, namespace := range s.namespaces {
 		for _, tool := range namespace {
@@ -185,11 +198,16 @@ func (*ToolsService) SplitToolCallName(s string) (string, string, bool) {
 }
 
 func (s *ToolsService) RegisterNamespaceMetadata(namespace string, meta NamespaceMetadata) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if namespace == "" {
 		return fmt.Errorf("namespace must not be empty")
 	}
+
 	key := strings.ToLower(namespace)
 	s.nsMeta[key] = meta
+
 	return nil
 }
 
@@ -210,6 +228,7 @@ func (s *ToolsService) ListNamespaces() []NamespaceInfo {
 		for _, t := range tools {
 			defs = append(defs, t.ToolDefinition)
 		}
+
 		sort.Slice(defs, func(i, j int) bool { return defs[i].Name < defs[j].Name })
 
 		meta := s.nsMeta[ns]
@@ -223,12 +242,14 @@ func (s *ToolsService) ListNamespaces() []NamespaceInfo {
 			Tools:       defs,
 		})
 	}
+
 	return out
 }
 
 func (s *ToolsService) GetAllToolCalls() ([]plugins.ToolCall, error) {
 	calls := make([]plugins.ToolCall, 0)
 	for _, namespace := range s.namespaces {
+
 		for _, tool := range namespace {
 			calls = append(calls, plugins.ToolCall{
 				Name:        tool.FullName,
@@ -237,6 +258,7 @@ func (s *ToolsService) GetAllToolCalls() ([]plugins.ToolCall, error) {
 			})
 		}
 	}
+
 	return calls, nil
 }
 
