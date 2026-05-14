@@ -1067,6 +1067,62 @@
                     }
                 }
             },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permanently deletes a session and all its data. Only archived sessions may be deleted; archive the session first to preserve its history as a resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Delete session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID or name",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -1671,36 +1727,51 @@
                 }
             }
         },
-        "/v1/sessions/{session_id}/system": {
+        "/v1/system/dag/diff": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the system message (root of HEAD chain) for a session.",
+                "description": "Fetches both objects, computes a unified diff of their canonical JSON, and returns it as text/plain.",
                 "produces": [
-                    "application/json"
+                    "text/plain"
                 ],
                 "tags": [
-                    "sessions"
+                    "system"
                 ],
-                "summary": "Get system message",
+                "summary": "Diff two DAG objects",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
-                        "in": "path",
+                        "description": "Hash A",
+                        "name": "a",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Hash B",
+                        "name": "b",
+                        "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Unified diff",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
@@ -1713,40 +1784,119 @@
                         }
                     }
                 }
-            },
-            "patch": {
+            }
+        },
+        "/v1/system/dag/gc": {
+            "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Replaces the system message with template-rendered content. Creates a fork branch if the session already has messages; writes to HEAD directly on a fresh session.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Walks every session ref, marks reachable objects, and deletes (or reports) the rest. ?dry_run=true returns stats without deleting.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "sessions"
+                    "system"
                 ],
-                "summary": "Edit system message",
+                "summary": "Garbage-collect DAG objects",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Report without deleting",
+                        "name": "dry_run",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/system/dag/objects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "?list=false (default) returns {\"count\":N}. ?list=true streams NDJSON of {hash, shard}. ?prefix=\u003cxx\u003e filters by 2-char shard prefix.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "List or count DAG objects",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
+                        "description": "2-char shard prefix",
+                        "name": "prefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Stream object entries instead of counting",
+                        "name": "list",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/system/dag/objects/{hash}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the raw canonical JSON for a content-addressed object. ?pretty=true indents the output. Prefix matching (\u003e=4 hex chars) resolved server-side. Sets X-Forge-Object-Type header.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Fetch a DAG object",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Full or prefix (\u003e=4 chars) SHA-256 hex hash",
+                        "name": "hash",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "New content (template vars like ${session.id} are rendered)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/pipeline.systemEditRequest"
-                        }
+                        "type": "boolean",
+                        "description": "Indent output",
+                        "name": "pretty",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1778,39 +1928,28 @@
                 }
             }
         },
-        "/v1/sessions/{session_id}/system/regen": {
-            "post": {
+        "/v1/system/dag/objects/{hash}/type": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Re-assembles the system prompt from current plugin state and stores it as the new root MessageObj. On a fresh session (empty HEAD) it writes directly to HEAD; on an existing session it creates a fork branch.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Returns the type of a DAG object without fetching its full body.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "sessions"
+                    "system"
                 ],
-                "summary": "Regenerate system message",
+                "summary": "Detect object type",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Session ID",
-                        "name": "session_id",
+                        "description": "Full or prefix (\u003e=4 chars) SHA-256 hex hash",
+                        "name": "hash",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Optional overrides",
-                        "name": "body",
-                        "in": "body",
-                        "schema": {
-                            "$ref": "#/definitions/pipeline.systemRegenRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -1823,6 +1962,104 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/system/dag/sessions/{id}/log": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns NDJSON of {hash, short_hash, role, preview, created_at} walking from the ref tip to the root. Mirrors git log --oneline.",
+                "produces": [
+                    "application/x-ndjson"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Walk session log",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ref name (default: HEAD)",
+                        "name": "ref",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "NDJSON stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/system/dag/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Walks reachable objects from the given ref, re-hashes each blob, and reports mismatches or missing parents.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Verify DAG integrity",
+                "parameters": [
+                    {
+                        "description": "Verify options",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/system.verifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2166,9 +2403,6 @@
                 "content": {
                     "type": "string"
                 },
-                "no_store": {
-                    "type": "boolean"
-                },
                 "session_id": {
                     "type": "string"
                 }
@@ -2254,34 +2488,6 @@
                 "options_override": {
                     "type": "object",
                     "additionalProperties": {}
-                }
-            }
-        },
-        "pipeline.systemEditRequest": {
-            "type": "object",
-            "required": [
-                "content"
-            ],
-            "properties": {
-                "content": {
-                    "type": "string"
-                }
-            }
-        },
-        "pipeline.systemRegenRequest": {
-            "type": "object",
-            "properties": {
-                "plugins": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "system": {
-                    "type": "string"
-                },
-                "tools_verbosity": {
-                    "type": "string"
                 }
             }
         },
@@ -2591,6 +2797,20 @@
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "system.verifyRequest": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "type": "boolean"
+                },
+                "ref": {
+                    "type": "string"
+                },
+                "session_id": {
                     "type": "string"
                 }
             }

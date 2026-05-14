@@ -18,7 +18,7 @@ The SDK (`forge-sdk`) and plugin modules are published separately. This reposito
   parent. Concurrent dispatches on the same branch surface as `409 Conflict`,
   not lost writes.
 - **Replayable prompts** — the exact prompt sent to a provider is persisted
-  as a `PromptContext` blob and exposed via `/v1/contexts/:hash` +
+  as a `PromptContext` blob and exposed via `/v1/pipeline/contexts/:hash` +
   `forge replay`. Non-determinism becomes a debuggable, reproducible problem.
 - **Streaming pipeline** — bounded tool-execution loop, emitted to clients as
   NDJSON (`TokenEvent`, `ToolCallEvent`, `ToolResultEvent`, `DoneEvent`).
@@ -102,8 +102,6 @@ type Service interface {
 ```
 
 …registers itself as a singleton in `init()`, exposes a narrow interface for its peers to `fabric:"inject"`, and reads its HCL config via `fabric:"config:<block>"`. `internal/agent/agent.go` is the orchestrator that spins up long-lived servers (`ServerService`, `MetricsService`, `PipelineService`) and wires plugin subprocesses up to `ProviderService` / `ToolsService`.
-
-For a deeper dive including sequence diagrams and the full config/API surface, see [`CLAUDE.md`](CLAUDE.md).
 
 ## Installation
 
@@ -258,13 +256,11 @@ PATCH  /v1/sessions/:id/refs/:ref           DELETE /v1/sessions/:id/refs/:ref
 POST   /v1/sessions/:id/archive             # build envelope, store, flip immutable
 POST   /v1/sessions/:id/clone               # replay envelope into fresh live session
 
-# Pipeline: dispatch + preview
-POST   /v1/pipeline/dispatch                # NDJSON; ?ref=<name> | ?fork_from=<hash>
+# Pipeline: dispatch + observability
+POST   /v1/pipeline/commit                  # NDJSON; ?ref=<name> | ?fork_from=<hash>
 POST   /v1/pipeline/preview                 # render the prompt without sending it
-
-# Contexts: replayable PromptContext blobs
-GET    /v1/contexts/:hash                   /v1/contexts/:hash/materialized
-POST   /v1/contexts/:hash/replay            # NDJSON; no persistence
+GET    /v1/pipeline/contexts/:hash          /v1/pipeline/contexts/:hash/materialized
+POST   /v1/pipeline/contexts/:hash/replay   # NDJSON; no persistence
 
 # System: observability + maintenance
 GET    /v1/system/monitor                   # stream server logs; ?level=trace|debug|info|warn|error
@@ -336,11 +332,11 @@ assistant message it produced.
 
 ```bash
 # Inspect
-curl http://127.0.0.1:9280/v1/contexts/<hash>
-curl http://127.0.0.1:9280/v1/contexts/<hash>/materialized
+curl http://127.0.0.1:9280/v1/pipeline/contexts/<hash>
+curl http://127.0.0.1:9280/v1/pipeline/contexts/<hash>/materialized
 
 # Re-dispatch (no persistence). Pass {"model":"forge/other"} to A/B providers.
-curl -N -X POST http://127.0.0.1:9280/v1/contexts/<hash>/replay \
+curl -N -X POST http://127.0.0.1:9280/v1/pipeline/contexts/<hash>/replay \
   -d '{"model":"forge/another"}'
 ```
 

@@ -10,8 +10,6 @@ definitions:
     properties:
       content:
         type: string
-      no_store:
-        type: boolean
       session_id:
         type: string
     required:
@@ -71,24 +69,6 @@ definitions:
       options_override:
         additionalProperties: {}
         type: object
-    type: object
-  pipeline.systemEditRequest:
-    properties:
-      content:
-        type: string
-    required:
-    - content
-    type: object
-  pipeline.systemRegenRequest:
-    properties:
-      plugins:
-        items:
-          type: string
-        type: array
-      system:
-        type: string
-      tools_verbosity:
-        type: string
     type: object
   plugins.PluginDriverInfo:
     properties:
@@ -309,6 +289,15 @@ definitions:
       name:
         type: string
       title:
+        type: string
+    type: object
+  system.verifyRequest:
+    properties:
+      all:
+        type: boolean
+      ref:
+        type: string
+      session_id:
         type: string
     type: object
   tools.executeBody:
@@ -905,6 +894,43 @@ paths:
       tags:
       - sessions
   /v1/sessions/{session_id}:
+    delete:
+      description: Permanently deletes a session and all its data. Only archived sessions
+        may be deleted; archive the session first to preserve its history as a resource.
+      parameters:
+      - description: Session ID or name
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete session
+      tags:
+      - sessions
     get:
       description: Returns metadata for a single session by ID or name
       parameters:
@@ -1326,114 +1352,6 @@ paths:
       summary: Compact messages
       tags:
       - sessions
-  /v1/sessions/{session_id}/system:
-    get:
-      description: Returns the system message (root of HEAD chain) for a session.
-      parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get system message
-      tags:
-      - sessions
-    patch:
-      consumes:
-      - application/json
-      description: Replaces the system message with template-rendered content. Creates
-        a fork branch if the session already has messages; writes to HEAD directly
-        on a fresh session.
-      parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: New content (template vars like ${session.id} are rendered)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/pipeline.systemEditRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Edit system message
-      tags:
-      - sessions
-  /v1/sessions/{session_id}/system/regen:
-    post:
-      consumes:
-      - application/json
-      description: Re-assembles the system prompt from current plugin state and stores
-        it as the new root MessageObj. On a fresh session (empty HEAD) it writes directly
-        to HEAD; on an existing session it creates a fork branch.
-      parameters:
-      - description: Session ID
-        in: path
-        name: session_id
-        required: true
-        type: string
-      - description: Optional overrides
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/pipeline.systemRegenRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Regenerate system message
-      tags:
-      - sessions
   /v1/sessions/commit:
     post:
       consumes:
@@ -1521,6 +1439,231 @@ paths:
       summary: Preview pipeline input
       tags:
       - pipeline
+  /v1/system/dag/diff:
+    get:
+      description: Fetches both objects, computes a unified diff of their canonical
+        JSON, and returns it as text/plain.
+      parameters:
+      - description: Hash A
+        in: query
+        name: a
+        required: true
+        type: string
+      - description: Hash B
+        in: query
+        name: b
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Unified diff
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Diff two DAG objects
+      tags:
+      - system
+  /v1/system/dag/gc:
+    post:
+      description: Walks every session ref, marks reachable objects, and deletes (or
+        reports) the rest. ?dry_run=true returns stats without deleting.
+      parameters:
+      - description: Report without deleting
+        in: query
+        name: dry_run
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Garbage-collect DAG objects
+      tags:
+      - system
+  /v1/system/dag/objects:
+    get:
+      description: ?list=false (default) returns {"count":N}. ?list=true streams NDJSON
+        of {hash, shard}. ?prefix=<xx> filters by 2-char shard prefix.
+      parameters:
+      - description: 2-char shard prefix
+        in: query
+        name: prefix
+        type: string
+      - description: Stream object entries instead of counting
+        in: query
+        name: list
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List or count DAG objects
+      tags:
+      - system
+  /v1/system/dag/objects/{hash}:
+    get:
+      description: Returns the raw canonical JSON for a content-addressed object.
+        ?pretty=true indents the output. Prefix matching (>=4 hex chars) resolved
+        server-side. Sets X-Forge-Object-Type header.
+      parameters:
+      - description: Full or prefix (>=4 chars) SHA-256 hex hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      - description: Indent output
+        in: query
+        name: pretty
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Fetch a DAG object
+      tags:
+      - system
+  /v1/system/dag/objects/{hash}/type:
+    get:
+      description: Returns the type of a DAG object without fetching its full body.
+      parameters:
+      - description: Full or prefix (>=4 chars) SHA-256 hex hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Detect object type
+      tags:
+      - system
+  /v1/system/dag/sessions/{id}/log:
+    get:
+      description: Returns NDJSON of {hash, short_hash, role, preview, created_at}
+        walking from the ref tip to the root. Mirrors git log --oneline.
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Ref name (default: HEAD)'
+        in: query
+        name: ref
+        type: string
+      produces:
+      - application/x-ndjson
+      responses:
+        "200":
+          description: NDJSON stream
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Walk session log
+      tags:
+      - system
+  /v1/system/dag/verify:
+    post:
+      consumes:
+      - application/json
+      description: Walks reachable objects from the given ref, re-hashes each blob,
+        and reports mismatches or missing parents.
+      parameters:
+      - description: Verify options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/system.verifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Verify DAG integrity
+      tags:
+      - system
   /v1/system/gc:
     post:
       description: Walks every session ref, marks reachable objects, and deletes everything
