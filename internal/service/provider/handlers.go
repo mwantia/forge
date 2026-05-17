@@ -2,6 +2,7 @@ package provider
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -131,5 +132,57 @@ func (s *ProviderService) handleGetModel() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, model)
+	}
+}
+
+// handleEmbed godoc
+//
+//	@Summary		Embed text
+//	@Description	Returns embedding vectors for the given content using the specified model.
+//	@Description	model accepts "provider/model" or a forge alias (e.g. "forge/my-embed").
+//	@Tags			provider
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		map[string]any	true	"{ model: string, content: string }"
+//	@Success		200		{object}	map[string]any
+//	@Failure		400		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		BearerAuth
+//	@Router			/v1/provider/embed [post]
+func (s *ProviderService) handleEmbed() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			Model   string `json:"model" binding:"required"`
+			Content string `json:"content" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx := c.Request.Context()
+
+		// Resolve forge alias or split "provider/model".
+		var providerName, modelName string
+		if strings.HasPrefix(req.Model, "forge/") {
+			p, m, err := s.ResolveEmbedModel(ctx, strings.TrimPrefix(req.Model, "forge/"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			providerName, modelName = p, m
+		} else if p, m, ok := strings.Cut(req.Model, "/"); ok {
+			providerName, modelName = p, m
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "model must be \"provider/model\" or \"forge/<alias>\""})
+			return
+		}
+
+		vecs, err := s.Embed(ctx, providerName, modelName, req.Content)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"model": req.Model, "vectors": vecs})
 	}
 }

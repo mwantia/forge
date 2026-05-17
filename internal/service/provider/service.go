@@ -50,6 +50,7 @@ func (s *ProviderService) Init(ctx context.Context) error {
 	{
 		group.GET("/", s.handleListProviders())
 		group.GET("/models", s.handleListAllModels())
+		group.POST("/embed", s.handleEmbed())
 		group.GET("/:name", s.handleGetProvider())
 		group.GET("/:name/models", s.handleListModels())
 		group.GET("/:name/models/:model", s.handleGetModel())
