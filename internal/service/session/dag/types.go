@@ -1,13 +1,14 @@
 // Package dag implements the immutable, content-addressed Merkle DAG that
-// backs Forge sessions. See docs/03-proposal-merkle-DAG-concept.md.
+// backs Forge sessions and resources. See docs/03-proposal-merkle-DAG-concept.md.
 //
-// Three object kinds keyed by SHA-256 of canonical JSON:
+// Object kinds keyed by SHA-256 of canonical JSON:
 //   - MessageObj    one conversation turn
+//   - ResourceObj   one immutable revision of a named resource
 //   - PromptContext the materialized prompt sent to a provider
 //   - ToolCatalog   snapshot of available tools at dispatch time
 //
-// Mutable refs ("HEAD" and named branches) live in the per-session ref store
-// and point at message hashes.
+// Mutable refs ("HEAD" and named branches for sessions; named resource refs)
+// live in the ref store and point at content hashes.
 package dag
 
 import (
@@ -77,3 +78,33 @@ type ToolDefinition struct {
 }
 
 func (t *ToolCatalog) Hash() (string, error) { return contenthash.Hash(t) }
+
+// ResourceObj is one immutable revision of a named resource's content.
+// Identity = sha256(canonical_json(ResourceObj)). ContentType lets the recall
+// layer choose the right embedding strategy without inspecting the content.
+// ParentHash links revisions into a version chain for history, diff, and revert.
+type ResourceObj struct {
+	ContentType string `json:"content_type"`
+	Content     string `json:"content"`
+	ParentHash  string `json:"parent_hash,omitempty"`
+}
+
+func (r *ResourceObj) Hash() (string, error) { return contenthash.Hash(r) }
+
+// ResourceMeta is the mutable sidecar for a ResourceObj revision.
+// Never folded into the hashed object so tags and metadata can change
+// without invalidating the content hash or breaking deduplication.
+// Layout: resources/<namespace>/log/<020d-unix_nano>_<hash>.json
+type ResourceMeta struct {
+	Hash      string         `json:"hash"`
+	Namespace string         `json:"namespace"`
+	Name      string         `json:"name"`
+	Tags      []string       `json:"tags,omitempty"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
+	CreatedAt time.Time      `json:"created_at"`
+
+	// Set after RecallPlugin.Index succeeds. Enables incremental rebuilds:
+	// only re-index entries where IndexedAt is nil or before CreatedAt.
+	IndexedAt *time.Time `json:"indexed_at,omitempty"`
+	IndexedBy string     `json:"indexed_by,omitempty"`
+}

@@ -224,6 +224,91 @@ func (r *RefStore) listRecursive(ctx context.Context, sessionID, storagePrefix, 
 	return nil
 }
 
+// ReadKey returns the hash stored at an arbitrary storage key, or ErrNotFound.
+// Symbolic refs are NOT followed — this is a raw read for non-session ref spaces.
+func (r *RefStore) ReadKey(ctx context.Context, key string) (string, error) {
+	b, err := r.Backend.ReadRaw(ctx, key)
+	if err != nil {
+		return "", err
+	}
+	if len(b) == 0 {
+		return "", ErrNotFound
+	}
+	return strings.TrimSpace(string(b)), nil
+}
+
+// WriteKey unconditionally writes hash at key.
+func (r *RefStore) WriteKey(ctx context.Context, key, hash string) error {
+	m := r.lockFor(key)
+	m.Lock()
+	defer m.Unlock()
+	return r.Backend.WriteRaw(ctx, key, []byte(hash))
+}
+
+// CASKey performs compare-and-swap at key. Returns CASConflict on mismatch.
+// Pass expected="" to assert the key does not yet exist.
+func (r *RefStore) CASKey(ctx context.Context, key, expected, next string) error {
+	m := r.lockFor(key)
+	m.Lock()
+	defer m.Unlock()
+
+	cur, err := r.Backend.ReadRaw(ctx, key)
+	if err != nil {
+		return err
+	}
+	curStr := ""
+	if cur != nil {
+		curStr = string(bytes.TrimSpace(cur))
+	}
+	if curStr != expected {
+		return &CASConflict{Session: key, Ref: key, Expected: expected, Actual: curStr}
+	}
+	return r.Backend.WriteRaw(ctx, key, []byte(next))
+}
+
+// DeleteKey removes the ref at key. Missing keys are not an error.
+func (r *RefStore) DeleteKey(ctx context.Context, key string) error {
+	m := r.lockFor(key)
+	m.Lock()
+	defer m.Unlock()
+	return r.Backend.DeleteEntry(ctx, key)
+}
+
+// ListKeys returns a name→hash map for all refs under prefix (recursive).
+// The name is the entry path relative to prefix.
+func (r *RefStore) ListKeys(ctx context.Context, prefix string) (map[string]string, error) {
+	out := make(map[string]string)
+	if err := r.listKeysRecursive(ctx, prefix, "", out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *RefStore) listKeysRecursive(ctx context.Context, storagePrefix, relPrefix string, out map[string]string) error {
+	entries, err := r.Backend.ListEntry(ctx, storagePrefix)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if sub, ok := strings.CutSuffix(e, "/"); ok {
+			if err := r.listKeysRecursive(ctx, storagePrefix+e, relPrefix+sub+"/", out); err != nil {
+				return err
+			}
+			continue
+		}
+		key := storagePrefix + e
+		hash, err := r.ReadKey(ctx, key)
+		if err != nil {
+			if err == ErrNotFound {
+				continue
+			}
+			return err
+		}
+		out[relPrefix+e] = hash
+	}
+	return nil
+}
+
 // Delete removes a ref. Missing refs are not an error.
 func (r *RefStore) Delete(ctx context.Context, sessionID, name string) error {
 	key := refKey(sessionID, name)
@@ -239,12 +324,15 @@ func (r *RefStore) Rename(ctx context.Context, sessionID, oldName, newName strin
 	if oldName == "" || newName == "" {
 		return fmt.Errorf("dag: empty ref name in rename")
 	}
+	if oldName == newName {
+		return nil
+	}
 
 	// Lock both keys in lexicographic order to avoid deadlock.
 	oldKey := refKey(sessionID, oldName)
 	newKey := refKey(sessionID, newName)
 	first, second := oldKey, newKey
-	if bytes.Compare([]byte(first), []byte(second)) > 0 {
+	if first > second {
 		first, second = second, first
 	}
 	r.lockFor(first).Lock()

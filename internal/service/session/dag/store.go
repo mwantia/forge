@@ -200,3 +200,30 @@ func (s *ObjectStore) GetToolCatalog(ctx context.Context, hash string) (*ToolCat
 	}
 	return &t, nil
 }
+
+// PutResource canonicalizes r, hashes it, stores via PutIfAbsent, and
+// returns the hash. Identical content stored twice is a no-op.
+func (s *ObjectStore) PutResource(ctx context.Context, r *ResourceObj) (string, error) {
+	blob, err := contenthash.Canonical(r)
+	if err != nil {
+		return "", err
+	}
+	hash := contenthash.HashBytes(blob)
+	if err := s.PutIfAbsent(ctx, hash, blob); err != nil {
+		return "", err
+	}
+	return hash, nil
+}
+
+// GetResource decodes the ResourceObj at hash.
+func (s *ObjectStore) GetResource(ctx context.Context, hash string) (*ResourceObj, error) {
+	blob, err := s.GetRaw(ctx, hash)
+	if err != nil {
+		return nil, err
+	}
+	var r ResourceObj
+	if err := json.Unmarshal(blob, &r); err != nil {
+		return nil, fmt.Errorf("dag: decode resource %s: %w", hash, err)
+	}
+	return &r, nil
+}
