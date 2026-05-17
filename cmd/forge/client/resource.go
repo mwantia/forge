@@ -1,13 +1,8 @@
 package client
 
 import (
-	"fmt"
-	"os"
-	"strings"
-	"text/tabwriter"
-
 	"github.com/mwantia/forge-sdk/pkg/api"
-	"github.com/mwantia/forge/cmd/forge/helpers"
+	"github.com/mwantia/forge/cmd/forge/client/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -15,98 +10,29 @@ func NewResourceCommand() *cobra.Command {
 	var httpAddr, httpToken string
 
 	cmd := &cobra.Command{
-		Use:   "resource",
-		Short: "Inspect forge resources",
-		Long: "Resources are key-value entries stored by the resource backend, used for\n" +
-			"long-term memory and session archives. Use these commands to list and inspect\n" +
-			"resources by namespace.",
+		Use:   "resources",
+		Short: "Manage forge resources",
+		Long: "Resources are content-addressed entries in the built-in long-term store,\n" +
+			"organized under a forge/ namespace tree:\n\n" +
+			"  /forge/sessions/<id>/memories    — facts, preferences, decisions\n" +
+			"  /forge/sessions/<id>/references  — cited docs, links, specs\n" +
+			"  /forge/sessions/<id>/online      — fetched web content\n" +
+			"  /forge/global                    — cross-session agent-wide facts\n\n" +
+			"Memories share a single HNSW semantic graph across all sessions;\n" +
+			"references and online content share another.",
 	}
 
-	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
-	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token for the forge agent (env: FORGE_HTTP_TOKEN)")
+	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Forge agent address (env: FORGE_HTTP_ADDR)")
+	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token (env: FORGE_HTTP_TOKEN)")
 
 	client := func() *api.Client { return api.New(httpAddr, httpToken) }
 
-	cmd.AddCommand(newResourceListCmd(client))
-	cmd.AddCommand(newResourcePreviewCmd(client))
+	cmd.AddCommand(resources.ListCmd(client))
+	cmd.AddCommand(resources.GetCmd(client))
+	cmd.AddCommand(resources.StoreCmd(client))
+	cmd.AddCommand(resources.RecallCmd(client))
+	cmd.AddCommand(resources.ForgetCmd(client))
+	cmd.AddCommand(resources.HistoryCmd(client))
 
-	return cmd
-}
-
-func newResourceListCmd(client func() *api.Client) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list <namespace>",
-		Short: "List resources in a namespace",
-		Long:  "List all resource entries in the given namespace, showing ID and a truncated content preview.",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			resources, err := client().ListResources(cmd.Context(), args[0])
-			if err != nil {
-				return err
-			}
-			if len(resources) == 0 {
-				fmt.Println("No resources found.")
-				return nil
-			}
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tPREVIEW")
-			for _, r := range resources {
-				preview := strings.ReplaceAll(r.Content, "\n", " ")
-				if len(preview) > 80 {
-					preview = preview[:77] + "..."
-				}
-				fmt.Fprintf(w, "%s\t%s\n", r.ID, preview)
-			}
-			return w.Flush()
-		},
-	}
-}
-
-func newResourcePreviewCmd(client func() *api.Client) *cobra.Command {
-	var render bool
-
-	cmd := &cobra.Command{
-		Use:   "preview <namespace> <id>",
-		Short: "Preview a memory resource by id",
-		Long: "Fetch and print the full content of a resource by namespace and ID.\n" +
-			"Metadata fields are printed as a YAML front-matter header.\n" +
-			"Pass --render to apply markdown rendering to the content.",
-		Args: cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			r, err := client().GetResource(cmd.Context(), args[0], args[1])
-			if err != nil {
-				return err
-			}
-
-			var sb strings.Builder
-			sb.WriteString("---\n")
-
-			fmt.Fprintf(&sb, "id: %s\n", r.ID)
-			fmt.Fprintf(&sb, "score: %.2f\n", r.Score)
-
-			if len(r.Metadata) > 0 {
-				sb.WriteString("metadata:\n")
-				for k, v := range r.Metadata {
-					fmt.Fprintf(&sb, "  %s: %v\n", k, v)
-				}
-			}
-
-			sb.WriteString("---\n\n")
-			sb.WriteString(r.Content)
-
-			result := sb.String()
-
-			if render {
-				markdown := helpers.RenderMarkdown(result, false)
-				fmt.Println(markdown)
-			} else {
-				fmt.Println(result)
-			}
-
-			return nil
-		},
-	}
-
-	cmd.Flags().BoolVar(&render, "render", false, "Print raw content without markdown rendering")
 	return cmd
 }
