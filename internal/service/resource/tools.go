@@ -16,17 +16,18 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "content")
 		}
-		path := s.resolvePath(ctx, req.Arguments)
+		path := s.resolvePathFromType(ctx, req.Arguments, false)
+		name := argStringOptional(req.Arguments, "name")
 		tags := argStringSlice(req.Arguments, "tags")
 		meta, _ := req.Arguments["metadata"].(map[string]any)
-		res, err := s.Store(ctx, path, content, tags, meta)
+		res, err := s.Store(ctx, path, name, content, tags, meta)
 		if err != nil {
 			return nil, err
 		}
 		return &plugins.ExecuteResponse{Result: res}, nil
 
 	case "recall":
-		path := s.resolvePath(ctx, req.Arguments)
+		path := s.resolvePathFromType(ctx, req.Arguments, true)
 		q, err := recallQueryFromArgs(req.Arguments, path)
 		if err != nil {
 			return nil, err
@@ -38,29 +39,54 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		return &plugins.ExecuteResponse{Result: res}, nil
 
 	case "forget":
-		id, ok := argString(req.Arguments, "id")
+		name, ok := argString(req.Arguments, "name")
 		if !ok {
-			return nil, fmt.Errorf("missing argument %q", "id")
+			return nil, fmt.Errorf("missing argument %q", "name")
 		}
-		path := s.resolvePath(ctx, req.Arguments)
-		if err := s.Forget(ctx, path, id); err != nil {
+		path := s.resolvePathFromType(ctx, req.Arguments, false)
+		if err := s.Forget(ctx, path, name); err != nil {
 			return nil, err
 		}
-		return &plugins.ExecuteResponse{Result: map[string]any{"id": id, "path": path}}, nil
+		return &plugins.ExecuteResponse{Result: map[string]any{"name": name, "path": path}}, nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", req.Tool, req.CallID)
 }
 
-func (s *ResourceService) resolvePath(ctx context.Context, args map[string]any) string {
-	if v, ok := argString(args, "path"); ok {
-		return v
-	}
-	if id := sessionctx.From(ctx); id != "" {
-		return "/sessions/" + id
-	}
+// resolvePathFromType maps the "type" argument to a canonical storage path.
+// allowAny enables the "any" glob type (recall only); store/forget pass false.
+func (s *ResourceService) resolvePathFromType(ctx context.Context, args map[string]any, allowAny bool) string {
+	typ := argStringOptional(args, "type")
+	sessionID := sessionctx.From(ctx)
 
-	return "/"
+	switch typ {
+	case "memory":
+		if sessionID != "" {
+			return "/forge/sessions/" + sessionID + "/memories"
+		}
+		return "/forge/global/memories"
+	case "reference":
+		if sessionID != "" {
+			return "/forge/sessions/" + sessionID + "/references"
+		}
+		return "/forge/global/references"
+	case "online":
+		if sessionID != "" {
+			return "/forge/sessions/" + sessionID + "/online"
+		}
+		return "/forge/global/online"
+	case "global":
+		return "/forge/global"
+	default:
+		// "any" or missing type — glob covers all forge-managed paths.
+		if allowAny {
+			return "/forge/**"
+		}
+		if sessionID != "" {
+			return "/forge/sessions/" + sessionID
+		}
+		return "/forge"
+	}
 }
 
 // recallQueryFromArgs parses the flat tool argument map into a RecallQuery.

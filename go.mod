@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mwantia/forge-plugin-consul v0.0.0-00010101000000-000000000000
+	github.com/mwantia/forge-plugin-discord v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-nomad v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-openai v1.0.0
 	github.com/mwantia/forge-plugin-plane v0.0.0-00010101000000-000000000000
@@ -17,9 +18,11 @@ require (
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-unifi v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-sdk v0.1.0
+	github.com/sergi/go-diff v1.4.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
+	github.com/viterin/vek v0.4.2
 	github.com/zclconf/go-cty v1.18.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -38,6 +41,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -47,6 +51,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/chewxy/math32 v1.10.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/fatih/color v1.16.0 // indirect
@@ -100,6 +105,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/viterin/partial v1.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
@@ -160,3 +166,5 @@ replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-
 replace github.com/mwantia/forge-plugin-nomad => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/nomad
 
 replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
+
+replace github.com/mwantia/forge-plugin-discord => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/discord

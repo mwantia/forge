@@ -327,7 +327,7 @@ func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID
 
 	const resourceRecallLimit = 5
 	hits, err := s.resources.Recall(ctx, sdkplugins.RecallQuery{
-		Path:  "/sessions/" + sessionID,
+		Path:  "/forge/sessions/" + sessionID + "/memories",
 		Query: query,
 		Limit: resourceRecallLimit,
 	})

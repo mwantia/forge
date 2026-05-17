@@ -3,44 +3,31 @@ package resource
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strings"
-	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/pkg/container"
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
-	"github.com/mwantia/forge/internal/service/plugins"
 	"github.com/mwantia/forge/internal/service/provider"
 	"github.com/mwantia/forge/internal/service/server"
 	"github.com/mwantia/forge/internal/service/storage"
 	"github.com/mwantia/forge/internal/service/tools"
 )
 
-// mountedStore pairs a path prefix with the store that owns it.
-type mountedStore struct {
-	prefix string       // normalized: leading slash, no trailing slash
-	store  resourceStore
-	plugin string       // "file" or driver name, for status display
-}
-
 type ResourceService struct {
 	service.UnimplementedService
 
-	mu           sync.RWMutex
-	mounts       []mountedStore // sorted longest-prefix-first
-	defaultStore resourceStore  // built-in file store, always present
+	defaultStore resourceStore // built-in DAG store, sole storage backend
+	idx          *vectorIndex  // shared flat vector index for semantic recall
 
-	pluginsReg plugins.PluginsRegistry   `fabric:"inject"`
-	provider   provider.ProviderRegistar `fabric:"inject"`
-	metrics    metrics.MetricsRegistar   `fabric:"inject"`
-	router     server.HttpRouter         `fabric:"inject"`
-	storage    storage.StorageBackend    `fabric:"inject"`
-	tools      tools.ToolsRegistar       `fabric:"inject"`
-	config     ResourceConfig            `fabric:"config:resource"`
-	logger     hclog.Logger              `fabric:"logger:resource"`
+	provider provider.ProviderRegistar `fabric:"inject"`
+	metrics  metrics.MetricsRegistar   `fabric:"inject"`
+	router   server.HttpRouter         `fabric:"inject"`
+	storage  storage.StorageBackend    `fabric:"inject"`
+	tools    tools.ToolsRegistar       `fabric:"inject"`
+	config   ResourceConfig            `fabric:"config:resource"`
+	logger   hclog.Logger              `fabric:"logger:resource"`
 
 	embedProvider string
 	embedModel    string
@@ -62,7 +49,8 @@ func (s *ResourceService) Init(ctx context.Context) error {
 
 	// defaultStore is always the built-in file store. Serve() may add plugin
 	// mounts on top, but requests arriving before Serve() completes are safe.
-	s.defaultStore = &fileResourceStore{storage: s.storage}
+	s.defaultStore = newDagResourceStore(s.storage)
+	s.idx = newVectorIndex()
 
 	if s.config.EmbedModel != "" {
 		p, m, err := s.provider.ResolveEmbedModel(ctx, s.config.EmbedModel)
@@ -105,83 +93,14 @@ func (s *ResourceService) Init(ctx context.Context) error {
 		group.GET("/*path", s.handleListOrGet())
 		group.PUT("/*path", s.handleStoreResource())
 		group.POST("/*path", s.handleRecallResources())
+		group.PATCH("/*path", s.handlePatchResource())
 		group.DELETE("/*path", s.handleForgetResource())
 	}
 
 	return nil
 }
 
-func (s *ResourceService) Serve(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Collect all resource-capable plugin drivers.
-	pluginMap := map[string]sdkplugins.ResourcePlugin{}
-	for _, driver := range s.pluginsReg.ListDrivers() {
-		if driver.Capabilities == nil || driver.Capabilities.Resource == nil {
-			continue
-		}
-		p, err := driver.Driver.GetResourcePlugin(ctx)
-		if err != nil {
-			s.logger.Warn("Failed to get resource plugin", "driver", driver.Info.Name, "error", err)
-			continue
-		}
-		if p == nil {
-			continue
-		}
-		pluginMap[driver.Info.Name] = p
-	}
-
-	// Always keep defaultStore pointing at the file store so that Init-time
-	// assignment stays coherent after Serve runs.
-	s.defaultStore = &fileResourceStore{storage: s.storage}
-
-	if len(s.config.Mounts) == 0 {
-		s.logger.Debug("No resource mount blocks; all paths use built-in file store")
-		return nil
-	}
-
-	seen := map[string]struct{}{}
-	mounts := make([]mountedStore, 0, len(s.config.Mounts))
-
-	for _, mc := range s.config.Mounts {
-		// Normalize: ensure single leading slash, no trailing slash.
-		normalized := "/" + strings.Trim(mc.Path, "/")
-
-		if _, dup := seen[normalized]; dup {
-			return fmt.Errorf("resource: duplicate mount prefix %q", normalized)
-		}
-		seen[normalized] = struct{}{}
-
-		var store resourceStore
-		var pluginLabel string
-
-		if mc.Plugin == "" || mc.Plugin == "file" {
-			store = &fileResourceStore{storage: s.storage}
-			pluginLabel = "file"
-		} else {
-			p, ok := pluginMap[mc.Plugin]
-			if !ok {
-				return fmt.Errorf("resource mount %q: plugin %q not found or lacks resource capability", normalized, mc.Plugin)
-			}
-			store = &pluginResourceStore{plugin: p}
-			pluginLabel = mc.Plugin
-		}
-
-		mounts = append(mounts, mountedStore{
-			prefix: normalized,
-			store:  store,
-			plugin: pluginLabel,
-		})
-		s.logger.Info("Mounted resource store", "path", normalized, "plugin", pluginLabel)
-	}
-
-	// Longest prefix first so resolveStore picks the most specific match.
-	sort.SliceStable(mounts, func(i, j int) bool {
-		return len(mounts[i].prefix) > len(mounts[j].prefix)
-	})
-
-	s.mounts = mounts
+func (s *ResourceService) Serve(_ context.Context) error {
 	return nil
 }
 
