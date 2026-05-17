@@ -12,29 +12,7 @@ import (
 	"github.com/mwantia/forge/internal/service/storage"
 )
 
-// sessionBackend is the storage surface that SessionService consumes.
-// SaveMessage returns the persisted message hash so callers can advance
-// their own state (e.g. PromptContext.MessageHashes) without re-hashing.
-type SessionBackend interface {
-	LoadSession(ctx context.Context, id string) (*SessionMetadata, error)
-	SaveSession(ctx context.Context, s *SessionMetadata) error
-	DeleteSession(ctx context.Context, id string) error
-	ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error)
-	ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error)
-	FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error)
-
-	LoadMessage(ctx context.Context, sessionID, hashOrPrefix string) (*Message, error)
-	SaveMessage(ctx context.Context, sessionID, ref string, msg *Message) (string, error)
-	ListMessages(ctx context.Context, sessionID string, offset, limit int) ([]*Message, error)
-	ListMessagesFromRef(ctx context.Context, sessionID, branch string, offset, limit int) ([]*Message, error)
-	CountMessages(ctx context.Context, sessionID string) (int, error)
-
-	CompactToolsMessages(ctx context.Context, sessionID string) (int, error)
-	HeadHash(ctx context.Context, sessionID string) (string, error)
-	ResolvePrefix(ctx context.Context, sessionID, prefix string) (string, error)
-}
-
-// dagSessionStore persists sessions on the content-addressed Merkle DAG
+// DagStore persists sessions on the content-addressed Merkle DAG
 // (docs/03-proposal-merkle-DAG-concept.md). Objects (MessageObj,
 // PromptContext, ToolCatalog) live in the global object pool; per-session
 // state is the SessionMetadata, the refs, and the audit log.
@@ -45,14 +23,14 @@ type SessionBackend interface {
 //	sessions/<id>/session.json                        # SessionMetadata
 //	sessions/<id>/refs/<ref>                          # message-hash bytes
 //	sessions/<id>/log/<020d-unix_nano>_<hash>.json    # MessageMeta sidecar
-type DagSessionStore struct {
+type DagStore struct {
 	storage storage.StorageBackend
 	objects *dag.ObjectStore
 	refs    *dag.RefStore
 }
 
-func NewDagSessionStore(s storage.StorageBackend) *DagSessionStore {
-	return &DagSessionStore{
+func NewDagStore(s storage.StorageBackend) *DagStore {
+	return &DagStore{
 		storage: s,
 		objects: dag.NewObjectStore(s),
 		refs:    dag.NewRefStore(s),
@@ -61,7 +39,7 @@ func NewDagSessionStore(s storage.StorageBackend) *DagSessionStore {
 
 // --- session metadata ---
 
-func (m *DagSessionStore) LoadSession(ctx context.Context, id string) (*SessionMetadata, error) {
+func (m *DagStore) LoadSession(ctx context.Context, id string) (*SessionMetadata, error) {
 	meta := &SessionMetadata{}
 	if err := m.storage.ReadJson(ctx, constructSessionKey(id), meta); err != nil {
 		return nil, fmt.Errorf("failed to load session %q: %w", id, err)
@@ -74,7 +52,7 @@ func (m *DagSessionStore) LoadSession(ctx context.Context, id string) (*SessionM
 	return meta, nil
 }
 
-func (m *DagSessionStore) SaveSession(ctx context.Context, s *SessionMetadata) error {
+func (m *DagStore) SaveSession(ctx context.Context, s *SessionMetadata) error {
 	if err := m.storage.WriteJson(ctx, constructSessionKey(s.ID), s); err != nil {
 		return fmt.Errorf("failed to save session %q: %w", s.ID, err)
 	}
@@ -82,7 +60,7 @@ func (m *DagSessionStore) SaveSession(ctx context.Context, s *SessionMetadata) e
 	return nil
 }
 
-func (m *DagSessionStore) DeleteSession(ctx context.Context, id string) error {
+func (m *DagStore) DeleteSession(ctx context.Context, id string) error {
 	if err := m.storage.DeletePrefix(ctx, constructSessionPrefix(id)); err != nil {
 		return fmt.Errorf("failed to delete session %q: %w", id, err)
 	}
@@ -90,7 +68,7 @@ func (m *DagSessionStore) DeleteSession(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *DagSessionStore) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+func (m *DagStore) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
 	entries, err := m.storage.ListEntry(ctx, "sessions/")
 	if err != nil {
 		return nil, err
@@ -137,11 +115,11 @@ func (m *DagSessionStore) ListParentSessions(ctx context.Context, parentID strin
 	return sessions, nil
 }
 
-func (m *DagSessionStore) ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+func (m *DagStore) ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error) {
 	return m.ListParentSessions(ctx, "", archived, offset, limit)
 }
 
-func (m *DagSessionStore) FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error) {
+func (m *DagStore) FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error) {
 	entries, err := m.storage.ListEntry(ctx, "sessions/")
 	if err != nil {
 		return nil, err
@@ -166,7 +144,7 @@ func (m *DagSessionStore) FindSessionByName(ctx context.Context, name string) (*
 	return nil, nil
 }
 
-func (m *DagSessionStore) HeadHash(ctx context.Context, sessionID string) (string, error) {
+func (m *DagStore) HeadHash(ctx context.Context, sessionID string) (string, error) {
 	hash, err := m.refs.Read(ctx, sessionID, dag.HEAD)
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
@@ -183,7 +161,7 @@ func (m *DagSessionStore) HeadHash(ctx context.Context, sessionID string) (strin
 // log-entry meta sidecar, and CAS-advances ref from its current value to
 // the new hash. Empty ref defaults to HEAD. Returns the new hash and
 // mutates msg.Hash + msg.ParentHash + msg.CreatedAt for the caller.
-func (m *DagSessionStore) SaveMessage(ctx context.Context, sessionID, ref string, msg *Message) (string, error) {
+func (m *DagStore) SaveMessage(ctx context.Context, sessionID, ref string, msg *Message) (string, error) {
 	if ref == "" {
 		ref = dag.HEAD
 	}
@@ -228,7 +206,7 @@ func (m *DagSessionStore) SaveMessage(ctx context.Context, sessionID, ref string
 
 // LoadMessage returns the message at hashOrPrefix. Prefix matching is
 // delegated to a log-scan when a non-full hash is supplied.
-func (m *DagSessionStore) LoadMessage(ctx context.Context, sessionID, hashOrPrefix string) (*Message, error) {
+func (m *DagStore) LoadMessage(ctx context.Context, sessionID, hashOrPrefix string) (*Message, error) {
 	hash := hashOrPrefix
 	if len(hash) != 64 {
 		resolved, err := m.ResolvePrefix(ctx, sessionID, hashOrPrefix)
@@ -250,7 +228,7 @@ func (m *DagSessionStore) LoadMessage(ctx context.Context, sessionID, hashOrPref
 
 // ListMessages walks HEAD chronologically. offset skips the most-recent
 // messages; limit caps the result. limit==0 means "all".
-func (m *DagSessionStore) ListMessages(ctx context.Context, sessionID string, offset, limit int) ([]*Message, error) {
+func (m *DagStore) ListMessages(ctx context.Context, sessionID string, offset, limit int) ([]*Message, error) {
 	head, err := m.HeadHash(ctx, sessionID)
 	if err != nil {
 		return nil, err
@@ -265,7 +243,10 @@ func (m *DagSessionStore) ListMessages(ctx context.Context, sessionID string, of
 		return nil, err
 	}
 
-	metaByHash, _ := m.loadAllMetas(ctx, sessionID)
+	metaByHash, err := m.loadAllMetas(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]*Message, 0, len(entries))
 	for _, e := range entries {
 		out = append(out, fromDagMessageObj(e.Hash, e.Message, metaByHash[e.Hash]))
@@ -274,7 +255,7 @@ func (m *DagSessionStore) ListMessages(ctx context.Context, sessionID string, of
 	return out, nil
 }
 
-func (m *DagSessionStore) ListMessagesFromRef(ctx context.Context, sessionID, branch string, offset, limit int) ([]*Message, error) {
+func (m *DagStore) ListMessagesFromRef(ctx context.Context, sessionID, branch string, offset, limit int) ([]*Message, error) {
 	tip, err := m.refs.Read(ctx, sessionID, branch)
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
@@ -293,7 +274,10 @@ func (m *DagSessionStore) ListMessagesFromRef(ctx context.Context, sessionID, br
 		return nil, err
 	}
 
-	metaByHash, _ := m.loadAllMetas(ctx, sessionID)
+	metaByHash, err := m.loadAllMetas(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]*Message, 0, len(entries))
 	for _, e := range entries {
 		out = append(out, fromDagMessageObj(e.Hash, e.Message, metaByHash[e.Hash]))
@@ -302,7 +286,7 @@ func (m *DagSessionStore) ListMessagesFromRef(ctx context.Context, sessionID, br
 	return out, nil
 }
 
-func (m *DagSessionStore) CountMessages(ctx context.Context, sessionID string) (int, error) {
+func (m *DagStore) CountMessages(ctx context.Context, sessionID string) (int, error) {
 	head, err := m.HeadHash(ctx, sessionID)
 	if err != nil {
 		return 0, err
@@ -324,7 +308,7 @@ func (m *DagSessionStore) CountMessages(ctx context.Context, sessionID string) (
 // and assistant turns whose only payload was tool calls removed. Because
 // the DAG is immutable, the old chain stays in the object store as
 // orphaned blobs (collected by `forge gc` in a future phase).
-func (m *DagSessionStore) CompactToolsMessages(ctx context.Context, sessionID string) (int, error) {
+func (m *DagStore) CompactToolsMessages(ctx context.Context, sessionID string) (int, error) {
 	head, err := m.HeadHash(ctx, sessionID)
 	if err != nil {
 		return 0, err
@@ -342,7 +326,10 @@ func (m *DagSessionStore) CompactToolsMessages(ctx context.Context, sessionID st
 	deleted := 0
 	parent := ""
 	var newHead string
-	metaByHash, _ := m.loadAllMetas(ctx, sessionID)
+	metaByHash, err := m.loadAllMetas(ctx, sessionID)
+	if err != nil {
+		return 0, err
+	}
 
 	// Walk chronologically; rebuild a new chain.
 	for _, e := range entries {
@@ -415,11 +402,11 @@ func logKey(sessionID string, createdAt time.Time, hash string) string {
 	return fmt.Sprintf("%s%020d_%s.json", logPrefix(sessionID), createdAt.UnixNano(), hash)
 }
 
-func (m *DagSessionStore) writeLogEntry(ctx context.Context, sessionID string, meta *dag.MessageMeta) error {
+func (m *DagStore) writeLogEntry(ctx context.Context, sessionID string, meta *dag.MessageMeta) error {
 	return m.storage.WriteJson(ctx, logKey(sessionID, meta.CreatedAt, meta.Hash), meta)
 }
 
-func (m *DagSessionStore) loadAllMetas(ctx context.Context, sessionID string) (map[string]*dag.MessageMeta, error) {
+func (m *DagStore) loadAllMetas(ctx context.Context, sessionID string) (map[string]*dag.MessageMeta, error) {
 	prefix := logPrefix(sessionID)
 	entries, err := m.storage.ListEntry(ctx, prefix)
 	if err != nil {
@@ -441,7 +428,7 @@ func (m *DagSessionStore) loadAllMetas(ctx context.Context, sessionID string) (m
 
 		meta := &dag.MessageMeta{}
 		if err := m.storage.ReadJson(ctx, key, meta); err != nil {
-			continue
+			continue // corrupt sidecar; skip rather than poisoning the map
 		}
 
 		if meta.Hash != "" {
@@ -452,7 +439,7 @@ func (m *DagSessionStore) loadAllMetas(ctx context.Context, sessionID string) (m
 	return out, nil
 }
 
-func (m *DagSessionStore) findMeta(ctx context.Context, sessionID, hash string) (*dag.MessageMeta, error) {
+func (m *DagStore) findMeta(ctx context.Context, sessionID, hash string) (*dag.MessageMeta, error) {
 	all, err := m.loadAllMetas(ctx, sessionID)
 	if err != nil {
 		return nil, err
@@ -461,7 +448,7 @@ func (m *DagSessionStore) findMeta(ctx context.Context, sessionID, hash string) 
 	return all[hash], nil
 }
 
-func (m *DagSessionStore) ResolvePrefix(ctx context.Context, sessionID, prefix string) (string, error) {
+func (m *DagStore) ResolvePrefix(ctx context.Context, sessionID, prefix string) (string, error) {
 	if len(prefix) == 64 {
 		return prefix, nil
 	}
@@ -540,4 +527,3 @@ func fromDagMessageObj(hash string, obj *dag.MessageObj, meta *dag.MessageMeta) 
 	return out
 }
 
-var _ SessionBackend = (*DagSessionStore)(nil)

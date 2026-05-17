@@ -116,10 +116,8 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 
 		// HEAD starts as a symbolic ref pointing at "main". Dispatches advance
 		// "main"; checkout rewrites the symref to point at another branch.
-		if d, ok := s.store.(*DagSessionStore); ok {
-			if err := d.refs.WriteSymRef(c.Request.Context(), meta.ID, dag.HEAD, dag.MAIN); err != nil {
-				s.logger.Warn("create session: HEAD symref init failed", "session", meta.ID, "error", err)
-			}
+		if err := s.store.refs.WriteSymRef(c.Request.Context(), meta.ID, dag.HEAD, dag.MAIN); err != nil {
+			s.logger.Warn("create session: HEAD symref init failed", "session", meta.ID, "error", err)
 		}
 
 		SessionsTotal.WithLabelValues("create").Inc()

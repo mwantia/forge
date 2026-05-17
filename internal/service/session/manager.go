@@ -141,7 +141,7 @@ func (s *SessionService) AppendMessage(ctx context.Context, sessionID string, ms
 
 	if capturedUsage != nil {
 		// Fire ans forget call to asynchronously write usage
-		go s.accumulateUsageLocked(ctx, sessionID, capturedUsage)
+		go s.accumulateUsage(ctx, sessionID, capturedUsage)
 	}
 
 	return hash, nil
@@ -165,19 +165,22 @@ func (s *SessionService) AppendMessageToRef(ctx context.Context, sessionID, ref 
 
 	if capturedUsage != nil {
 		// Fire ans forget call to asynchronously write usage
-		go s.accumulateUsageLocked(ctx, sessionID, capturedUsage)
+		go s.accumulateUsage(ctx, sessionID, capturedUsage)
 	}
 
 	return hash, nil
 }
 
-// accumulateUsageLocked folds a per-message TokenUsage into the session's
-// running total. Caller must hold s.mu. Failures are logged and swallowed:
-// usage accounting must not fail a successful message commit.
-func (s *SessionService) accumulateUsageLocked(ctx context.Context, sessionID string, usage *sdkplugins.TokenUsage) {
+// accumulateUsage folds a per-message TokenUsage into the session's running
+// total. Failures are logged and swallowed: usage accounting must not fail a
+// successful message commit.
+func (s *SessionService) accumulateUsage(ctx context.Context, sessionID string, usage *sdkplugins.TokenUsage) {
 	if usage == nil {
 		return
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	meta, err := s.store.LoadSession(ctx, sessionID)
 	if err != nil {
@@ -205,17 +208,12 @@ func (s *SessionService) HeadHash(ctx context.Context, sessionID string) (string
 	return s.store.HeadHash(ctx, sessionID)
 }
 
-// PutPromptContext implements SessionManager. The DAG store exposes a typed
-// helper for this; non-DAG backends can choose to no-op + return "".
+// PutPromptContext implements SessionManager.
 func (s *SessionService) PutPromptContext(ctx context.Context, p *dag.PromptContext) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if d, ok := s.store.(*DagSessionStore); ok {
-		return d.objects.PutPromptContext(ctx, p)
-	}
-
-	return "", nil
+	return s.store.objects.PutPromptContext(ctx, p)
 }
 
 // GetPromptContext implements SessionManager.
@@ -223,12 +221,7 @@ func (s *SessionService) GetPromptContext(ctx context.Context, hash string) (*da
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return nil, fmt.Errorf("prompt-context store unavailable")
-	}
-
-	return d.objects.GetPromptContext(ctx, hash)
+	return s.store.objects.GetPromptContext(ctx, hash)
 }
 
 // GetMessageObj implements SessionManager.
@@ -236,25 +229,15 @@ func (s *SessionService) GetMessageObj(ctx context.Context, hash string) (*dag.M
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return nil, fmt.Errorf("object store unavailable")
-	}
-
-	return d.objects.GetMessage(ctx, hash)
+	return s.store.objects.GetMessage(ctx, hash)
 }
 
 // ListMessagesFromRef implements SessionManager.
 func (s *SessionService) ListMessagesFromRef(ctx context.Context, sessionID, ref string, offset, limit int) ([]*Message, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	d, ok := s.store.(*DagSessionStore)
 
-	if !ok {
-		return nil, fmt.Errorf("dag store unavailable")
-	}
-
-	tip, err := d.refs.Read(ctx, sessionID, ref)
+	tip, err := s.store.refs.Read(ctx, sessionID, ref)
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
 			return []*Message{}, nil
@@ -262,12 +245,15 @@ func (s *SessionService) ListMessagesFromRef(ctx context.Context, sessionID, ref
 		return nil, err
 	}
 
-	entries, err := dag.Walk(ctx, d.objects, d.refs, sessionID, tip, limit, offset)
+	entries, err := dag.Walk(ctx, s.store.objects, s.store.refs, sessionID, tip, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	metas, _ := d.loadAllMetas(ctx, sessionID)
+	metas, err := s.store.loadAllMetas(ctx, sessionID)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]*Message, 0, len(entries))
 	for _, e := range entries {
 		out = append(out, fromDagMessageObj(e.Hash, e.Message, metas[e.Hash]))
@@ -281,12 +267,7 @@ func (s *SessionService) ListRefs(ctx context.Context, sessionID string) (map[st
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return nil, fmt.Errorf("ref store unavailable")
-	}
-
-	return d.refs.List(ctx, sessionID)
+	return s.store.refs.List(ctx, sessionID)
 }
 
 // ReadRef implements SessionManager.
@@ -294,12 +275,7 @@ func (s *SessionService) ReadRef(ctx context.Context, sessionID, name string) (s
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return "", fmt.Errorf("ref store unavailable")
-	}
-
-	hash, err := d.refs.Read(ctx, sessionID, name)
+	hash, err := s.store.refs.Read(ctx, sessionID, name)
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
 			return "", nil
@@ -319,12 +295,7 @@ func (s *SessionService) WriteRef(ctx context.Context, sessionID, name, hash str
 		return err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return fmt.Errorf("ref store unavailable")
-	}
-
-	return d.refs.Write(ctx, sessionID, name, hash)
+	return s.store.refs.Write(ctx, sessionID, name, hash)
 }
 
 // CASRef implements SessionManager.
@@ -336,12 +307,7 @@ func (s *SessionService) CASRef(ctx context.Context, sessionID, name, expected, 
 		return err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return fmt.Errorf("ref store unavailable")
-	}
-
-	return d.refs.CAS(ctx, sessionID, name, expected, next)
+	return s.store.refs.CAS(ctx, sessionID, name, expected, next)
 }
 
 // DeleteRef implements SessionManager.
@@ -353,12 +319,7 @@ func (s *SessionService) DeleteRef(ctx context.Context, sessionID, name string) 
 		return err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return fmt.Errorf("ref store unavailable")
-	}
-
-	return d.refs.Delete(ctx, sessionID, name)
+	return s.store.refs.Delete(ctx, sessionID, name)
 }
 
 // RenameRef implements SessionManager.
@@ -370,12 +331,7 @@ func (s *SessionService) RenameRef(ctx context.Context, sessionID, oldName, newN
 		return err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return fmt.Errorf("ref store unavailable")
-	}
-
-	return d.refs.Rename(ctx, sessionID, oldName, newName)
+	return s.store.refs.Rename(ctx, sessionID, oldName, newName)
 }
 
 // PutMessageObj implements SessionManager.
@@ -383,12 +339,7 @@ func (s *SessionService) PutMessageObj(ctx context.Context, obj *dag.MessageObj)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return "", fmt.Errorf("object store unavailable")
-	}
-
-	return d.objects.PutMessage(ctx, obj)
+	return s.store.objects.PutMessage(ctx, obj)
 }
 
 // ResolveMessageHash implements SessionManager.
@@ -408,16 +359,11 @@ func (s *SessionService) CheckoutRef(ctx context.Context, sessionID, targetBranc
 		return err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return fmt.Errorf("ref store unavailable")
-	}
-
-	if _, err := d.refs.Read(ctx, sessionID, targetBranch); err != nil {
+	if _, err := s.store.refs.Read(ctx, sessionID, targetBranch); err != nil {
 		return fmt.Errorf("ref %q not found: %w", targetBranch, err)
 	}
 
-	return d.refs.WriteSymRef(ctx, sessionID, dag.HEAD, targetBranch)
+	return s.store.refs.WriteSymRef(ctx, sessionID, dag.HEAD, targetBranch)
 }
 
 var _ SessionManager = (*SessionService)(nil)

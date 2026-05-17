@@ -94,12 +94,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 		meta.Name = name
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return nil, fmt.Errorf("dag store unavailable")
-	}
-
-	tip, err := d.refs.Read(ctx, sessionID, refName)
+	tip, err := s.store.refs.Read(ctx, sessionID, refName)
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
 			return nil, fmt.Errorf("ref %q does not exist", refName)
@@ -107,12 +102,12 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 		return nil, err
 	}
 
-	entries, err := dag.Walk(ctx, d.objects, d.refs, sessionID, tip, 0, 0)
+	entries, err := dag.Walk(ctx, s.store.objects, s.store.refs, sessionID, tip, 0, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	metaByHash, _ := d.loadAllMetas(ctx, sessionID)
+	metaByHash, _ := s.store.loadAllMetas(ctx, sessionID)
 	messages := make([]ArchiveMessage, 0, len(entries))
 	contextHashes := make([]string, 0, len(entries))
 	seenCtx := make(map[string]struct{})
@@ -163,7 +158,7 @@ func (s *SessionService) ArchiveSession(ctx context.Context, sessionID, refName,
 		"ref_name":             refName,
 		"head_hash":            tip,
 	}
-	res, err := s.resources.Store(ctx, ArchivePath, string(envBytes), nil, resMeta)
+	res, err := s.resources.Store(ctx, ArchivePath, sessionID, string(envBytes), nil, resMeta)
 	if err != nil {
 		return nil, fmt.Errorf("store archive envelope: %w", err)
 	}
@@ -203,11 +198,6 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 		return nil, err
 	}
 
-	d, ok := s.store.(*DagSessionStore)
-	if !ok {
-		return nil, fmt.Errorf("dag store unavailable")
-	}
-
 	// Replay messages — PutMessage is idempotent (PutIfAbsent), so any
 	// already-known hashes dedup automatically.
 	for _, m := range envelope.Messages {
@@ -218,7 +208,7 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 			ParentHash: m.ParentHash,
 		}
 
-		hash, err := d.objects.PutMessage(ctx, obj)
+		hash, err := s.store.objects.PutMessage(ctx, obj)
 		if err != nil {
 			return nil, fmt.Errorf("replay message %s: %w", m.Hash, err)
 		}
@@ -263,16 +253,16 @@ func (s *SessionService) CloneSession(ctx context.Context, sourceID, name string
 			SessionID: clone.ID,
 			CreatedAt: now,
 		}
-		if err := d.writeLogEntry(ctx, clone.ID, mm); err != nil {
+		if err := s.store.writeLogEntry(ctx, clone.ID, mm); err != nil {
 			return nil, fmt.Errorf("write clone log %s: %w", m.Hash, err)
 		}
 	}
 
-	if err := d.refs.Write(ctx, clone.ID, dag.MAIN, envelope.HeadHash); err != nil {
+	if err := s.store.refs.Write(ctx, clone.ID, dag.MAIN, envelope.HeadHash); err != nil {
 		return nil, fmt.Errorf("write clone main: %w", err)
 	}
 
-	if err := d.refs.WriteSymRef(ctx, clone.ID, dag.HEAD, dag.MAIN); err != nil {
+	if err := s.store.refs.WriteSymRef(ctx, clone.ID, dag.HEAD, dag.MAIN); err != nil {
 		return nil, fmt.Errorf("write clone HEAD symref: %w", err)
 	}
 
@@ -313,7 +303,7 @@ func (s *SessionService) fetchEnvelope(ctx context.Context, path, id string) (*A
 	return env, nil
 }
 
-func uniqueCloneName(ctx context.Context, store SessionBackend, base string) string {
+func uniqueCloneName(ctx context.Context, store *DagStore, base string) string {
 	if base == "" {
 		base = "session"
 	}

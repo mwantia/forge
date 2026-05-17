@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mwantia/forge/internal/service/session/dag"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type refCreateRequest struct {
@@ -57,11 +58,9 @@ func (s *SessionService) handleListRefs() gin.HandlerFunc {
 			refs = filtered
 		}
 		symrefs := map[string]string{}
-		if d, ok := s.store.(*DagSessionStore); ok {
-			for name := range refs {
-				if target, isSym, _ := d.refs.ReadSymRef(ctx, meta.ID, name); isSym {
-					symrefs[name] = target
-				}
+		for name := range refs {
+			if target, isSym, _ := s.store.refs.ReadSymRef(ctx, meta.ID, name); isSym {
+				symrefs[name] = target
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{"refs": refs, "symrefs": symrefs})
@@ -254,5 +253,122 @@ func (s *SessionService) handleDeleteRef() gin.HandlerFunc {
 			return
 		}
 		c.Status(http.StatusNoContent)
+	}
+}
+
+// handleRevertRef godoc
+//
+//	@Summary		Hard-revert a session branch
+//	@Description	CAS-moves the named ref to the target hash, orphaning messages between the current tip and the target. Prefer fork_from on /pipeline/commit for non-destructive branching.
+//	@Tags			sessions
+//	@Accept			json
+//	@Produce		json
+//	@Param			session_id	path		string	true	"Session ID"
+//	@Param			ref			path		string	true	"Ref name"
+//	@Param			body		body		map[string]any	true	"Body with 'to' field (target hash)"
+//	@Success		204
+//	@Failure		400		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		409		{object}	map[string]string
+//	@Failure		500		{object}	map[string]string
+//	@Security		BearerAuth
+//	@Router			/v1/sessions/{session_id}/branch/{ref}/revert [post]
+func (s *SessionService) handleRevertRef() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ref := c.Param("ref")
+		ctx := c.Request.Context()
+
+		var req struct {
+			To string `json:"to" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		meta, err := s.ResolveSession(ctx, c.Param("session_id"))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		current, err := s.ReadRef(ctx, meta.ID, ref)
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := s.CASRef(ctx, meta.ID, ref, current, req.To); err != nil {
+			var cas *dag.CASConflict
+			if errors.As(err, &cas) {
+				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
+// handleMessageDiff godoc
+//
+//	@Summary		Diff two messages
+//	@Description	Returns a Myers diff on the Content field of two message objects identified by their content hashes.
+//	@Tags			sessions
+//	@Produce		json
+//	@Param			session_id	path		string	true	"Session ID"
+//	@Param			msg_id		path		string	true	"First message hash (or prefix)"
+//	@Param			to			query		string	true	"Second message hash (or prefix)"
+//	@Success		200			{object}	map[string]any
+//	@Failure		400			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		500			{object}	map[string]string
+//	@Security		BearerAuth
+//	@Router			/v1/sessions/{session_id}/messages/{msg_id}/diff [get]
+func (s *SessionService) handleMessageDiff() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sessionID := c.Param("session_id")
+		hashA := c.Param("msg_id")
+		hashB := c.Query("to")
+		if hashB == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing required query parameter: to"})
+			return
+		}
+		ctx := c.Request.Context()
+
+		s.mu.RLock()
+		meta, err := s.resolveSessionLocked(ctx, sessionID)
+		s.mu.RUnlock()
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		msgA, err := s.store.LoadMessage(ctx, meta.ID, hashA)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "message a: " + err.Error()})
+			return
+		}
+		msgB, err := s.store.LoadMessage(ctx, meta.ID, hashB)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "message b: " + err.Error()})
+			return
+		}
+
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(msgA.Content, msgB.Content, false)
+		dmp.DiffCleanupSemantic(diffs)
+
+		c.JSON(http.StatusOK, gin.H{
+			"hash_a": msgA.Hash,
+			"hash_b": msgB.Hash,
+			"patch":  dmp.DiffToDelta(diffs),
+			"text":   dmp.DiffPrettyText(diffs),
+		})
 	}
 }

@@ -22,7 +22,7 @@ type SessionService struct {
 	service.UnimplementedService
 
 	mu    sync.RWMutex
-	store SessionBackend
+	store *DagStore
 
 	metrics   metrics.MetricsRegistar   `fabric:"inject"`
 	router    server.HttpRouter         `fabric:"inject"`
@@ -49,7 +49,7 @@ func (s *SessionService) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to register metrics: %w", err)
 	}
 
-	s.store = NewDagSessionStore(s.storage)
+	s.store = NewDagStore(s.storage)
 
 	metadata := tools.NamespaceMetadata{
 		Description: "Built-in session bookkeeping: title/description, sub-session creation, message history.",
@@ -92,6 +92,9 @@ func (s *SessionService) Init(ctx context.Context) error {
 		group.POST("/:session_id/branch", s.handleCreateRef())
 		group.PATCH("/:session_id/branch/:ref", s.handleUpdateRef())
 		group.DELETE("/:session_id/branch/:ref", s.handleDeleteRef())
+		group.POST("/:session_id/branch/:ref/revert", s.handleRevertRef())
+		// /v1/sessions/:session_id/messages/:msg_id/diff?to=<hash_b>
+		group.GET("/:session_id/messages/:msg_id/diff", s.handleMessageDiff())
 		// /v1/sessions/:session_id/archive|clone
 		group.POST("/:session_id/archive", s.handleArchiveSession())
 		group.POST("/:session_id/clone", s.handleCloneSession())
