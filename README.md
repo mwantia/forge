@@ -22,9 +22,11 @@ The SDK (`forge-sdk`) and plugin modules are published separately. This reposito
   `forge replay`. Non-determinism becomes a debuggable, reproducible problem.
 - **Streaming pipeline** — bounded tool-execution loop, emitted to clients as
   NDJSON (`TokenEvent`, `ToolCallEvent`, `ToolResultEvent`, `DoneEvent`).
-- **Resources** — long-term memory verbs `Store` / `Recall` / `Forget` over a
-  `ResourcePlugin` (built-in file fallback today; OpenViking / pgvector / S3
-  swappable). Per-turn `<relevant-resources>` block injected into the prompt.
+- **Resources** — long-term memory backed by the same content-addressed DAG as
+  sessions. Named resources version like git refs: overwriting a name advances
+  the ref and chains `ParentHash`, giving history, diff, and revert for free.
+  Semantic recall via HNSW when `embed_model` is set; falls back to substring
+  scoring otherwise. Per-turn `<relevant-resources>` block injected into the prompt.
 - **Archive + clone** — declare a session immutable, push its log through the
   resource layer; later, replay the envelope into a fresh live session whose
   HEAD points at the archived tip. Lineage tracked via `parent_session_id`.
@@ -202,14 +204,16 @@ provider {
   }
 }
 
-# Optional: mount specific path prefixes to different resource backends.
-# Unmatched paths fall back to the built-in file store.
+# Optional: semantic indexing + custom mounts.
+# embed_model must name a declared model of type "embed".
+# When set, Store embeds content → HNSW; Recall embeds query → HNSW search.
 resource {
+  embed_model = "nomic-embed"   # e.g. provider { model "nomic-embed" { base_model = "..." } }
+
+  # Mount specific path prefixes to different backends (optional).
+  # Unmatched paths use the built-in DAG store.
   mount "openviking" {
-    path = "/global"     # plugin-backed mount
-  }
-  mount "file" {
-    path = "/archives"   # explicit built-in file store
+    path = "/global"
   }
 }
 
@@ -250,8 +254,10 @@ GET    /v1/sessions/:id/messages/:hash      # :hash accepts ≥4-char prefix
 PATCH  /v1/sessions/:id/messages/compact    # rewrites HEAD without tool turns
 PATCH  /v1/sessions/:id/messages/summarize  # 501 not implemented
 
-GET    /v1/sessions/:id/refs                POST   /v1/sessions/:id/refs
-PATCH  /v1/sessions/:id/refs/:ref           DELETE /v1/sessions/:id/refs/:ref
+GET    /v1/sessions/:id/messages/:a/diff/:b       # Myers diff on Content of two messages
+GET    /v1/sessions/:id/branch                    POST   /v1/sessions/:id/branch
+PATCH  /v1/sessions/:id/branch/:ref               DELETE /v1/sessions/:id/branch/:ref
+POST   /v1/sessions/:id/branch/:ref/revert        # hard CAS revert; body: {"to":"<hash>"}
 
 POST   /v1/sessions/:id/archive             # build envelope, store, flip immutable
 POST   /v1/sessions/:id/clone               # replay envelope into fresh live session
@@ -266,12 +272,17 @@ POST   /v1/pipeline/contexts/:hash/replay   # NDJSON; no persistence
 GET    /v1/system/monitor                   # stream server logs; ?level=trace|debug|info|warn|error
 POST   /v1/system/gc                        # GC pass; returns {total, kept, swept}
 
-# Resources: long-term memory + archive sink
-GET    /v1/resources                        # backend status
-POST   /v1/resources/:ns                    # store
-GET    /v1/resources/:ns                    # list (built-in fallback only)
-GET    /v1/resources/:ns/recall?q=...       # semantic-ish recall
-GET    /v1/resources/:ns/:id                DELETE /v1/resources/:ns/:id  # forget
+# Resources: DAG-backed long-term memory; dispatch on path suffix
+GET    /v1/resources                        # backend status + mount table
+PUT    /v1/resources/*path                  # store; body: {name?, content, tags?, metadata?}
+GET    /v1/resources/*path                  # list
+POST   /v1/resources/*path                  # recall (RecallQuery body; HNSW when embed_model set)
+PATCH  /v1/resources/*path  ?name=          # update tags/metadata (no content change)
+DELETE /v1/resources/*path  ?id=            # forget
+GET    /v1/resources/*path/history  ?name=  # version history (ParentHash chain)
+GET    /v1/resources/*path/diff  ?name=[&from=<hash>][&to=<hash>]   # Myers diff
+GET    /v1/resources/*path/versions/<hash>  # fetch historical ResourceObj by hash
+POST   /v1/resources/*path/revert  ?name=   # CAS ref to prior hash; body: {"to":"<hash>"}
 ```
 
 `POST /v1/pipeline/dispatch` responds with `application/x-ndjson`. Each line is a `{ "type": "token|tool_call|tool_result|error|done", "data": {...} }` envelope — see `internal/service/pipeline/events.go`. The active branch is returned as `X-Forge-Ref`.
@@ -342,24 +353,50 @@ curl -N -X POST http://127.0.0.1:9280/v1/pipeline/contexts/<hash>/replay \
 
 ### Resources (long-term memory)
 
-```bash
-# Store
-curl -X POST http://127.0.0.1:9280/v1/resources/demo \
-  -d '{"content":"user prefers terse answers","metadata":{"kind":"preference"}}'
+Resources are stored on the same content-addressed DAG as session messages.
+A resource has a human-readable **name** within a **path namespace**. Overwriting
+the same name chains the new content to the previous via `ParentHash` — the full
+revision history is always traversable.
 
-# Recall (semantic-ish; the built-in fallback is substring-scored)
-curl 'http://127.0.0.1:9280/v1/resources/demo/recall?q=preferences&limit=3'
+```bash
+# Store (name is optional; if omitted, derived from content hash)
+curl -X PUT http://127.0.0.1:9280/v1/resources/sessions/demo \
+  -d '{"name":"preferences","content":"user prefers terse answers","tags":["preference"]}'
+
+# Recall — HNSW semantic search when embed_model is configured,
+# substring fallback otherwise
+curl -X POST http://127.0.0.1:9280/v1/resources/sessions/demo \
+  -d '{"query":"terse","limit":3}'
+
+# Recall with glob (always substring-scored)
+curl -X POST http://127.0.0.1:9280/v1/resources/sessions/** \
+  -d '{"query":"preferences"}'
+
+# List all resources at a path
+curl http://127.0.0.1:9280/v1/resources/sessions/demo
+
+# Version history
+curl 'http://127.0.0.1:9280/v1/resources/sessions/demo/history?name=preferences'
+
+# Diff (defaults to parent → current tip)
+curl 'http://127.0.0.1:9280/v1/resources/sessions/demo/diff?name=preferences'
+
+# Fetch any historical version
+curl http://127.0.0.1:9280/v1/resources/sessions/demo/versions/<content-hash>
+
+# Revert to a prior version
+curl -X POST 'http://127.0.0.1:9280/v1/resources/sessions/demo/revert?name=preferences' \
+  -d '{"to":"<content-hash>"}'
 
 # Forget
-curl -X DELETE http://127.0.0.1:9280/v1/resources/demo/<id>
+curl -X DELETE 'http://127.0.0.1:9280/v1/resources/sessions/demo?id=preferences'
 ```
 
 The pipeline calls `Recall(sessionID, userMessage, 5)` per turn and renders
-the hits into the prompt as a `<relevant-resources>` block. Failures are
-silent — never a hard dependency on the resource backend.
+the hits as a `<relevant-resources>` block in the prompt. Failures are silent.
 
-The agent also exposes built-in tools `resource__store`, `resource__recall`,
-`resource__forget` so the LLM can manage memory itself.
+Built-in tools `resource__store`, `resource__recall`, `resource__forget` let the
+LLM manage memory itself.
 
 ### Archive + clone
 
@@ -449,15 +486,17 @@ build/                     # output
 
 1. **Sandbox is a stub.** `SandboxService` implements `Service` but does nothing. The SDK still exports `SandboxPlugin`. Either wire it up or delete it.
 2. **No channel subsystem.** `ChannelPlugin` exists in the SDK but there is no `internal/service/channel/` — the old dispatcher lives in `old_code/channel`.
-3. **`dispatch_session` and `summarize` are stubs.** `sessions__dispatch_session` returns "not yet implemented"; `PATCH /v1/sessions/:id/messages/summarize` returns 501. Compaction works.
-4. **OpenViking adapter not in this repo.** `docs/03 §7.3` references it as the canonical archive-storage `ResourcePlugin`; until it lands, archives go to the built-in file fallback under `resources/archives/`.
-7. **Config processor caveat.** `internal/config/processor.go` holds `TODO :: Find a solution to dynamically register 'meta' for sub-blocks` — `meta {}` is parsed but not yet exposed as `meta.*` inside other blocks (only the top-level eval has it via the template engine, not gohcl's decode context).
-8. **Cleanup chain is partial.** `Agent.Cleanup` only calls `plugins.Cleanup`, `srv.Cleanup`, `met.Cleanup`. The new services (`SessionService`, `ResourceService`) aren't awaited. Nothing holds long-lived resources beyond what plugins own, but the invariant is fragile.
-9. **Locking is cargo-culted.** Several services take `mu.Lock()` around read-only operations. No deadlock today but worth a pass.
-10. **Auth is a single shared token.** Fine for dev, bad for multi-tenant. No audit log of auth successes/failures.
-11. **No automated tests.** `tests/` holds fixtures only; the project deliberately validates feature surfaces via the CLI / `/preview` rather than unit tests today.
+3. **`commit_session` and `summarize` are stubs.** `sessions__commit_session` returns "not yet implemented"; `PATCH /v1/sessions/:id/messages/summarize` returns 501. Compaction works.
+4. **OpenViking adapter not in this repo.** Archives go to the built-in DAG store under `resources/archives/` until the external plugin lands. Schema_version 1 of the archive envelope is the stable contract.
+5. **`pluginResourceStore` is a shim.** External plugins using the old `ResourcePlugin` interface only support `Store`, `Recall`, and `Forget`. History, versioning, patching, and diff are unavailable on plugin-backed mounts. Migration path: implement `RecallPlugin` (in `shared/pkg/plugins/recall.go`).
+6. **HNSW glob recall falls back to substring.** Paths containing `*`, `?`, or `[` skip the HNSW index. Only exact-namespace queries with a non-empty `query` field use HNSW.
+7. **HNSW indexing is eventually consistent.** `Store` fires indexing in a background goroutine. A resource may not appear in semantic recall immediately after being stored.
+8. **Config processor caveat.** `internal/config/processor.go` — `meta {}` is parsed but not yet exposed as `meta.*` inside sub-blocks (only the top-level eval has it via the template engine).
+9. **Cleanup chain is partial.** `Agent.Cleanup` only calls `plugins.Cleanup`, `srv.Cleanup`, `met.Cleanup`. `SessionService` and `ResourceService` aren't awaited.
+10. **Auth is a single shared token.** Fine for dev, bad for multi-tenant. No audit log.
+11. **No automated tests.** `tests/` holds fixtures only; feature surfaces are validated via the CLI and `/preview`.
 12. **Plugin path resolution has three fallbacks** (explicit path → `plugin_dir/type` → `os.Executable() plugin <type>`). The third branch silently turns a missing external plugin into an embedded one.
-13. **Graceful shutdown is best-effort.** Server + metrics have 10s shutdown timeouts; plugins are killed, not asked to drain. In-flight tool calls are abandoned.
+13. **Graceful shutdown is best-effort.** Server + metrics have 10s timeouts; plugins are killed, not drained. In-flight tool calls are abandoned.
 
 ## License
 

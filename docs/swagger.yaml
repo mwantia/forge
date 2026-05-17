@@ -97,6 +97,16 @@ definitions:
       type:
         type: string
     type: object
+  resource.patchResourceRequest:
+    properties:
+      metadata:
+        additionalProperties: {}
+        type: object
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
   resource.storeResourceRequest:
     properties:
       content:
@@ -104,6 +114,8 @@ definitions:
       metadata:
         additionalProperties: {}
         type: object
+      name:
+        type: string
       tags:
         items:
           type: string
@@ -600,6 +612,46 @@ paths:
       summary: Get model
       tags:
       - provider
+  /v1/provider/embed:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Returns embedding vectors for the given content using the specified model.
+        model accepts "provider/model" or a forge alias (e.g. "forge/my-embed").
+      parameters:
+      - description: '{ model: string, content: string }'
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Embed text
+      tags:
+      - provider
   /v1/provider/models:
     get:
       description: Returns all models from every provider alongside locally configured
@@ -627,7 +679,7 @@ paths:
       - provider
   /v1/resources:
     get:
-      description: Returns the active mount table and the catch-all backend.
+      description: Returns the active storage backend for resources.
       produces:
       - application/json
       responses:
@@ -711,6 +763,56 @@ paths:
       security:
       - BearerAuth: []
       summary: List or get resources
+      tags:
+      - resource
+    patch:
+      consumes:
+      - application/json
+      description: Updates tags and metadata for an existing resource without changing
+        its content or advancing the content ref. Requires ?name=<name>.
+      parameters:
+      - description: Resource namespace path
+        in: path
+        name: path
+        required: true
+        type: string
+      - description: Resource name (ref key)
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/resource.patchResourceRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch resource metadata
       tags:
       - resource
     post:
@@ -1206,6 +1308,65 @@ paths:
       summary: Move or rename branch
       tags:
       - sessions
+  /v1/sessions/{session_id}/branch/{ref}/revert:
+    post:
+      consumes:
+      - application/json
+      description: CAS-moves the named ref to the target hash, orphaning messages
+        between the current tip and the target. Prefer fork_from on /pipeline/commit
+        for non-destructive branching.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Ref name
+        in: path
+        name: ref
+        required: true
+        type: string
+      - description: Body with 'to' field (target hash)
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Hard-revert a session branch
+      tags:
+      - sessions
   /v1/sessions/{session_id}/clone:
     post:
       consumes:
@@ -1316,6 +1477,57 @@ paths:
       security:
       - BearerAuth: []
       summary: Get message
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/messages/{msg_id}/diff:
+    get:
+      description: Returns a Myers diff on the Content field of two message objects
+        identified by their content hashes.
+      parameters:
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: First message hash (or prefix)
+        in: path
+        name: msg_id
+        required: true
+        type: string
+      - description: Second message hash (or prefix)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Diff two messages
       tags:
       - sessions
   /v1/sessions/{session_id}/messages/compact:
