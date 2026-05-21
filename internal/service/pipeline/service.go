@@ -76,6 +76,12 @@ func (s *PipelineService) Init(ctx context.Context) error {
 		}
 	}
 
+	// /v1/sessions/:session_id/system — owned by pipeline (needs prompt assembly).
+	sessions := s.router.AuthGroup("/sessions")
+	{
+		sessions.POST("/:session_id/system/reset", s.handleResetSystemSnapshot())
+	}
+
 	// /v1/pipeline
 	group := s.router.AuthGroup("/" + ServiceNamespace)
 	{
