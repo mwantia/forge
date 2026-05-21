@@ -2,14 +2,22 @@ FROM golang:1.25-alpine AS gobuild
 
 ARG TARGETOS
 ARG TARGETARCH
+ARG VARIANT=none
 
 WORKDIR /build
 ADD . /build
 
 RUN go get -d -v ./...
-RUN go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
 
-RUN CGO_ENABLED=0 GOOS=linux go build -tags all -a -ldflags '-s -w -extldflags "-static"' -o ./forge ./cmd/forge/main.go
+RUN if [ "$VARIANT" != "none" ]; then \
+      go run ./tools/plugins -manifest plugins.yaml -out cmd/forge; \
+    fi
+
+RUN if [ "$VARIANT" = "none" ]; then \
+      CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ./forge ./cmd/forge/main.go; \
+    else \
+      CGO_ENABLED=0 GOOS=linux go build -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ./forge ./cmd/forge/main.go; \
+    fi
 
 RUN chmod +x ./forge
 

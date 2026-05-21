@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: service
+
+      - uses: actions/checkout@v4
+        with:
+          repository: mwantia/forge-sdk
+          path: shared
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: service/go.mod
+          cache-dependency-path: service/go.sum
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: service
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: service
+
+      - uses: actions/checkout@v4
+        with:
+          repository: mwantia/forge-sdk
+          path: shared
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: service/go.mod
+          cache-dependency-path: service/go.sum
+
+      - name: go vet
+        working-directory: service
+        run: go vet ./...
+
+      - name: Build (none)
+        working-directory: service
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -a -ldflags '-s -w -extldflags "-static"' -trimpath -o /dev/null ./cmd/forge/
