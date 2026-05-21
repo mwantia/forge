@@ -158,14 +158,60 @@ func (s *dagResourceStore) List(ctx context.Context, path string) ([]*sdkplugins
 		return nil, err
 	}
 
-	out := make([]*sdkplugins.Resource, 0, len(nameToHash))
-	for name, hash := range nameToHash {
-		obj, err := s.objects.GetResource(ctx, hash)
-		if err != nil {
+	if len(nameToHash) > 0 {
+		out := make([]*sdkplugins.Resource, 0, len(nameToHash))
+		for name, hash := range nameToHash {
+			obj, err := s.objects.GetResource(ctx, hash)
+			if err != nil {
+				continue
+			}
+			meta := s.loadRecentMeta(ctx, ns, hash)
+			out = append(out, toSDKResource(path, name, hash, obj, meta))
+		}
+		sort.SliceStable(out, func(i, j int) bool {
+			return out[i].ID < out[j].ID
+		})
+		return out, nil
+	}
+
+	// No resources at this exact path — return immediate virtual subdirectories.
+	return s.listImmediate(ctx, ns)
+}
+
+// listImmediate returns one Resource{Type:"dir"} per unique immediate child
+// segment under ns. E.g. ns="forge" → ["forge/sessions", "forge/global"].
+func (s *dagResourceStore) listImmediate(ctx context.Context, ns string) ([]*sdkplugins.Resource, error) {
+	all, err := s.listNamespaces(ctx, ns)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := ns
+	if prefix != "" {
+		prefix += "/"
+	}
+
+	seen := map[string]struct{}{}
+	var out []*sdkplugins.Resource
+	for _, fullNS := range all {
+		rel := strings.TrimPrefix(fullNS, prefix)
+		seg := rel
+		if i := strings.Index(rel, "/"); i >= 0 {
+			seg = rel[:i]
+		}
+		if seg == "" {
 			continue
 		}
-		meta := s.loadRecentMeta(ctx, ns, hash)
-		out = append(out, toSDKResource(path, name, hash, obj, meta))
+		child := prefix + seg
+		if _, dup := seen[child]; dup {
+			continue
+		}
+		seen[child] = struct{}{}
+		out = append(out, &sdkplugins.Resource{
+			ID:   seg,
+			Path: "/" + child,
+			Type: "dir",
+		})
 	}
 
 	sort.SliceStable(out, func(i, j int) bool {
