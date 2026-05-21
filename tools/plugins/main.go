@@ -28,8 +28,7 @@ func (p Plugin) ResolvedImport() string {
 		return p.Module
 	}
 	if after, ok := strings.CutPrefix(p.Import, "./"); ok {
-		sub := after
-		return p.Module + "/" + sub
+		return p.Module + "/" + after
 	}
 	return p.Import
 }
@@ -75,7 +74,15 @@ func main() {
 		log.Fatalf("resolve manifest path: %v", err)
 	}
 	manifestDir := filepath.Dir(manifestAbs)
-	workFile := findGoWork(manifestDir)
+
+	// If any plugin uses a local path, rebuild go.work from scratch so it
+	// always mirrors exactly what is in plugins.yaml. This prevents stale
+	// `use` entries from accumulating when plugins are added or removed.
+	if hasLocalPlugins(m.Plugins) {
+		if err := resetWorkspace(manifestDir); err != nil {
+			log.Fatalf("reset workspace: %v", err)
+		}
+	}
 
 	for _, p := range m.Plugins {
 		if p.Name == "" {
@@ -84,7 +91,7 @@ func main() {
 		if p.Module == "" {
 			log.Fatalf("plugin %q missing required field: module", p.Name)
 		}
-		if err := resolveModule(manifestDir, workFile, p); err != nil {
+		if err := resolveModule(manifestDir, p); err != nil {
 			log.Fatalf("resolve %s: %v", p.Name, err)
 		}
 	}
@@ -104,7 +111,44 @@ func main() {
 	log.Printf("wrote %s (%d plugins)", out, len(m.Plugins))
 }
 
-func resolveModule(manifestDir, workFile string, p Plugin) error {
+func hasLocalPlugins(plugins []Plugin) bool {
+	for _, p := range plugins {
+		if p.Local != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// resetWorkspace deletes any existing go.work / go.work.sum and creates a
+// fresh workspace containing just the service module and ../shared. Plugin
+// modules are added afterwards by resolveModule.
+func resetWorkspace(moduleDir string) error {
+	for _, f := range []string{"go.work", "go.work.sum"} {
+		path := filepath.Join(moduleDir, f)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove %s: %w", f, err)
+		}
+	}
+	log.Printf("  go work init .")
+	if err := run(moduleDir, "go", "work", "init", "."); err != nil {
+		return fmt.Errorf("go work init: %w", err)
+	}
+	// Include the SDK so the ../shared replace in go.mod is workspace-aware.
+	sharedAbs, err := filepath.Abs(filepath.Join(moduleDir, "../shared"))
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(sharedAbs); err == nil {
+		log.Printf("  go work use %s", sharedAbs)
+		if err := run(moduleDir, "go", "work", "use", sharedAbs); err != nil {
+			return fmt.Errorf("go work use shared: %w", err)
+		}
+	}
+	return nil
+}
+
+func resolveModule(manifestDir string, p Plugin) error {
 	if p.Local != "" && p.Version != "" {
 		log.Printf("warning: %q has both local and version set — local takes precedence", p.Name)
 	}
@@ -117,32 +161,16 @@ func resolveModule(manifestDir, workFile string, p Plugin) error {
 		if _, err := os.Stat(localAbs); err != nil {
 			return fmt.Errorf("local path %q does not exist: %w", localAbs, err)
 		}
-		if workFile != "" {
-			log.Printf("  go work use %s", localAbs)
-			return goWorkUse(filepath.Dir(workFile), localAbs)
-		}
-		log.Printf("  go mod edit -replace %s=%s", p.Module, localAbs)
-		return goModReplace(manifestDir, p.Module, localAbs)
+		log.Printf("  go work use %s", localAbs)
+		return run(manifestDir, "go", "work", "use", localAbs)
 	}
 
 	if p.Version != "" {
 		log.Printf("  go get %s@%s", p.Module, p.Version)
-		return goGet(manifestDir, p.Module+"@"+p.Version)
+		return run(manifestDir, "go", "get", p.Module+"@"+p.Version)
 	}
 
 	return nil
-}
-
-func goWorkUse(workDir, localAbs string) error {
-	return run(workDir, "go", "work", "use", localAbs)
-}
-
-func goModReplace(moduleDir, module, localAbs string) error {
-	return run(moduleDir, "go", "mod", "edit", "-replace="+module+"="+localAbs)
-}
-
-func goGet(moduleDir, pkg string) error {
-	return run(moduleDir, "go", "get", pkg)
 }
 
 func run(dir string, name string, args ...string) error {
@@ -151,19 +179,4 @@ func run(dir string, name string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
-}
-
-// findGoWork walks up from dir looking for a go.work file.
-func findGoWork(dir string) string {
-	for {
-		candidate := filepath.Join(dir, "go.work")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return ""
-		}
-		dir = parent
-	}
 }
