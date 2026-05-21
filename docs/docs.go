@@ -2035,6 +2035,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/sessions/{session_id}/system/reset": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Re-assembles the system prompt from current plugin state and stores it as the root message. Creates a fork branch when HEAD is non-empty.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Reset system snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID or name",
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reset options",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/pipeline.systemResetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/system/dag/diff": {
             "get": {
                 "security": [
@@ -2796,6 +2860,23 @@ const docTemplate = `{
                 "options_override": {
                     "type": "object",
                     "additionalProperties": {}
+                }
+            }
+        },
+        "pipeline.systemResetRequest": {
+            "type": "object",
+            "properties": {
+                "plugins": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "system": {
+                    "type": "string"
+                },
+                "tools_verbosity": {
+                    "type": "string"
                 }
             }
         },

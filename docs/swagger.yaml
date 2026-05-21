@@ -70,6 +70,17 @@ definitions:
         additionalProperties: {}
         type: object
     type: object
+  pipeline.systemResetRequest:
+    properties:
+      plugins:
+        items:
+          type: string
+        type: array
+      system:
+        type: string
+      tools_verbosity:
+        type: string
+    type: object
   plugins.PluginDriverInfo:
     properties:
       args:
@@ -1562,6 +1573,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Compact messages
+      tags:
+      - sessions
+  /v1/sessions/{session_id}/system/reset:
+    post:
+      consumes:
+      - application/json
+      description: Re-assembles the system prompt from current plugin state and stores
+        it as the root message. Creates a fork branch when HEAD is non-empty.
+      parameters:
+      - description: Session ID or name
+        in: path
+        name: session_id
+        required: true
+        type: string
+      - description: Reset options
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/pipeline.systemResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reset system snapshot
       tags:
       - sessions
   /v1/sessions/commit:
