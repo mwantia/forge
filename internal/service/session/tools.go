@@ -11,15 +11,16 @@ import (
 )
 
 func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+	args := request.Args.AsMap()
 	switch request.Tool {
 	case "update_session_title":
-		return s.execUpdateSessionField(ctx, request.Arguments, "title")
+		return s.execUpdateSessionField(ctx, args, "title")
 
 	case "update_session_description":
-		return s.execUpdateSessionField(ctx, request.Arguments, "description")
+		return s.execUpdateSessionField(ctx, args, "description")
 
 	case "read_session":
-		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
+		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
@@ -35,12 +36,12 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		}, nil
 
 	case "list_sub_sessions":
-		parent, ok := ArgString(request.Arguments, "parent")
+		parent, ok := ArgString(args, "parent")
 		if !ok {
 			parent = CallerSessionID(ctx)
 		}
-		offset := ArgInt(request.Arguments, "offset", 0)
-		limit := ArgInt(request.Arguments, "limit", 20)
+		offset := ArgInt(args, "offset", 0)
+		limit := ArgInt(args, "limit", 20)
 		s.mu.RLock()
 		sessions, err := s.store.ListParentSessions(ctx, parent, false, offset, limit)
 		s.mu.RUnlock()
@@ -53,15 +54,15 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		}, nil
 
 	case "create_session":
-		return s.execCreateSession(ctx, request.Arguments)
+		return s.execCreateSession(ctx, args)
 
 	case "list_message_history":
-		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
+		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
-		offset := ArgInt(request.Arguments, "offset", 0)
-		limit := ArgInt(request.Arguments, "limit", 50)
+		offset := ArgInt(args, "offset", 0)
+		limit := ArgInt(args, "limit", 50)
 		s.mu.RLock()
 		msgs, err := s.store.ListMessages(ctx, sessionID, offset, limit)
 		s.mu.RUnlock()
@@ -74,11 +75,11 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		}, nil
 
 	case "archive_session":
-		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
+		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
-		ref, _ := ArgString(request.Arguments, "ref")
+		ref, _ := ArgString(args, "ref")
 		res, err := s.ArchiveSession(ctx, sessionID, ref, "")
 		if err != nil {
 			return nil, err
@@ -86,11 +87,11 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		return &plugins.ExecuteResponse{Result: res}, nil
 
 	case "clone_archived_session":
-		sourceID, ok := ArgString(request.Arguments, "source_id")
+		sourceID, ok := ArgString(args, "source_id")
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "source_id")
 		}
-		name, _ := ArgString(request.Arguments, "name")
+		name, _ := ArgString(args, "name")
 		clone, err := s.CloneSession(ctx, sourceID, name)
 		if err != nil {
 			return nil, err
@@ -98,11 +99,11 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		return &plugins.ExecuteResponse{Result: clone}, nil
 
 	case "read_message":
-		sessionID, err := ResolveSessionArg(ctx, request.Arguments, "session_id")
+		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
-		msgID, ok := ArgString(request.Arguments, "message_id")
+		msgID, ok := ArgString(args, "message_id")
 		if !ok {
 			return nil, fmt.Errorf("invalid Argument defined for %q", "message_id")
 		}

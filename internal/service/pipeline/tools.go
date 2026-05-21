@@ -9,19 +9,20 @@ import (
 )
 
 func (s *PipelineService) ExecuteTool(ctx context.Context, request plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+	args := request.Args.AsMap()
 	switch request.Tool {
 	case "commit_session":
-		sessionID, err := session.ResolveSessionArg(ctx, request.Arguments, "session_id")
+		sessionID, err := session.ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
 
-		content, ok := session.ArgString(request.Arguments, "content")
+		content, ok := session.ArgString(args, "content")
 		if !ok || content == "" {
 			return nil, fmt.Errorf("missing argument %q", "content")
 		}
 
-		ref, _ := session.ArgString(request.Arguments, "ref")
+		ref, _ := session.ArgString(args, "ref")
 		response, err := s.CommitSync(ctx, sessionID, ref, content)
 		if err != nil {
 			return nil, fmt.Errorf("commit_session: %w", err)

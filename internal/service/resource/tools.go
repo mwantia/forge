@@ -10,16 +10,17 @@ import (
 )
 
 func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+	args := req.Args.AsMap()
 	switch req.Tool {
 	case "store":
-		content, ok := argString(req.Arguments, "content")
+		content, ok := argString(args, "content")
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "content")
 		}
-		path := s.resolvePathFromType(ctx, req.Arguments, false)
-		name := argStringOptional(req.Arguments, "name")
-		tags := argStringSlice(req.Arguments, "tags")
-		meta, _ := req.Arguments["metadata"].(map[string]any)
+		path := s.resolvePathFromType(ctx, args, false)
+		name := argStringOptional(args, "name")
+		tags := argStringSlice(args, "tags")
+		meta, _ := args["metadata"].(map[string]any)
 		res, err := s.Store(ctx, path, name, content, tags, meta)
 		if err != nil {
 			return nil, err
@@ -27,8 +28,8 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		return &plugins.ExecuteResponse{Result: res}, nil
 
 	case "recall":
-		path := s.resolvePathFromType(ctx, req.Arguments, true)
-		q, err := recallQueryFromArgs(req.Arguments, path)
+		path := s.resolvePathFromType(ctx, args, true)
+		q, err := recallQueryFromArgs(args, path)
 		if err != nil {
 			return nil, err
 		}
@@ -39,11 +40,11 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		return &plugins.ExecuteResponse{Result: res}, nil
 
 	case "forget":
-		name, ok := argString(req.Arguments, "name")
+		name, ok := argString(args, "name")
 		if !ok {
 			return nil, fmt.Errorf("missing argument %q", "name")
 		}
-		path := s.resolvePathFromType(ctx, req.Arguments, false)
+		path := s.resolvePathFromType(ctx, args, false)
 		if err := s.Forget(ctx, path, name); err != nil {
 			return nil, err
 		}
