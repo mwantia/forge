@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/system"
 	"github.com/spf13/cobra"
 )
 
-func SystemDagCmd(client func() *api.Client) *cobra.Command {
+func SystemDagCmd(client func() *v2.ForgeApi) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dag",
 		Short: "Inspect and debug the DAG object store",
@@ -31,7 +33,7 @@ func SystemDagCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagCatCmd(client func() *api.Client) *cobra.Command {
+func dagCatCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var pretty, jsonOut bool
 
 	cmd := &cobra.Command{
@@ -40,9 +42,12 @@ func dagCatCmd(client func() *api.Client) *cobra.Command {
 		Long: "Fetch the raw canonical JSON for an object by its full hash or a prefix\n" +
 			"(minimum 4 hex characters). Pass --pretty to indent the output.\n" +
 			"The X-Forge-Object-Type response header indicates the object kind.",
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			obj, err := client().DagCat(cmd.Context(), args[0], pretty || jsonOut)
+			obj, err := client().System.DagCat(cmd.Context(), system.DagCatRequest{
+				Hash:   args[0],
+				Pretty: pretty || jsonOut,
+			})
 			if err != nil {
 				return err
 			}
@@ -61,7 +66,7 @@ func dagCatCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagTypeCmd(client func() *api.Client) *cobra.Command {
+func dagTypeCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var jsonOut bool
 
 	cmd := &cobra.Command{
@@ -69,16 +74,16 @@ func dagTypeCmd(client func() *api.Client) *cobra.Command {
 		Short: "Print the type of a DAG object",
 		Long: "Report the type of a DAG object (message, prompt_context, tool_catalog)\n" +
 			"without fetching the full body.",
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := client().DagType(cmd.Context(), args[0])
+			resp, err := client().System.DagType(cmd.Context(), system.DagTypeRequest{Hash: args[0]})
 			if err != nil {
 				return err
 			}
 			if jsonOut {
-				return json.NewEncoder(os.Stdout).Encode(map[string]string{"type": t})
+				return json.NewEncoder(os.Stdout).Encode(map[string]string{"type": resp.Type})
 			}
-			fmt.Println(t)
+			fmt.Println(resp.Type)
 			return nil
 		},
 	}
@@ -86,7 +91,7 @@ func dagTypeCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagLogCmd(client func() *api.Client) *cobra.Command {
+func dagLogCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var ref string
 	var jsonOut bool
 
@@ -97,14 +102,17 @@ func dagLogCmd(client func() *api.Client) *cobra.Command {
 			"printing hash, role, and a content preview for each entry.\n\n" +
 			"Note: <session> must be a session ID, not a session name.\n" +
 			"Use 'forge sessions log' if you want name resolution.",
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ch, err := client().DagLog(cmd.Context(), args[0], ref)
+			resp, err := client().System.DagLog(cmd.Context(), system.DagLogRequest{
+				SessionID: args[0],
+				Ref:       ref,
+			})
 			if err != nil {
 				return err
 			}
 			enc := json.NewEncoder(os.Stdout)
-			for entry := range ch {
+			for entry := range resp.Entries {
 				if jsonOut {
 					_ = enc.Encode(entry)
 					continue
@@ -123,26 +131,29 @@ func dagLogCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagDiffCmd(client func() *api.Client) *cobra.Command {
+func dagDiffCmd(client func() *v2.ForgeApi) *cobra.Command {
 	return &cobra.Command{
 		Use:   "diff <hash-a> <hash-b>",
 		Short: "Unified diff of two DAG objects' canonical JSON",
 		Long: "Fetch two objects by hash (or prefix), canonicalize their JSON, and emit\n" +
 			"a unified diff to stdout. Useful for comparing versions of a message or\n" +
 			"two prompt contexts across model runs.",
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			diff, err := client().DagDiff(cmd.Context(), args[0], args[1])
+			resp, err := client().System.DagDiff(cmd.Context(), system.DagDiffRequest{
+				HashA: args[0],
+				HashB: args[1],
+			})
 			if err != nil {
 				return err
 			}
-			fmt.Print(diff)
+			fmt.Print(resp.Diff)
 			return nil
 		},
 	}
 }
 
-func dagRefsCmd(client func() *api.Client) *cobra.Command {
+func dagRefsCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var jsonOut bool
 
 	cmd := &cobra.Command{
@@ -151,16 +162,16 @@ func dagRefsCmd(client func() *api.Client) *cobra.Command {
 		Long: "List all named refs (HEAD and branches) for the given session and their\n" +
 			"current tip hashes.\n\n" +
 			"Note: <session> must be a session ID, not a session name.",
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			refs, err := client().ListBranches(cmd.Context(), args[0])
+			refsResp, err := client().Refs.List(cmd.Context(), refs.RefsListRequest{SessionID: args[0]})
 			if err != nil {
 				return err
 			}
 			if jsonOut {
-				return json.NewEncoder(os.Stdout).Encode(refs)
+				return json.NewEncoder(os.Stdout).Encode(refsResp.Refs)
 			}
-			for name, hash := range refs {
+			for name, hash := range refsResp.Refs {
 				fmt.Printf("%-30s %s\n", name, hash)
 			}
 			return nil
@@ -170,7 +181,7 @@ func dagRefsCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagVerifyCmd(client func() *api.Client) *cobra.Command {
+func dagVerifyCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var ref string
 	var all bool
 
@@ -180,9 +191,13 @@ func dagVerifyCmd(client func() *api.Client) *cobra.Command {
 		Long: "Walk every reachable object from the named ref, re-hash each blob, and\n" +
 			"report any mismatches or missing parents. Exits with status 1 if any errors are found.\n\n" +
 			"Note: <session> must be a session ID, not a session name. Use --all to verify every session.",
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := client().DagVerify(cmd.Context(), args[0], ref, all)
+			result, err := client().System.DagVerify(cmd.Context(), system.DagVerifyRequest{
+				SessionID: args[0],
+				Ref:       ref,
+				All:       all,
+			})
 			if err != nil {
 				return err
 			}
@@ -202,7 +217,7 @@ func dagVerifyCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagObjectsCmd(client func() *api.Client) *cobra.Command {
+func dagObjectsCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var prefix string
 	var list, jsonOut bool
 
@@ -211,25 +226,25 @@ func dagObjectsCmd(client func() *api.Client) *cobra.Command {
 		Short: "Count or list objects in the DAG store",
 		Long: "Count the total number of objects in the store, optionally filtered by shard prefix\n" +
 			"(2 hex chars). Pass --list to stream object hashes instead of just counting.",
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !list {
-				count, err := client().DagObjectsCount(cmd.Context(), prefix)
+				resp, err := client().System.DagObjectsCount(cmd.Context(), system.DagObjectsCountRequest{Prefix: prefix})
 				if err != nil {
 					return err
 				}
 				if jsonOut {
-					return json.NewEncoder(os.Stdout).Encode(map[string]int{"count": count})
+					return json.NewEncoder(os.Stdout).Encode(map[string]int{"count": resp.Count})
 				}
-				fmt.Println(count)
+				fmt.Println(resp.Count)
 				return nil
 			}
-			ch, err := client().DagObjectsList(cmd.Context(), prefix)
+			resp, err := client().System.DagObjectsList(cmd.Context(), system.DagObjectsListRequest{Prefix: prefix})
 			if err != nil {
 				return err
 			}
 			enc := json.NewEncoder(os.Stdout)
-			for entry := range ch {
+			for entry := range resp.Entries {
 				if jsonOut {
 					_ = enc.Encode(entry)
 					continue
@@ -245,7 +260,7 @@ func dagObjectsCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func dagGCCmd(client func() *api.Client) *cobra.Command {
+func dagGCCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
@@ -253,9 +268,9 @@ func dagGCCmd(client func() *api.Client) *cobra.Command {
 		Short: "Garbage-collect unreachable DAG objects",
 		Long: "Mark all objects reachable from any session ref, then delete the rest.\n" +
 			"Pass --dry-run to report how many objects would be swept without deleting.",
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := client().DagGC(cmd.Context(), dryRun)
+			result, err := client().System.DagGC(cmd.Context(), system.DagGCRequest{DryRun: dryRun})
 			if err != nil {
 				return err
 			}

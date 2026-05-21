@@ -6,14 +6,15 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func BranchCmd(client func() *api.Client) *cobra.Command {
+func BranchCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var rename string
-	var delete bool
+	var deleteBranch bool
 
 	cmd := &cobra.Command{
 		Use:   "branch <session> [name]",
@@ -32,43 +33,52 @@ func BranchCmd(client func() *api.Client) *cobra.Command {
 
 			switch {
 			case rename != "":
-				// -m <old> <new>
 				if len(args) < 2 {
 					return fmt.Errorf("usage: branch <session> -m <old-name> <new-name>")
 				}
-				return c.RenameBranch(ctx, sessionID, rename, args[1])
+				_, err := c.Refs.Rename(ctx, refs.RefsRenameRequest{
+					SessionID: sessionID,
+					Ref:       rename,
+					Name:      args[1],
+				})
+				return err
 
-			case delete:
-				// -d <name>
+			case deleteBranch:
 				if len(args) < 2 {
 					return fmt.Errorf("usage: branch <session> -d <name>")
 				}
-				return c.DeleteBranch(ctx, sessionID, args[1])
+				return c.Refs.Delete(ctx, refs.RefsDeleteRequest{
+					SessionID: sessionID,
+					Ref:       args[1],
+				})
 
 			case len(args) == 2:
-				// create at HEAD
-				refs, err := c.ListBranches(ctx, sessionID)
+				refsResp, err := c.Refs.List(ctx, refs.RefsListRequest{SessionID: sessionID})
 				if err != nil {
 					return err
 				}
-				headHash, ok := refs["HEAD"]
+				headHash, ok := refsResp.Refs["HEAD"]
 				if !ok || headHash == "" {
 					return fmt.Errorf("session has no HEAD")
 				}
-				return c.CreateBranch(ctx, sessionID, args[1], headHash)
+				_, err = c.Refs.Create(ctx, refs.RefsCreateRequest{
+					SessionID: sessionID,
+					Name:      args[1],
+					Hash:      headHash,
+				})
+				return err
 
 			default:
-				// list
-				refs, symrefs, err := c.ListBranchesWithSymrefs(ctx, sessionID)
+				refsResp, err := c.Refs.List(ctx, refs.RefsListRequest{SessionID: sessionID})
 				if err != nil {
 					return err
 				}
-				if len(refs) == 0 {
+				if len(refsResp.Refs) == 0 {
 					fmt.Println("No branches.")
 					return nil
 				}
-				names := make([]string, 0, len(refs))
-				for n := range refs {
+				names := make([]string, 0, len(refsResp.Refs))
+				for n := range refsResp.Refs {
 					names = append(names, n)
 				}
 				sort.Strings(names)
@@ -76,10 +86,10 @@ func BranchCmd(client func() *api.Client) *cobra.Command {
 				fmt.Fprintln(w, "REF\tHASH")
 				for _, n := range names {
 					label := n
-					if target, ok := symrefs[n]; ok {
+					if target, ok := refsResp.Symrefs[n]; ok {
 						label = n + " → " + target
 					}
-					fmt.Fprintf(w, "%s\t%s\n", label, helpers.FormatShortHash(refs[n]))
+					fmt.Fprintf(w, "%s\t%s\n", label, helpers.FormatShortHash(refsResp.Refs[n]))
 				}
 				return w.Flush()
 			}
@@ -87,6 +97,6 @@ func BranchCmd(client func() *api.Client) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&rename, "move", "m", "", "Rename: -m <old-name> <new-name>")
-	cmd.Flags().BoolVarP(&delete, "delete", "d", false, "Delete the named branch")
+	cmd.Flags().BoolVarP(&deleteBranch, "delete", "d", false, "Delete the named branch")
 	return cmd
 }

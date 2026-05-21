@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
 	"github.com/mwantia/forge/cmd/forge/client/contexts"
 	"github.com/spf13/cobra"
 )
@@ -24,8 +24,8 @@ func NewContextsCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Address of the forge agent (env: FORGE_HTTP_ADDR)")
 	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token for the forge agent (env: FORGE_HTTP_TOKEN)")
 
-	client := func() *api.Client {
-		return api.New(httpAddr, httpToken)
+	client := func() *v2.ForgeApi {
+		return v2.NewApi(httpAddr, httpToken)
 	}
 
 	cmd.AddCommand(contexts.ContextsReplayCmd(client))

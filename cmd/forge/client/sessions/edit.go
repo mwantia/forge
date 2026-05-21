@@ -4,31 +4,41 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsEditCmd(client func() *api.Client) *cobra.Command {
-	var branch string
+func SessionsEditCmd(client func() *v2.ForgeApi) *cobra.Command {
+	var branch, editor string
+	var noSwitch bool
 
 	cmd := &cobra.Command{
 		Use:   "edit <session> <msg-hash-prefix>",
 		Short: "Open a message in $EDITOR and re-commit from its parent",
 		Long: "Fetch the message at <msg-hash-prefix>, open its content in $EDITOR, then\n" +
 			"commit the edited text using fork_from to branch off the message's parent.\n\n" +
-			"The auto-created fork-* branch can be renamed with --branch.",
+			"The new branch is named edit-<8hex> by default (derived from the edited\n" +
+			"message hash) and HEAD is switched to it automatically. Use --branch to\n" +
+			"override the name, --no-switch to stay on the current branch, and\n" +
+			"-e/--editor to override $EDITOR.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			c := client()
 
-			orig, err := c.GetMessage(ctx, args[0], args[1])
+			origResp, err := c.Sessions.GetMessage(ctx, sessions.SessionsGetMessageRequest{
+				SessionID: args[0],
+				MessageID: args[1],
+			})
 			if err != nil {
 				return err
 			}
+			orig := origResp.Message
 
-			edited, err := helpers.OpenInEditor(orig.Content)
+			edited, err := helpers.OpenInEditorWith(orig.Content, editor)
 			if err != nil {
 				return err
 			}
@@ -39,35 +49,43 @@ func SessionsEditCmd(client func() *api.Client) *cobra.Command {
 				return fmt.Errorf("no changes; aborting")
 			}
 
-			activeRef, events, err := c.SendMessage(ctx, args[0], edited, api.CommitOptions{
-				ForkFrom: args[1],
-			})
+			activeRef, err := streamSend(ctx, c, args[0], edited, false, false, false, "", args[1])
 			if err != nil {
 				return err
 			}
-			for ev := range events {
-				parsed, err := api.ParseWireEvent(ev)
-				if err != nil {
-					continue
-				}
-				switch e := parsed.(type) {
-				case api.ChunkEvent:
-					fmt.Print(e.Text)
-				case api.ErrorEvent:
-					return fmt.Errorf("commit error: %s", e.Message)
-				}
-			}
-			fmt.Println()
 
-			if branch != "" && activeRef != "" && activeRef != branch {
-				if err := c.RenameBranch(ctx, args[0], activeRef, branch); err != nil {
+			finalBranch := branch
+			if finalBranch == "" && len(orig.Hash) >= 8 {
+				finalBranch = "edit-" + orig.Hash[:8]
+			}
+
+			if finalBranch != "" && activeRef != "" && activeRef != finalBranch {
+				if _, err := c.Refs.Rename(ctx, refs.RefsRenameRequest{
+					SessionID: args[0],
+					Ref:       activeRef,
+					Name:      finalBranch,
+				}); err != nil {
 					return fmt.Errorf("edit succeeded but branch rename failed: %w", err)
 				}
+				activeRef = finalBranch
 			}
+
+			if !noSwitch && activeRef != "" {
+				if _, err := c.Refs.Checkout(ctx, refs.RefsCheckoutRequest{
+					SessionID: args[0],
+					Branch:    activeRef,
+				}); err != nil {
+					return fmt.Errorf("edit succeeded but checkout failed: %w", err)
+				}
+				fmt.Printf("Switched to branch %s\n", activeRef)
+			}
+
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&branch, "branch", "", "Rename the auto-created fork-* ref to this name after commit")
+	cmd.Flags().StringVar(&branch, "branch", "", "Name for the new edit branch (default: edit-<8hex>)")
+	cmd.Flags().StringVarP(&editor, "editor", "e", "", "Editor to use (overrides $EDITOR)")
+	cmd.Flags().BoolVar(&noSwitch, "no-switch", false, "Do not switch HEAD to the new branch after edit")
 	return cmd
 }

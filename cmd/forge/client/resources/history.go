@@ -5,11 +5,12 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/resources"
 	"github.com/spf13/cobra"
 )
 
-func HistoryCmd(client func() *api.Client) *cobra.Command {
+func HistoryCmd(client func() *v2.ForgeApi) *cobra.Command {
 	return &cobra.Command{
 		Use:   "history <path> <name>",
 		Short: "Show revision history for a resource",
@@ -19,18 +20,21 @@ func HistoryCmd(client func() *api.Client) *cobra.Command {
 			"  forge resources history /forge/sessions/<id>/memories dark-mode-pref",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			revs, err := client().ListResourceHistory(cmd.Context(), args[0], args[1])
+			resp, err := client().Resources.History(cmd.Context(), resources.ResourcesHistoryRequest{
+				Path: args[0],
+				Name: args[1],
+			})
 			if err != nil {
 				return err
 			}
-			if len(revs) == 0 {
+			if len(resp.History) == 0 {
 				fmt.Println("No history found.")
 				return nil
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "#\tHASH\tCREATED\tINDEXED BY")
-			for i, rev := range revs {
+			for i, rev := range resp.History {
 				short := rev.Hash
 				if len(short) > 12 {
 					short = short[:12]

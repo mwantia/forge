@@ -1,12 +1,13 @@
 package sessions
 
 import (
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsUpdateCmd(client func() *api.Client) *cobra.Command {
+func SessionsUpdateCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var name, title, description, model string
 
 	cmd := &cobra.Command{
@@ -16,24 +17,24 @@ func SessionsUpdateCmd(client func() *api.Client) *cobra.Command {
 			"applied; omitted flags leave the existing values unchanged.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			req := api.UpdateSessionRequest{}
+			req := sessions.SessionsUpdateRequest{ID: args[0]}
 			if cmd.Flags().Changed("name") {
-				req.Name = &name
+				req.Name = name
 			}
 			if cmd.Flags().Changed("title") {
-				req.Title = &title
+				req.Title = title
 			}
 			if cmd.Flags().Changed("description") {
-				req.Description = &description
+				req.Description = description
 			}
 			if cmd.Flags().Changed("model") {
-				req.Model = &model
+				req.Model = model
 			}
-			meta, err := client().UpdateSession(cmd.Context(), args[0], req)
+			resp, err := client().Sessions.Update(cmd.Context(), req)
 			if err != nil {
 				return err
 			}
-			helpers.PrintSession(meta, false)
+			helpers.PrintSession(resp.Session, false)
 			return nil
 		},
 	}

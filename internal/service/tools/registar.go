@@ -123,7 +123,7 @@ func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, nam
 	start := time.Now()
 	resp, err := tool.Execution(ctx, plugins.ExecuteRequest{
 		Tool:      tool.ToolDefinition.Name,
-		Arguments: arguments,
+		Args: plugins.NewArgs(arguments),
 		CallID:    callID,
 	})
 

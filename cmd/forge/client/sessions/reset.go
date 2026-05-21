@@ -3,11 +3,12 @@ package sessions
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/spf13/cobra"
 )
 
-func SessionsResetCmd(client func() *api.Client) *cobra.Command {
+func SessionsResetCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var systemPrompt string
 	var toolsVerbosity string
 	var plugins []string
@@ -22,17 +23,19 @@ func SessionsResetCmd(client func() *api.Client) *cobra.Command {
 			"how tool docs are rendered, and --plugins to restrict which namespaces contribute.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			c := client()
-
-			newHash, branch, err := c.RegenSystemSnapshot(ctx, args[0], systemPrompt, toolsVerbosity, plugins)
+			resp, err := client().Sessions.Reset(cmd.Context(), sessions.SessionsResetRequest{
+				SessionID:      args[0],
+				System:         systemPrompt,
+				ToolsVerbosity: toolsVerbosity,
+				Plugins:        plugins,
+			})
 			if err != nil {
 				return err
 			}
-			if branch != "" {
-				fmt.Printf("System message regenerated: %s (fork branch: %s)\n", newHash, branch)
+			if resp.Branch != "" {
+				fmt.Printf("System message regenerated: %s (fork branch: %s)\n", resp.Hash, resp.Branch)
 			} else {
-				fmt.Printf("System message regenerated: %s\n", newHash)
+				fmt.Printf("System message regenerated: %s\n", resp.Hash)
 			}
 			return nil
 		},

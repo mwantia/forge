@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/pipeline"
 )
 
-func FormatUsage(u api.PreviewUsage) string {
+func FormatUsage(u pipeline.PreviewUsage) string {
 	return fmt.Sprintf("%d bytes, %d runes, ~%d tokens", u.Bytes, u.Runes, u.EstTokens)
 }
 

@@ -8,7 +8,13 @@ import (
 )
 
 func OpenInEditor(initial string) (string, error) {
-	editor := os.Getenv("EDITOR")
+	return OpenInEditorWith(initial, "")
+}
+
+func OpenInEditorWith(initial, editor string) (string, error) {
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
 	if editor == "" {
 		editor = "vi"
 	}

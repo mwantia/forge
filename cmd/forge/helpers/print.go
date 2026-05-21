@@ -10,7 +10,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/events"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 )
 
 const (
@@ -37,7 +38,7 @@ func roleColor(role string) string {
 	}
 }
 
-func PrintEventStatus(ev *api.EventStatus) error {
+func PrintEventStatus(ev events.EventStatus) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(w, "ID\t= %s\n", ev.ID)
 	fmt.Fprintf(w, "State\t= %s\n", ev.State)
@@ -51,7 +52,7 @@ func PrintEventStatus(ev *api.EventStatus) error {
 	return w.Flush()
 }
 
-func PrintEventOptions(ev *api.EventStatus) error {
+func PrintEventOptions(ev events.EventStatus) error {
 	if ev.Options == nil {
 		return nil
 	}
@@ -70,26 +71,24 @@ func PrintEventOptions(ev *api.EventStatus) error {
 	return w.Flush()
 }
 
-func PrintEventQueue(ev *api.EventStatus) error {
+func PrintEventQueue(ev events.EventStatus) error {
 	if ev.Queue == nil {
 		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
-	if ev.Queue != nil {
-		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "Queue")
-		fmt.Fprintf(w, "  Size\t= %d\n", ev.Queue.Size)
-		if ev.Queue.WindowExpiresAt != nil {
-			fmt.Fprintf(w, "  Window Expires\t= %s\n", FormatTime(*ev.Queue.WindowExpiresAt))
-		}
+	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "Queue")
+	fmt.Fprintf(w, "  Size\t= %d\n", ev.Queue.Size)
+	if ev.Queue.WindowExpiresAt != nil {
+		fmt.Fprintf(w, "  Window Expires\t= %s\n", FormatTime(*ev.Queue.WindowExpiresAt))
 	}
 
 	return w.Flush()
 }
 
-func PrintEventBranches(branches []api.EventBranch) error {
+func PrintEventBranches(branches []events.EventBranch) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 	if len(branches) > 0 {
@@ -109,7 +108,7 @@ func PrintEventBranches(branches []api.EventBranch) error {
 	return w.Flush()
 }
 
-func PrintSession(meta *api.SessionMetadata, skipEmpty bool) error {
+func PrintSession(meta sessions.SessionMetadata, skipEmpty bool) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 	plugins := strings.Join(meta.Plugins, ",")
@@ -147,7 +146,7 @@ func PrintSession(meta *api.SessionMetadata, skipEmpty bool) error {
 	return w.Flush()
 }
 
-func PrintSessionLogTable(msgs []*api.Message) error {
+func PrintSessionLogTable(msgs []sessions.Message) error {
 	if len(msgs) == 0 {
 		fmt.Println("No messages found.")
 		return nil
@@ -174,18 +173,18 @@ func PrintSessionLogTable(msgs []*api.Message) error {
 			content = content[:77] + "..."
 		}
 
-		time := m.CreatedAt.Local().Format("2006-01-02 15:04:05")
+		t := m.CreatedAt.Local().Format("2006-01-02 15:04:05")
 		hash := m.Hash
 		if len(hash) > 12 {
 			hash = hash[:12]
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", hash, time, role, tokens, content)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", hash, t, role, tokens, content)
 	}
 	return w.Flush()
 }
 
-func PrintSessionLogHeader(meta *api.SessionMetadata, msgs []*api.Message) {
+func PrintSessionLogHeader(meta sessions.SessionMetadata, msgs []sessions.Message) {
 	roleCounts := map[string]int{}
 	var liveContext int
 	for _, m := range msgs {
@@ -236,10 +235,9 @@ func PrintSessionLogHeader(meta *api.SessionMetadata, msgs []*api.Message) {
 	}
 }
 
-func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, detailed bool) {
+func PrintSessionLogEntry(m sessions.Message, byHash map[string][]string, verbose, detailed bool) {
 	role := displayRole(m)
 
-	// "message <hash> (<branches>)"
 	hash := FormatShortHash(m.Hash)
 	if detailed || verbose {
 		hash = m.Hash
@@ -270,7 +268,6 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 
 	fmt.Println()
 
-	// Content block — indented 4 spaces, capped at 6 lines unless detailed.
 	var lines []string
 	switch role {
 	case "tool_call":
@@ -327,10 +324,7 @@ func PrintSessionLogEntry(m *api.Message, byHash map[string][]string, verbose, d
 	fmt.Println()
 }
 
-// displayRole maps stored roles to their display label.
-// An assistant message that carries only tool calls (no text content) is shown
-// as "tool_call"; tool-result messages are shown as "tool_result".
-func displayRole(m *api.Message) string {
+func displayRole(m sessions.Message) string {
 	switch m.Role {
 	case "assistant":
 		if m.Content == "" && len(m.ToolCalls) > 0 {
@@ -344,8 +338,6 @@ func displayRole(m *api.Message) string {
 	}
 }
 
-// formatArgPreview renders tool call arguments as a compact JSON snippet,
-// capped at maxLen characters.
 func formatArgPreview(args map[string]any, maxLen int) string {
 	if len(args) == 0 {
 		return "()"

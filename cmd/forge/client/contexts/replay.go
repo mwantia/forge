@@ -3,11 +3,12 @@ package contexts
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/pipeline"
 	"github.com/spf13/cobra"
 )
 
-func ContextsReplayCmd(client func() *api.Client) *cobra.Command {
+func ContextsReplayCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var httpAddr, httpToken, model string
 
 	cmd := &cobra.Command{
@@ -22,26 +23,29 @@ func ContextsReplayCmd(client func() *api.Client) *cobra.Command {
 			ctx := cmd.Context()
 			c := client()
 
-			ch, err := c.ReplayContext(ctx, args[0], model)
+			resp, err := c.Pipeline.ReplayContext(ctx, pipeline.PipelineReplayContextRequest{
+				Hash:          args[0],
+				ModelOverride: model,
+			})
 			if err != nil {
 				return err
 			}
 
 			printed := false
-			for ev := range ch {
-				parsed, err := api.ParseWireEvent(ev)
+			for ev := range resp.Events {
+				parsed, err := pipeline.ParseWireEvent(ev)
 				if err != nil {
 					continue
 				}
 
 				switch e := parsed.(type) {
-				case api.ChunkEvent:
+				case pipeline.ChunkEvent:
 					if e.Text == "" {
 						continue
 					}
 					fmt.Print(e.Text)
 					printed = true
-				case api.ErrorEvent:
+				case pipeline.ErrorEvent:
 					return fmt.Errorf("replay error: %s", e.Message)
 				}
 			}

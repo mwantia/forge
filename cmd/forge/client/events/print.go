@@ -6,10 +6,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/events"
 )
 
-func printEventStatus(ev *api.EventStatus) error {
+func printEventStatus(ev events.EventStatus) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 
 	kv(w, "ID", ev.ID)
@@ -45,59 +45,7 @@ func printEventStatus(ev *api.EventStatus) error {
 	return w.Flush()
 }
 
-func printEventStatusDetailed(ev *api.EventStatus, branches []api.EventBranch) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-
-	kv(w, "ID", ev.ID)
-	kv(w, "Session", ev.Session)
-	if ev.Description != "" {
-		kv(w, "Description", ev.Description)
-	}
-	kv(w, "State", string(ev.State))
-
-	if ev.Options != nil {
-		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "Options")
-		if ev.Options.Timespan != "" {
-			kv(w, "  Timespan", ev.Options.Timespan)
-		}
-		if ev.Options.MaxQueue > 0 {
-			kv(w, "  Max Queue", fmt.Sprintf("%d", ev.Options.MaxQueue))
-		}
-	}
-
-	if ev.Queue != nil {
-		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "Queue")
-		kv(w, "  Size", fmt.Sprintf("%d", ev.Queue.Size))
-		if ev.Queue.WindowExpiresAt != nil {
-			kv(w, "  Window Expires", formatTime(*ev.Queue.WindowExpiresAt))
-		}
-	}
-
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Allocations")
-	if len(branches) == 0 {
-		fmt.Fprintln(w, "  No allocations.")
-	} else {
-		fmt.Fprintf(w, "%-55s\t%-21s\t%s\n", "BRANCH", "FIRED AT", "HASH")
-		for _, b := range branches {
-			hash := b.Hash
-			if len(hash) > 8 {
-				hash = hash[:8]
-			}
-			fmt.Fprintf(w, "%-55s\t%-21s\t%s\n",
-				b.Name,
-				b.FiredAt.Local().Format(time.DateTime),
-				hash,
-			)
-		}
-	}
-
-	return w.Flush()
-}
-
-func printFireResponse(r *api.FireResponse) error {
+func printFireResponse(r events.FireResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 
 	kv(w, "Event ID", r.EventID)

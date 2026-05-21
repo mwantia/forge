@@ -6,11 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/resources"
 	"github.com/spf13/cobra"
 )
 
-func StoreCmd(client func() *api.Client) *cobra.Command {
+func StoreCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var name, content, file string
 	var tags []string
 
@@ -46,7 +47,8 @@ func StoreCmd(client func() *api.Client) *cobra.Command {
 				return fmt.Errorf("no content: provide --content, --file, or pipe via stdin")
 			}
 
-			res, err := client().StoreResource(cmd.Context(), args[0], api.StoreResourceRequest{
+			resp, err := client().Resources.Store(cmd.Context(), resources.ResourcesStoreRequest{
+				Path:    args[0],
 				Name:    name,
 				Content: text,
 				Tags:    tags,
@@ -55,7 +57,7 @@ func StoreCmd(client func() *api.Client) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("stored: %s\n", res.ID)
+			fmt.Printf("stored: %s\n", resp.Resource.ID)
 			return nil
 		},
 	}

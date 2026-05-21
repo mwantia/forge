@@ -1,12 +1,13 @@
 package sessions
 
 import (
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsCreateCmd(client func() *api.Client) *cobra.Command {
+func SessionsCreateCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var (
 		name              string
 		model             string
@@ -23,19 +24,17 @@ func SessionsCreateCmd(client func() *api.Client) *cobra.Command {
 			"tool verbosity and plugin settings. Pass --tools-verbosity and --plugins to\n" +
 			"control what gets assembled into the system block.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			req := api.CreateSessionRequest{
+			resp, err := client().Sessions.Create(cmd.Context(), sessions.SessionsCreateRequest{
 				Name:              name,
 				Model:             model,
 				MaxToolIterations: maxToolIterations,
 				ToolsVerbosity:    toolsVerbosity,
 				Plugins:           plugins,
-			}
-			meta, err := client().CreateSession(ctx, req)
+			})
 			if err != nil {
 				return err
 			}
-			helpers.PrintSession(meta, true)
+			helpers.PrintSession(resp.Session, true)
 			return nil
 		},
 	}

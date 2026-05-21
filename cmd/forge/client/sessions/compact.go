@@ -3,11 +3,12 @@ package sessions
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/spf13/cobra"
 )
 
-func SessionsMessagesCompactCmd(client func() *api.Client) *cobra.Command {
+func SessionsMessagesCompactCmd(client func() *v2.ForgeApi) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compact <id>",
 		Short: "Compact messages in a session by removing tool call entries",
@@ -16,7 +17,9 @@ func SessionsMessagesCompactCmd(client func() *api.Client) *cobra.Command {
 			"to reclaim the space.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := client().CompactMessages(cmd.Context(), args[0])
+			result, err := client().Sessions.Compact(cmd.Context(), sessions.SessionsCompactRequest{
+				SessionID: args[0],
+			})
 			if err != nil {
 				return err
 			}

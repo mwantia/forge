@@ -3,11 +3,12 @@ package sessions
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
 	"github.com/spf13/cobra"
 )
 
-func BranchCheckoutCmd(client func() *api.Client) *cobra.Command {
+func BranchCheckoutCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var newBranch bool
 
 	cmd := &cobra.Command{
@@ -23,20 +24,28 @@ func BranchCheckoutCmd(client func() *api.Client) *cobra.Command {
 			sessionID, branchName := args[0], args[1]
 
 			if newBranch {
-				refs, err := c.ListBranches(ctx, sessionID)
+				refsResp, err := c.Refs.List(ctx, refs.RefsListRequest{SessionID: sessionID})
 				if err != nil {
 					return err
 				}
-				headHash, ok := refs["HEAD"]
+				headHash, ok := refsResp.Refs["HEAD"]
 				if !ok || headHash == "" {
 					return fmt.Errorf("session has no HEAD")
 				}
-				if err := c.CreateBranch(ctx, sessionID, branchName, headHash); err != nil {
+				if _, err := c.Refs.Create(ctx, refs.RefsCreateRequest{
+					SessionID: sessionID,
+					Name:      branchName,
+					Hash:      headHash,
+				}); err != nil {
 					return err
 				}
 			}
 
-			return c.CheckoutBranch(ctx, sessionID, branchName)
+			_, err := c.Refs.Checkout(ctx, refs.RefsCheckoutRequest{
+				SessionID: sessionID,
+				Branch:    branchName,
+			})
+			return err
 		},
 	}
 

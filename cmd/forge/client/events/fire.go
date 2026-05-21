@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/events"
 	"github.com/spf13/cobra"
 )
 
-func EventsFireCmd(client func() *api.Client) *cobra.Command {
+func EventsFireCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var payload, payloadFile, ref string
 
 	cmd := &cobra.Command{
@@ -43,12 +44,16 @@ func EventsFireCmd(client func() *api.Client) *cobra.Command {
 				}
 			}
 
-			resp, err := client().FireEvent(cmd.Context(), args[0], body, ref)
+			resp, err := client().Events.Fire(cmd.Context(), events.EventsFireRequest{
+				ID:      args[0],
+				Ref:     ref,
+				Payload: body,
+			})
 			if err != nil {
 				return err
 			}
 
-			return printFireResponse(resp)
+			return printFireResponse(resp.Fire)
 		},
 	}
 

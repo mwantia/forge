@@ -6,11 +6,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/resources"
 	"github.com/spf13/cobra"
 )
 
-func RecallCmd(client func() *api.Client) *cobra.Command {
+func RecallCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var query string
 	var limit int
 	var tags []string
@@ -25,7 +26,8 @@ func RecallCmd(client func() *api.Client) *cobra.Command {
 			"  forge resources recall /forge/global --query \"auth decisions\" --tag decision --limit 10",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			hits, err := client().RecallResources(cmd.Context(), args[0], api.RecallResourcesRequest{
+			resp, err := client().Resources.Recall(cmd.Context(), resources.ResourcesRecallRequest{
+				Path:  args[0],
 				Query: query,
 				Tags:  tags,
 				Limit: limit,
@@ -33,14 +35,14 @@ func RecallCmd(client func() *api.Client) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if len(hits) == 0 {
+			if len(resp.Resources) == 0 {
 				fmt.Println("No matching resources.")
 				return nil
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 			fmt.Fprintln(w, "SCORE\tNAME\tTAGS\tPREVIEW")
-			for _, r := range hits {
+			for _, r := range resp.Resources {
 				preview := strings.ReplaceAll(r.Content, "\n", " ")
 				if len(preview) > 60 {
 					preview = preview[:57] + "..."

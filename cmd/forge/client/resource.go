@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
 	"github.com/mwantia/forge/cmd/forge/client/resources"
 	"github.com/spf13/cobra"
 )
@@ -25,9 +25,9 @@ func NewResourceCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&httpAddr, "http-addr", "", "Forge agent address (env: FORGE_HTTP_ADDR)")
 	cmd.PersistentFlags().StringVar(&httpToken, "http-token", "", "Auth token (env: FORGE_HTTP_TOKEN)")
 
-	client := func() *api.Client { return api.New(httpAddr, httpToken) }
+	client := func() *v2.ForgeApi { return v2.NewApi(httpAddr, httpToken) }
 
-	cmd.AddCommand(resources.ListCmd(client))
+	cmd.AddCommand(resources.LsCmd(client))
 	cmd.AddCommand(resources.GetCmd(client))
 	cmd.AddCommand(resources.StoreCmd(client))
 	cmd.AddCommand(resources.RecallCmd(client))

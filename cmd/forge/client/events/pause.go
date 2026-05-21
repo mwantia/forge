@@ -6,11 +6,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/events"
 	"github.com/spf13/cobra"
 )
 
-func EventsPauseCmd(client func() *api.Client) *cobra.Command {
+func EventsPauseCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var hold bool
 
 	cmd := &cobra.Command{
@@ -23,11 +24,11 @@ func EventsPauseCmd(client func() *api.Client) *cobra.Command {
 			id := args[0]
 			c := client()
 
-			ev, err := c.PauseEvent(cmd.Context(), id)
+			resp, err := c.Events.Pause(cmd.Context(), events.EventsPauseRequest{ID: id})
 			if err != nil {
 				return err
 			}
-			if err := printEventStatus(ev); err != nil {
+			if err := printEventStatus(resp.Event); err != nil {
 				return err
 			}
 
@@ -43,11 +44,11 @@ func EventsPauseCmd(client func() *api.Client) *cobra.Command {
 			signal.Stop(sig)
 
 			fmt.Fprintln(os.Stderr, "\nResuming event...")
-			ev, err = c.ResumeEvent(cmd.Context(), id)
+			resumeResp, err := c.Events.Resume(cmd.Context(), events.EventsResumeRequest{ID: id})
 			if err != nil {
 				return fmt.Errorf("resume: %w", err)
 			}
-			return printEventStatus(ev)
+			return printEventStatus(resumeResp.Event)
 		},
 	}
 

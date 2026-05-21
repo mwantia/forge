@@ -7,12 +7,14 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/transport"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsStatusCmd(client func() *api.Client) *cobra.Command {
+func SessionsStatusCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var limit, offset int
 	var parent string
 	var skipEmpty, archived, detailed bool
@@ -29,41 +31,42 @@ func SessionsStatusCmd(client func() *api.Client) *cobra.Command {
 			c := client()
 
 			if len(args) == 0 {
-				sessions, err := c.ListSessions(ctx, parent, archived, offset, limit)
+				resp, err := c.Sessions.List(ctx, sessions.SessionsListRequest{
+					Parent:     parent,
+					Archived:   archived,
+					Pagination: transport.Pagination{Offset: offset, Limit: limit},
+				})
 				if err != nil {
 					return err
 				}
 
-				if len(sessions) == 0 {
+				if len(resp.Sessions) == 0 {
 					fmt.Println("No sessions found.")
 					return nil
 				}
 
 				w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-
 				fmt.Fprintln(w, "ID\tNAME\tTITLE\tDESCRIPTION\tPLUGINS\tMODEL\tPARENT\tCREATED")
 
-				for _, s := range sessions {
+				for _, s := range resp.Sessions {
 					plugins := strings.Join(s.Plugins, ",")
 					if plugins == "" {
 						plugins = "all"
 					}
 					createdAt := s.CreatedAt.Format(time.DateTime)
-
 					fmt.Fprintf(w, "%s\t%s\t%.20s\t%.40s\t%s\t%s\t%s\t%s", s.ID, s.Name, s.Title, s.Description, plugins, s.Model, s.Parent, createdAt)
-
 					fmt.Fprintln(w)
 				}
 
 				return w.Flush()
 			}
 
-			meta, err := c.GetSession(ctx, args[0])
+			resp, err := c.Sessions.Get(ctx, sessions.SessionsGetRequest{ID: args[0]})
 			if err != nil {
 				return err
 			}
 
-			helpers.PrintSession(meta, skipEmpty)
+			helpers.PrintSession(resp.Session, skipEmpty)
 			return nil
 		},
 	}

@@ -3,12 +3,15 @@ package sessions
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/transport"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsLogCmd(client func() *api.Client) *cobra.Command {
+func SessionsLogCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var branch string
 	var limit, offset int
 	var verbose, detailed, table bool
@@ -25,29 +28,34 @@ func SessionsLogCmd(client func() *api.Client) *cobra.Command {
 			c := client()
 			ctx := cmd.Context()
 
-			msgs, err := c.ListMessagesForRef(ctx, args[0], branch, limit)
+			msgsResp, err := c.Sessions.ListMessages(ctx, sessions.SessionsListMessagesRequest{
+				SessionID:  args[0],
+				Ref:        branch,
+				Pagination: transport.Pagination{Limit: limit},
+			})
 			if err != nil {
 				return err
 			}
+			msgs := msgsResp.Messages
 
 			if table {
 				return helpers.PrintSessionLogTable(msgs[offset:])
 			}
 
-			meta, err := c.GetSession(ctx, args[0])
+			metaResp, err := c.Sessions.Get(ctx, sessions.SessionsGetRequest{ID: args[0]})
 			if err != nil {
 				return err
 			}
-			refs, err := c.ListBranches(ctx, args[0])
+			refsResp, err := c.Refs.List(ctx, refs.RefsListRequest{SessionID: args[0]})
 			if err != nil {
 				return err
 			}
 			byHash := map[string][]string{}
-			for n, h := range refs {
+			for n, h := range refsResp.Refs {
 				byHash[h] = append(byHash[h], n)
 			}
 
-			helpers.PrintSessionLogHeader(meta, msgs)
+			helpers.PrintSessionLogHeader(metaResp.Session, msgs)
 			fmt.Println()
 
 			for i := len(msgs) - 1; i >= 0; i-- {

@@ -54,7 +54,10 @@ func (s *SessionService) Init(ctx context.Context) error {
 	metadata := tools.NamespaceMetadata{
 		Description: "Built-in session bookkeeping: title/description, sub-session creation, message history.",
 		Builtin:     true,
-		System:      `Built-in session tools manage the conversation's own metadata and any sub-sessions you spawn. Update title/description when the topic crystallises so the user can navigate session lists. Read message history only when context truly requires it — the active conversation is already in your context window.`,
+		System: `
+Built-in session tools manage the conversation's own metadata and any sub-sessions you spawn. Update title/description when the topic crystallises so the user can navigate session lists. 
+Read message history only when context truly requires it — the active conversation is already in your context window.
+`,
 	}
 	if err := s.tools.RegisterNamespaceMetadata(ServiceNamespace, metadata); err != nil {
 		return fmt.Errorf("failed to register namespace metadata for %q: %w", ServiceNamespace, err)

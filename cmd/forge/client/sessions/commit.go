@@ -7,12 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/pipeline"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsCommitCmd(client func() *api.Client) *cobra.Command {
+func SessionsCommitCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var raw, noRender, noStore bool
 	var ref, forkFrom, branch string
 
@@ -39,7 +41,11 @@ func SessionsCommitCmd(client func() *api.Client) *cobra.Command {
 				return err
 			}
 			if branch != "" && activeRef != "" && activeRef != branch {
-				if err := client().RenameBranch(cmd.Context(), args[0], activeRef, branch); err != nil {
+				if _, err := client().Refs.Rename(cmd.Context(), refs.RefsRenameRequest{
+					SessionID: args[0],
+					Ref:       activeRef,
+					Name:      branch,
+				}); err != nil {
 					return fmt.Errorf("commit succeeded but branch rename failed: %w", err)
 				}
 			}
@@ -57,12 +63,14 @@ func SessionsCommitCmd(client func() *api.Client) *cobra.Command {
 	return cmd
 }
 
-func streamSend(ctx context.Context, c *api.Client, sessionID, content string, raw, noRender, noStore bool, ref, forkFrom string) (string, error) {
-	activeRef, ch, err := c.SendMessage(ctx, sessionID, content, api.CommitOptions{
-		NoStore:  noStore,
-		Raw:      raw,
-		Ref:      ref,
-		ForkFrom: forkFrom,
+func streamSend(ctx context.Context, c *v2.ForgeApi, sessionID, content string, raw, noRender, noStore bool, ref, forkFrom string) (string, error) {
+	resp, err := c.Pipeline.Commit(ctx, pipeline.PipelineCommitRequest{
+		SessionID: sessionID,
+		Content:   content,
+		NoStore:   noStore,
+		Raw:       raw,
+		Ref:       ref,
+		ForkFrom:  forkFrom,
 	})
 	if err != nil {
 		return "", err
@@ -71,18 +79,18 @@ func streamSend(ctx context.Context, c *api.Client, sessionID, content string, r
 	render := !raw && !noRender
 	printed := false
 
-	for ev := range ch {
-		parsed, err := api.ParseWireEvent(ev)
+	for ev := range resp.Events {
+		parsed, err := pipeline.ParseWireEvent(ev)
 		if err != nil {
 			continue
 		}
 		switch e := parsed.(type) {
-		case api.ChunkEvent:
+		case pipeline.ChunkEvent:
 			if e.Text == "" {
 				continue
 			}
 			switch e.Boundary {
-			case api.ChunkBoundaryBlock, api.ChunkBoundaryFinal:
+			case pipeline.ChunkBoundaryBlock, pipeline.ChunkBoundaryFinal:
 				if render {
 					fmt.Print(helpers.RenderMarkdown(e.Text, false))
 				} else {
@@ -92,7 +100,7 @@ func streamSend(ctx context.Context, c *api.Client, sessionID, content string, r
 				fmt.Print(e.Text)
 			}
 			printed = true
-		case api.ErrorEvent:
+		case pipeline.ErrorEvent:
 			return "", fmt.Errorf("pipeline error: %s", e.Message)
 		}
 	}
@@ -100,5 +108,5 @@ func streamSend(ctx context.Context, c *api.Client, sessionID, content string, r
 	if printed {
 		fmt.Println()
 	}
-	return activeRef, nil
+	return resp.Ref, nil
 }

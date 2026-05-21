@@ -3,11 +3,12 @@ package system
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/system"
 	"github.com/spf13/cobra"
 )
 
-func SystemMonitorCmd(client func() *api.Client) *cobra.Command {
+func SystemMonitorCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var logLevel string
 
 	cmd := &cobra.Command{
@@ -18,11 +19,11 @@ func SystemMonitorCmd(client func() *api.Client) *cobra.Command {
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			ch, err := client().SystemMonitor(ctx, logLevel)
+			resp, err := client().System.Monitor(ctx, system.SystemMonitorRequest{Level: logLevel})
 			if err != nil {
 				return err
 			}
-			for line := range ch {
+			for line := range resp.Lines {
 				if line == "" {
 					continue
 				}

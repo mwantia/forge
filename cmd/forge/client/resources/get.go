@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/resources"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func GetCmd(client func() *api.Client) *cobra.Command {
+func GetCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var render bool
 
 	cmd := &cobra.Command{
@@ -20,10 +21,14 @@ func GetCmd(client func() *api.Client) *cobra.Command {
 			"Pass --render to apply markdown rendering to the content.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			r, err := client().GetResource(cmd.Context(), args[0], args[1])
+			resp, err := client().Resources.Get(cmd.Context(), resources.ResourcesGetRequest{
+				Path: args[0],
+				Name: args[1],
+			})
 			if err != nil {
 				return err
 			}
+			r := resp.Resource
 
 			var sb strings.Builder
 			sb.WriteString("---\n")

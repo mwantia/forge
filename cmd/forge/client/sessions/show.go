@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func SessionsShowCmd(client func() *api.Client) *cobra.Command {
+func SessionsShowCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var noRender bool
 
 	cmd := &cobra.Command{
@@ -22,10 +23,14 @@ func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 			"rendered inline. Pass --no-render to skip markdown rendering.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			msg, err := client().GetMessage(cmd.Context(), args[0], args[1])
+			resp, err := client().Sessions.GetMessage(cmd.Context(), sessions.SessionsGetMessageRequest{
+				SessionID: args[0],
+				MessageID: args[1],
+			})
 			if err != nil {
 				return err
 			}
+			msg := resp.Message
 
 			var sb strings.Builder
 			sb.WriteString("---\n")
@@ -47,7 +52,6 @@ func SessionsShowCmd(client func() *api.Client) *cobra.Command {
 					if tc.IsError {
 						sb.WriteString("(error)\n")
 					}
-
 					sb.WriteString(tc.Result)
 				} else {
 					fmt.Fprintf(&sb, "tool_call  %s\n", tc.Name)

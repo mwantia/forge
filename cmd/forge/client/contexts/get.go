@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/pipeline"
 	"github.com/spf13/cobra"
 )
 
-func ContextsGetCmd(client func() *api.Client) *cobra.Command {
+func ContextsGetCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var materialized bool
 
 	cmd := &cobra.Command{
@@ -26,20 +27,18 @@ func ContextsGetCmd(client func() *api.Client) *cobra.Command {
 			enc.SetIndent("", "  ")
 
 			if materialized {
-				out, err := c.MaterializeContext(ctx, args[0])
+				resp, err := c.Pipeline.MaterializeContext(ctx, pipeline.PipelineMaterializeContextRequest{Hash: args[0]})
 				if err != nil {
 					return err
 				}
-
-				return enc.Encode(out)
+				return enc.Encode(resp.Context)
 			}
 
-			raw, err := c.GetContext(ctx, args[0])
+			resp, err := c.Pipeline.GetContext(ctx, pipeline.PipelineGetContextRequest{Hash: args[0]})
 			if err != nil {
 				return err
 			}
-
-			return enc.Encode(raw)
+			return enc.Encode(resp.Raw)
 		},
 	}
 

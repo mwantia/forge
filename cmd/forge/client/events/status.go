@@ -3,14 +3,19 @@ package events
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
+	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/api"
+	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/events"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/refs"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
-func EventsStatusCmd(client func() *api.Client) *cobra.Command {
+func EventsStatusCmd(client func() *v2.ForgeApi) *cobra.Command {
 	var detailed bool
 
 	cmd := &cobra.Command{
@@ -26,43 +31,42 @@ func EventsStatusCmd(client func() *api.Client) *cobra.Command {
 			c := client()
 
 			if len(args) == 0 {
-				events, err := c.ListEvents(ctx)
+				eventsResp, err := c.Events.List(ctx, events.EventsListRequest{})
 				if err != nil {
 					return err
 				}
 
-				if len(events) == 0 {
+				if len(eventsResp.Events) == 0 {
 					fmt.Println("No events configured.")
 					return nil
 				}
 
 				w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 				fmt.Fprintln(w, "ID\tSTATE\tSESSION\tLAST BRANCH\tDescription")
-				for _, ev := range events {
+				for _, ev := range eventsResp.Events {
 					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", ev.ID, ev.State, ev.Session, ev.LastBranch, ev.Description)
 				}
 
 				return w.Flush()
 			}
 
-			ev, err := c.GetEvent(ctx, args[0])
+			evResp, err := c.Events.Get(ctx, events.EventsGetRequest{ID: args[0]})
 			if err != nil {
 				return err
 			}
+			ev := evResp.Event
 
 			helpers.PrintEventStatus(ev)
 			fmt.Println("\nSession:")
 
 			if ev.Session != "" {
-				session, err := c.GetSession(ctx, ev.Session)
+				sessResp, err := c.Sessions.Get(ctx, sessions.SessionsGetRequest{ID: ev.Session})
 				if err != nil {
 					return err
 				}
-
-				helpers.PrintSession(session, true)
+				helpers.PrintSession(sessResp.Session, true)
 			} else {
 				fmt.Println("  No session configured")
-
 				return nil
 			}
 
@@ -70,9 +74,25 @@ func EventsStatusCmd(client func() *api.Client) *cobra.Command {
 			helpers.PrintEventQueue(ev)
 
 			if detailed {
-				branches, err := c.ListEventBranches(ctx, ev.Session, args[0])
+				prefix := "event/" + args[0] + "-"
+				refsResp, err := c.Refs.List(ctx, refs.RefsListRequest{
+					SessionID: ev.Session,
+					Prefix:    prefix,
+				})
 				if err != nil {
 					return err
+				}
+
+				branches := make([]events.EventBranch, 0, len(refsResp.Refs))
+				for name, hash := range refsResp.Refs {
+					eb := events.EventBranch{Name: name, Hash: hash}
+					// Parse "event/<id>-<RFC3339>" to extract FiredAt
+					if after, ok := strings.CutPrefix(name, prefix); ok {
+						if t, err := time.Parse(time.RFC3339, after); err == nil {
+							eb.FiredAt = t
+						}
+					}
+					branches = append(branches, eb)
 				}
 
 				fmt.Println("\nBranches:")
