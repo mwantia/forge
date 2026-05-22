@@ -25,7 +25,7 @@ func NewEventsCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(events.EventsStatusCmd(client))
-	cmd.AddCommand(events.EventsFireCmd(client))
+	cmd.AddCommand(events.EventsPushCmd(client))
 	cmd.AddCommand(events.EventsPauseCmd(client))
 	cmd.AddCommand(events.EventsResumeCmd(client))
 

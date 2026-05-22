@@ -45,12 +45,12 @@ func printEventStatus(ev events.EventStatus) error {
 	return w.Flush()
 }
 
-func printFireResponse(r events.FireResponse) error {
+func printPushResponse(r events.PushResponse) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 
 	kv(w, "Event ID", r.EventID)
 	kv(w, "Status", r.Status)
-	kv(w, "Fired At", r.FiredAt.Local().Format(time.RFC3339))
+	kv(w, "Pushed At", r.PushedAt.Local().Format(time.RFC3339))
 	if r.Branch != "" {
 		kv(w, "Branch", r.Branch)
 	}
@@ -63,8 +63,16 @@ func printFireResponse(r events.FireResponse) error {
 	if r.WindowExpiresAt != nil {
 		kv(w, "Window Expires", formatTime(*r.WindowExpiresAt))
 	}
+	if err := w.Flush(); err != nil {
+		return err
+	}
 
-	return w.Flush()
+	if r.Content != "" {
+		fmt.Println()
+		fmt.Println(r.Content)
+	}
+
+	return nil
 }
 
 func kv(w *tabwriter.Writer, key, value string) {
