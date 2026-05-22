@@ -4,6 +4,9 @@
 > This project is in **early development** and is **not production-ready**.
 > Expect broken plugins, missing features, and frequent breaking changes to config schema and APIs.
 > Do not deploy in production or critical environments.
+>
+> This project is AI assisted - As seen by the `Co-Authored-By` tags in the commit history, as well as the GitHub's contributors tab.
+> I review changes where possible, but cannot guarantee full correctness or quality done by AI in all instances.
 
 Forge is a modular, pluggable AI agent framework written in Go. The agent exposes a REST + NDJSON streaming API, persists sessions as a content-addressed Merkle DAG (immutable messages + git-style refs) on top of a pluggable storage backend, and drives providers / tools / long-term memory through gRPC plugin subprocesses.
 
