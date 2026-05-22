@@ -101,7 +101,7 @@ func EventsStatusCmd(client func() *v2.ForgeApi) *cobra.Command {
 				}
 			}
 
-			fmt.Printf("\n==> Commit events by using the webhook: %s/v1/events/%s/fire\n", c.GetAddress(), ev.ID)
+			fmt.Printf("\n==> Push new commit events by using the webhook: %s/v1/events/%s/push?async=false\n", c.GetAddress(), ev.ID)
 			return nil
 		},
 	}
