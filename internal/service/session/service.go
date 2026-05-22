@@ -90,12 +90,12 @@ Read message history only when context truly requires it — the active conversa
 		// /v1/sessions/:session_id/messages/compact|summarize
 		group.PATCH("/:session_id/messages/compact", s.handleCompactMessages())
 		group.PATCH("/:session_id/messages/summarize", s.handleSummarizeMessages())
-		// /v1/sessions/:session_id/branch
-		group.GET("/:session_id/branch", s.handleListRefs())
-		group.POST("/:session_id/branch", s.handleCreateRef())
-		group.PATCH("/:session_id/branch/:ref", s.handleUpdateRef())
-		group.DELETE("/:session_id/branch/:ref", s.handleDeleteRef())
-		group.POST("/:session_id/branch/:ref/revert", s.handleRevertRef())
+		// /v1/sessions/:session_id/refs
+		group.GET("/:session_id/refs", s.handleListRefs())
+		group.POST("/:session_id/refs", s.handleCreateRef())
+		group.PATCH("/:session_id/refs/:ref", s.handleUpdateRef())
+		group.DELETE("/:session_id/refs/:ref", s.handleDeleteRef())
+		group.POST("/:session_id/refs/:ref/revert", s.handleRevertRef())
 		// /v1/sessions/:session_id/messages/:msg_id/diff?to=<hash_b>
 		group.GET("/:session_id/messages/:msg_id/diff", s.handleMessageDiff())
 		// /v1/sessions/:session_id/archive|clone

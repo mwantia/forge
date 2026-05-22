@@ -229,7 +229,7 @@ func (s *SessionService) handleUpdateSession() gin.HandlerFunc {
 //	@Tags			sessions
 //	@Produce		json
 //	@Param			session_id		path		string	true	"Session ID"
-//	@Param			offset	query		int		false	"Pagination offset"
+//	@Param			offset	query		int		false	"Skip N most-recent messages (HEAD-anchored; offset=1 omits the latest message)"
 //	@Param			limit	query		int		false	"Max results (default 50)"
 //	@Success		200		{object}	map[string][]Message
 //	@Failure		404		{object}	map[string]string

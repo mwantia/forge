@@ -335,10 +335,12 @@ func (r *RefStore) Rename(ctx context.Context, sessionID, oldName, newName strin
 	if first > second {
 		first, second = second, first
 	}
-	r.lockFor(first).Lock()
-	defer r.lockFor(first).Unlock()
-	r.lockFor(second).Lock()
-	defer r.lockFor(second).Unlock()
+	m1 := r.lockFor(first)
+	m2 := r.lockFor(second)
+	m1.Lock()
+	defer m1.Unlock()
+	m2.Lock()
+	defer m2.Unlock()
 
 	// Target must not already exist.
 	existing, err := r.Backend.ReadRaw(ctx, newKey)

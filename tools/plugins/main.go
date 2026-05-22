@@ -78,9 +78,14 @@ func main() {
 	// If any plugin uses a local path, rebuild go.work from scratch so it
 	// always mirrors exactly what is in plugins.yaml. This prevents stale
 	// `use` entries from accumulating when plugins are added or removed.
+	// Also reset go.mod replace directives for plugins so go mod tidy can
+	// resolve them locally instead of hitting the network.
 	if hasLocalPlugins(m.Plugins) {
 		if err := resetWorkspace(manifestDir); err != nil {
 			log.Fatalf("reset workspace: %v", err)
+		}
+		if err := resetGoModPluginReplaces(manifestDir, m.Plugins); err != nil {
+			log.Fatalf("reset go.mod plugin replaces: %v", err)
 		}
 	}
 
@@ -162,7 +167,14 @@ func resolveModule(manifestDir string, p Plugin) error {
 			return fmt.Errorf("local path %q does not exist: %w", localAbs, err)
 		}
 		log.Printf("  go work use %s", localAbs)
-		return run(manifestDir, "go", "work", "use", localAbs)
+		if err := run(manifestDir, "go", "work", "use", localAbs); err != nil {
+			return err
+		}
+		// go mod tidy does not use go.work for resolution; add a replace
+		// directive so it can resolve the package locally without network access.
+		replace := p.Module + "=" + localAbs
+		log.Printf("  go mod edit -replace=%s", replace)
+		return run(manifestDir, "go", "mod", "edit", "-replace="+replace)
 	}
 
 	if p.Version != "" {
@@ -170,6 +182,21 @@ func resolveModule(manifestDir string, p Plugin) error {
 		return run(manifestDir, "go", "get", p.Module+"@"+p.Version)
 	}
 
+	return nil
+}
+
+// resetGoModPluginReplaces drops any existing replace directives for the
+// listed plugin modules so stale entries don't accumulate across runs.
+func resetGoModPluginReplaces(moduleDir string, plugins []Plugin) error {
+	for _, p := range plugins {
+		if p.Local == "" {
+			continue
+		}
+		log.Printf("  go mod edit -dropreplace=%s", p.Module)
+		if err := run(moduleDir, "go", "mod", "edit", "-dropreplace="+p.Module); err != nil {
+			return fmt.Errorf("dropreplace %s: %w", p.Module, err)
+		}
+	}
 	return nil
 }
 

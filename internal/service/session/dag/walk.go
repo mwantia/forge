@@ -17,7 +17,8 @@ type WalkEntry struct {
 //
 //   - refOrHash may be a 64-char hex hash (resolved against the object
 //     store directly) or a ref name (resolved via the ref store).
-//   - offset skips that many of the most-recent messages before collecting.
+//   - offset skips that many of the most-recent messages before collecting
+//     (HEAD-anchored, not root-anchored — offset=1 omits the latest message).
 //   - limit caps the number of returned entries; <=0 means "all".
 //
 // Result order is root-first. A missing parent ends the walk cleanly.

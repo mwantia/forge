@@ -23,8 +23,7 @@ import (
 )
 
 type Agent struct {
-	mutex sync.RWMutex
-	wait  sync.WaitGroup
+	wait sync.WaitGroup
 
 	logger hclog.Logger        `fabric:"logger:agent"`
 	config *config.AgentConfig `fabric:"config"`
@@ -78,7 +77,6 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 		return fmt.Errorf("failed to bind event service: %w", err)
 	}
 
-	a.mutex.Lock()
 	a.logger.Debug("Starting server runner...")
 	a.wait.Go(func() {
 		if err := a.srv.Serve(ctx); err != nil {
@@ -99,8 +97,6 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 			a.logger.Error("error serving pipeline server", "error", err)
 		}
 	})
-
-	a.mutex.Unlock()
 
 	if !once {
 		<-ctx.Done()

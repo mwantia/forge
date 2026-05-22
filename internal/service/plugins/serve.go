@@ -132,7 +132,9 @@ func (s *PluginsService) GetPluginDriverInfo(cfg PluginConfig) (PluginDriverInfo
 
 		if cfg.Runtime.Timeout != "" {
 			timeout, err := time.ParseDuration(cfg.Runtime.Timeout)
-			if err == nil || timeout > 0 {
+			if err != nil {
+				s.logger.Warn("invalid plugin timeout; using default", "plugin", cfg.Name, "value", cfg.Runtime.Timeout, "error", err)
+			} else if timeout > 0 {
 				info.Timeout = timeout
 			}
 		}
