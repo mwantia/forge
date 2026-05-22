@@ -1428,7 +1428,8 @@ paths:
         name: session_id
         required: true
         type: string
-      - description: Pagination offset
+      - description: Skip N most-recent messages (HEAD-anchored; offset=1 omits the
+          latest message)
         in: query
         name: offset
         type: integer

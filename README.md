@@ -25,8 +25,9 @@ The SDK (`forge-sdk`) and plugin modules are published separately. This reposito
 - **Resources** — long-term memory backed by the same content-addressed DAG as
   sessions. Named resources version like git refs: overwriting a name advances
   the ref and chains `ParentHash`, giving history, diff, and revert for free.
-  Semantic recall via HNSW when `embed_model` is set; falls back to substring
-  scoring otherwise. Per-turn `<relevant-resources>` block injected into the prompt.
+  Semantic recall via a flat cosine vector index when `embed_model` is set; falls
+  back to substring scoring otherwise. Per-turn `<relevant-resources>` block
+  injected into the prompt.
 - **Archive + clone** — declare a session immutable, push its log through the
   resource layer; later, replay the envelope into a fresh live session whose
   HEAD points at the archived tip. Lineage tracked via `parent_session_id`.
@@ -204,17 +205,12 @@ provider {
   }
 }
 
-# Optional: semantic indexing + custom mounts.
-# embed_model must name a declared model of type "embed".
-# When set, Store embeds content → HNSW; Recall embeds query → HNSW search.
+# Optional: semantic indexing via flat cosine vector index.
+# embed_model must name a declared model alias of type "embed".
+# When set, Store embeds content and adds it to the vector index;
+# Recall embeds the query and runs a cosine scan.
 resource {
-  embed_model = "nomic-embed"   # e.g. provider { model "nomic-embed" { base_model = "..." } }
-
-  # Mount specific path prefixes to different backends (optional).
-  # Unmatched paths use the built-in DAG store.
-  mount "openviking" {
-    path = "/global"
-  }
+  embed_model = "nomic-embed"
 }
 
 plugin "ollama" "ollama" {
@@ -285,7 +281,9 @@ GET    /v1/resources/*path/versions/<hash>  # fetch historical ResourceObj by ha
 POST   /v1/resources/*path/revert  ?name=   # CAS ref to prior hash; body: {"to":"<hash>"}
 ```
 
-`POST /v1/pipeline/dispatch` responds with `application/x-ndjson`. Each line is a `{ "type": "token|tool_call|tool_result|error|done", "data": {...} }` envelope — see `internal/service/pipeline/events.go`. The active branch is returned as `X-Forge-Ref`.
+`POST /v1/pipeline/commit` responds with `application/x-ndjson`. Each line is a `{ "type": "token|tool_call|tool_result|error|done", "data": {...} }` envelope — see `internal/service/pipeline/events.go`. The active branch is returned as `X-Forge-Ref`.
+
+`POST /v1/pipeline/contexts/:hash/replay` also streams NDJSON but does not persist any messages or advance any refs.
 
 Mutating operations on archived sessions (`AppendMessage*`, ref CRUD) return `409 Conflict` with `ErrSessionArchived`. CAS conflicts on a busy branch likewise return 409 with the actual current tip in the body.
 
@@ -303,7 +301,7 @@ curl -X POST http://127.0.0.1:9280/v1/sessions \
   -d '{"name":"demo","model":"forge/assistant"}'
 
 # Dispatch on HEAD (default)
-curl -N -X POST http://127.0.0.1:9280/v1/pipeline/dispatch \
+curl -N -X POST http://127.0.0.1:9280/v1/pipeline/commit \
   -H 'Content-Type: application/json' \
   -d '{"session":"demo","content":"hello"}'
 # Response is application/x-ndjson; X-Forge-Ref tells you which branch advanced.
@@ -320,7 +318,7 @@ curl -X POST http://127.0.0.1:9280/v1/sessions/demo/refs \
   -d '{"name":"experiment","hash":"<message-hash>"}'
 
 # Dispatch on the branch (HEAD stays untouched)
-curl -N -X POST 'http://127.0.0.1:9280/v1/pipeline/dispatch?ref=experiment' \
+curl -N -X POST 'http://127.0.0.1:9280/v1/pipeline/commit?ref=experiment' \
   -d '{"session":"demo","content":"different angle"}'
 ```
 
@@ -331,7 +329,7 @@ a fresh `fork-<8hex>[-N]` ref pointing at the parent — so the new turn
 descends from the same context the original did, but on its own branch.
 
 ```bash
-curl -N -X POST 'http://127.0.0.1:9280/v1/pipeline/dispatch?fork_from=ab12cd' \
+curl -N -X POST 'http://127.0.0.1:9280/v1/pipeline/commit?fork_from=ab12cd' \
   -d '{"session":"demo","content":"rewritten user turn"}'
 # X-Forge-Ref: fork-ab12cd34
 ```
@@ -488,15 +486,14 @@ build/                     # output
 2. **No channel subsystem.** `ChannelPlugin` exists in the SDK but there is no `internal/service/channel/` — the old dispatcher lives in `old_code/channel`.
 3. **`commit_session` and `summarize` are stubs.** `sessions__commit_session` returns "not yet implemented"; `PATCH /v1/sessions/:id/messages/summarize` returns 501. Compaction works.
 4. **OpenViking adapter not in this repo.** Archives go to the built-in DAG store under `resources/archives/` until the external plugin lands. Schema_version 1 of the archive envelope is the stable contract.
-5. **`pluginResourceStore` is a shim.** External plugins using the old `ResourcePlugin` interface only support `Store`, `Recall`, and `Forget`. History, versioning, patching, and diff are unavailable on plugin-backed mounts. Migration path: implement `RecallPlugin` (in `shared/pkg/plugins/recall.go`).
-6. **HNSW glob recall falls back to substring.** Paths containing `*`, `?`, or `[` skip the HNSW index. Only exact-namespace queries with a non-empty `query` field use HNSW.
-7. **HNSW indexing is eventually consistent.** `Store` fires indexing in a background goroutine. A resource may not appear in semantic recall immediately after being stored.
+5. **External plugins via `ResourcePlugin` are limited.** Plugins implementing the old `ResourcePlugin` interface only support `Store`, `Recall`, and `Forget` — history, versioning, patching, and diff are unavailable. Migration path: implement `RecallPlugin` (search-only; `shared/pkg/plugins/recall.go`). The built-in DAG store remains the source of truth.
+6. **Flat vector index glob recall falls back to substring.** Paths containing `*`, `?`, or `[` skip the vector index. Only exact-namespace queries with a non-empty `query` field use the cosine scan.
+7. **Vector indexing is eventually consistent.** `Store` fires indexing in a background goroutine. A resource may not appear in semantic recall immediately after being stored.
 8. **Config processor caveat.** `internal/config/processor.go` — `meta {}` is parsed but not yet exposed as `meta.*` inside sub-blocks (only the top-level eval has it via the template engine).
-9. **Cleanup chain is partial.** `Agent.Cleanup` only calls `plugins.Cleanup`, `srv.Cleanup`, `met.Cleanup`. `SessionService` and `ResourceService` aren't awaited.
-10. **Auth is a single shared token.** Fine for dev, bad for multi-tenant. No audit log.
-11. **No automated tests.** `tests/` holds fixtures only; feature surfaces are validated via the CLI and `/preview`.
-12. **Plugin path resolution has three fallbacks** (explicit path → `plugin_dir/type` → `os.Executable() plugin <type>`). The third branch silently turns a missing external plugin into an embedded one.
-13. **Graceful shutdown is best-effort.** Server + metrics have 10s timeouts; plugins are killed, not drained. In-flight tool calls are abandoned.
+9. **Auth is a single shared token.** Fine for dev, bad for multi-tenant. No audit log.
+10. **No automated tests.** `tests/` holds fixtures only; feature surfaces are validated via the CLI and `/preview`.
+11. **Plugin path resolution has three fallbacks** (explicit path → `plugin_dir/type` → `os.Executable() plugin <type>`). The third branch silently turns a missing external plugin into an embedded one.
+12. **Graceful shutdown is best-effort.** Server + metrics have 10s timeouts; plugins are killed, not drained. In-flight tool calls are abandoned.
 
 ## License
 

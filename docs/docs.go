@@ -1821,7 +1821,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Pagination offset",
+                        "description": "Skip N most-recent messages (HEAD-anchored; offset=1 omits the latest message)",
                         "name": "offset",
                         "in": "query"
                     },
