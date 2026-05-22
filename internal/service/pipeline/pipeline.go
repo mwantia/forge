@@ -34,6 +34,8 @@ type PipelineStream struct {
 func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session, out chan<- PipelineEvent) error {
 	defer close(out)
 
+	start := time.Now()
+
 	providerName, modelName, ok := s.splitModelName(sess.Metadata.Model)
 	if !ok {
 		return fmt.Errorf("invalid model format, expected '<provider>/<model>', got '%s'", sess.Metadata.Model)
@@ -70,6 +72,7 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 			out <- DoneEvent{
 				Usage:    finalChunk.Usage,
 				Metadata: finalChunk.Metadata,
+				Duration: time.Since(start).Milliseconds(),
 			}
 			return nil
 		}

@@ -59,6 +59,7 @@ type ErrorEvent struct {
 type DoneEvent struct {
 	Usage    *sdkplugins.TokenUsage `json:"usage,omitempty"`
 	Metadata map[string]any         `json:"metadata,omitempty"`
+	Duration int64                  `json:"duration,omitempty"`
 }
 
 func (ChunkEvent) pipelineEvent()      {}

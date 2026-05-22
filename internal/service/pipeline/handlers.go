@@ -62,94 +62,29 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			return
 		}
 
-		// Load full message history along the target ref.
-		var history []*session.Message
-		if ref == dag.HEAD {
-			history, err = s.sessions.ListMessages(ctx, meta.ID, 0, 0)
-		} else {
-			history, err = s.sessions.ListMessagesFromRef(ctx, meta.ID, ref, 0, 0)
-		}
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load message history: " + err.Error()})
-			return
-		}
-
-		// If there's no system message at the root yet, assemble and persist one
-		// before the first user message is committed (lazy init for sessions
-		// created without an explicit regen call).
-		if len(history) == 0 || history[0].Role != "system" {
-			history, err = s.initSystemMessage(ctx, meta, ref, history)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to init system message: " + err.Error()})
-				return
-			}
-		}
-
 		if scoped, err := s.tmpl.Clone(session.SessionVars(meta)); err == nil {
 			if rendered, err := scoped.RenderBody(req.Content); err == nil {
 				req.Content = rendered
 			}
 		}
 
-		chatMessages := buildChatMessages(history)
-		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
-			chatMessages[0].Content += "\n\n" + resources
-		}
-
-		// Persist user message before pipeline start (skipped when no_store is set).
-		userMsg := &session.Message{
-			Role:      "user",
-			Content:   req.Content,
-			CreatedAt: time.Now(),
-		}
-		var userHash string
-		userHash, err = s.sessions.AppendMessageToRef(ctx, meta.ID, ref, userMsg)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save message: " + err.Error()})
-			return
-		}
-
-		chatMessages = append(chatMessages, sdkplugins.ChatMessage{
-			Role:    "user",
-			Content: req.Content,
-		})
-
-		// Resolve all tool calls (full namespace__name form for the LLM).
-		toolCalls, err := s.tools.GetAllToolCalls()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve tools: " + err.Error()})
-			return
-		}
-		toolCalls = filterToolCallsByPlugins(toolCalls, builtinNamespaceSetFromRegistar(s.tools), meta.Plugins)
-
 		output := s.config.Output.resolve()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
 			output = rawOverride()
 		}
 
-		// Materialize PromptContext for this commit (docs/03 §1.2). The
-		// hash is stamped onto every assistant + tool message produced
-		// during the run so the turn is replayable later.
-		ctxHash, err := s.recordPromptContext(ctx, meta, history, userHash, toolCalls)
+		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, output)
 		if err != nil {
-			s.logger.Warn("failed to record prompt context", "session", meta.ID, "error", err)
-		}
-
-		sess := &Session{
-			SessionID:   meta.ID,
-			Metadata:    meta,
-			Messages:    chatMessages,
-			ToolCalls:   toolCalls,
-			Ref:         ref,
-			ContextHash: ctxHash,
-			Output:      output,
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
 		c.Writer.Header().Set("X-Forge-Ref", ref)
 
+		start := time.Now()
 		out := make(chan PipelineEvent, 32)
 		go func() {
-			if err := s.RunSessionPipeline(ctx, sess, out); err != nil {
+			if err := s.RunSessionPipeline(ctx, run.sess, out); err != nil {
 				s.logger.Error("Pipeline error", "session", meta.ID, "error", err)
 			}
 		}()
@@ -179,6 +114,8 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			c.Writer.Write(append(b, '\n'))
 			flusher.Flush()
 		}
+
+		go s.sessions.AccumulateDuration(ctx, meta.ID, time.Since(start).Milliseconds())
 	}
 }
 
@@ -414,20 +351,40 @@ func (s *PipelineService) recordPromptContext(ctx context.Context, meta *session
 			hashes = append(hashes, m.Hash)
 		}
 	}
-
 	if userHash != "" {
 		hashes = append(hashes, userHash)
 	}
 
-	_ = tools
+	catalogHash, err := s.sessions.PutToolCatalog(ctx, buildToolCatalog(tools))
+	if err != nil {
+		s.logger.Warn("failed to store tool catalog", "error", err)
+		catalogHash = ""
+	}
 
 	pc := &dag.PromptContext{
-		Provider:      provider,
-		Model:         model,
-		MessageHashes: hashes,
+		Provider:        provider,
+		Model:           model,
+		MessageHashes:   hashes,
+		ToolCatalogHash: catalogHash,
 	}
 
 	return s.sessions.PutPromptContext(ctx, pc)
+}
+
+func buildToolCatalog(tools []sdkplugins.ToolCall) *dag.ToolCatalog {
+	defs := make([]dag.ToolDefinition, 0, len(tools))
+	for _, t := range tools {
+		var schema map[string]any
+		if b, err := json.Marshal(t.Parameters); err == nil {
+			_ = json.Unmarshal(b, &schema)
+		}
+		defs = append(defs, dag.ToolDefinition{
+			Name:        t.Name,
+			Description: t.Description,
+			Schema:      schema,
+		})
+	}
+	return &dag.ToolCatalog{Tools: defs}
 }
 
 // fetchModelSystem fetches the system prompt string from the provider's model

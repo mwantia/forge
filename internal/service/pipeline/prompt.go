@@ -264,13 +264,22 @@ func renderResourcesBlock(items []resourceItem) string {
 	b.WriteString("<relevant-resources>")
 	for _, r := range items {
 		b.WriteString("\n  <resource id=\"")
-		b.WriteString(r.ID)
+		b.WriteString(xmlEscape(r.ID))
 		b.WriteString("\">\n    ")
-		b.WriteString(strings.ReplaceAll(strings.TrimSpace(r.Content), "\n", "\n    "))
+		content := strings.ReplaceAll(strings.TrimSpace(r.Content), "\n", "\n    ")
+		b.WriteString(xmlEscape(content))
 		b.WriteString("\n  </resource>")
 	}
 	b.WriteString("\n</relevant-resources>")
 	return b.String()
+}
+
+func xmlEscape(s string) string {
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
+	s = strings.ReplaceAll(s, "\"", "&quot;")
+	return s
 }
 
 // resourceItem is the prompt-layer view of a Resource — only the bits the
