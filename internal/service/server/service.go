@@ -11,12 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/pkg/container"
-	_ "github.com/mwantia/forge/docs"
 	"github.com/mwantia/forge/internal/service"
 	svcmetrics "github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/server/api"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type ServerService struct {
@@ -69,24 +66,6 @@ func (s *ServerService) Init(ctx context.Context) error {
 	s.auth = v1.Group("/", s.authMiddleware())
 
 	s.public.GET("/health", api.Health())
-
-	if sw := s.config.Swagger; sw != nil {
-		path := sw.Path
-		if path == "" {
-			path = "/swagger"
-		}
-		swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler,
-			ginSwagger.URL(path+"/doc.json"),
-		)
-		s.engine.GET(path+"/*any", func(c *gin.Context) {
-			if c.Param("any") == "/" {
-				c.Redirect(http.StatusMovedPermanently, path+"/index.html")
-				return
-			}
-			swaggerHandler(c)
-		})
-		s.logger.Info("Swagger UI enabled", "path", path)
-	}
 
 	return nil
 }

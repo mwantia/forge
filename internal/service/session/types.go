@@ -26,7 +26,7 @@ type SessionMetadata struct {
 	// Usage aggregates provider-reported token consumption across every
 	// turn commited against this session. Updated atomically with each
 	// assistant message that carries a usage report.
-	Usage *sdkplugins.TokenUsage `json:"usage,omitempty" swaggertype:"object"`
+	Usage *sdkplugins.TokenUsage `json:"usage,omitempty"`
 	// ToolsVerbosity controls how much plugin/tool guidance appears in the
 	// assembled system prompt: "full" (default) includes plugin prose and
 	// per-tool annotations; "basic" includes only plugin-level prose; "none"
@@ -54,7 +54,7 @@ type Message struct {
 	ToolCalls   []MessageToolCall      `json:"tool_calls,omitempty"`
 	CreatedAt   time.Time              `json:"created_at"`
 	ContextHash string                 `json:"context_hash,omitempty"`
-	Usage       *sdkplugins.TokenUsage `json:"usage,omitempty" swaggertype:"object"`
+	Usage       *sdkplugins.TokenUsage `json:"usage,omitempty"`
 }
 
 type MessageToolCall struct {

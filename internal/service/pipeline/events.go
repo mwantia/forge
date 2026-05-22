@@ -72,7 +72,7 @@ func (DoneEvent) pipelineEvent()       {}
 // The Type field identifies the event; Data holds the marshaled concrete event payload.
 type WireEvent struct {
 	Type string          `json:"type"`
-	Data json.RawMessage `json:"data,omitempty" swaggertype:"object"`
+	Data json.RawMessage `json:"data,omitempty"`
 }
 
 // ToWireEvent converts a typed PipelineEvent to a WireEvent for NDJSON / SSE / WS output.

@@ -9,12 +9,7 @@ import (
 
 // handleListPlugins godoc
 //
-//	@Summary		List plugins
 //	@Description	Returns info for all loaded plugin drivers
-//	@Tags			plugins
-//	@Produce		json
-//	@Success		200	{object}	map[string][]PluginDriverInfo
-//	@Router			/v1/plugins/ [get]
 func (s *PluginsService) handleListPlugins() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		s.mu.RLock()
@@ -30,14 +25,7 @@ func (s *PluginsService) handleListPlugins() gin.HandlerFunc {
 
 // handleGetPlugin godoc
 //
-//	@Summary		Get plugin
 //	@Description	Returns info for a single plugin driver by name
-//	@Tags			plugins
-//	@Produce		json
-//	@Param			name	path		string	true	"Plugin name"
-//	@Success		200		{object}	PluginDriverInfo
-//	@Failure		404		{object}	map[string]string
-//	@Router			/v1/plugins/{name} [get]
 func (s *PluginsService) handleGetPlugin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
@@ -56,14 +44,7 @@ func (s *PluginsService) handleGetPlugin() gin.HandlerFunc {
 
 // handleGetPluginCapabilities godoc
 //
-//	@Summary		Get plugin capabilities
 //	@Description	Returns the capability set advertised by a plugin driver
-//	@Tags			plugins
-//	@Produce		json
-//	@Param			name	path		string	true	"Plugin name"
-//	@Success		200		{object}	object
-//	@Failure		404		{object}	map[string]string
-//	@Router			/v1/plugins/{name}/capabilities [get]
 func (s *PluginsService) handleGetPluginCapabilities() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")

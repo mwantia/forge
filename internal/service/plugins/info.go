@@ -10,7 +10,7 @@ type PluginDriverInfo struct {
 	Enabled bool           `json:"enabled"`
 	Path    string         `json:"path"`
 	Args    []string       `json:"args"`
-	Timeout time.Duration  `json:"timeout" swaggertype:"integer"`
+	Timeout time.Duration  `json:"timeout"`
 	MinPort uint           `json:"min_port"`
 	MaxPort uint           `json:"max_port"`
 	Env     map[string]any `json:"env"`

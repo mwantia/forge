@@ -23,10 +23,9 @@ tasks:
         - go mod tidy
 
     generate:
-        desc: Generate plugin_*.go files from plugins.yaml and regenerate swagger docs
+        desc: Generate plugin_*.go files from plugins.yaml
         cmds:
         - go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
-        - swag init -g cmd/forge/main.go -o docs --parseInternal
         - task: setup
 
     build:

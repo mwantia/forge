@@ -18,14 +18,7 @@ type gcResult struct {
 
 // handleGC godoc
 //
-//	@Summary		Garbage-collect unreachable objects
 //	@Description	Walks every session ref, marks reachable objects, and deletes everything else from the object store.
-//	@Tags			system
-//	@Produce		json
-//	@Success		200	{object}	map[string]any
-//	@Failure		500	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/gc [post]
 func (s *SystemService) handleGC() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()

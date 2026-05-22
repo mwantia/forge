@@ -46,14 +46,7 @@ func formatEntry(name string, level hclog.Level, msg string, args []interface{})
 
 // handleMonitor godoc
 //
-//	@Summary		Stream server logs
 //	@Description	Opens a long-lived connection and streams formatted log lines, one per chunk. ?level= filters (trace/debug/info/warn/error). Disconnect to stop.
-//	@Tags			system
-//	@Produce		plain
-//	@Param			level	query	string	false	"Minimum log level (default: info)"
-//	@Success		200		{string}	string	"newline-delimited log lines"
-//	@Security		BearerAuth
-//	@Router			/v1/system/monitor [get]
 func (s *SystemService) handleMonitor() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		levelStr := c.DefaultQuery("level", "info")

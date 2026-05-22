@@ -26,18 +26,7 @@ type systemResetResult struct {
 
 // handleResetSystemSnapshot godoc
 //
-//	@Summary		Reset system snapshot
 //	@Description	Re-assembles the system prompt from current plugin state and stores it as the root message. Creates a fork branch when HEAD is non-empty.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string				true	"Session ID or name"
-//	@Param			body		body		systemResetRequest	false	"Reset options"
-//	@Success		200			{object}	map[string]any
-//	@Failure		404			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/system/reset [post]
 func (s *PipelineService) handleResetSystemSnapshot() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()

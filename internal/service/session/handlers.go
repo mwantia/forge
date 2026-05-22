@@ -29,18 +29,7 @@ type compactResult struct {
 
 // handleListSessions godoc
 //
-//	@Summary		List sessions
 //	@Description	Returns all sessions, optionally filtered by parent ID. Archived sessions are excluded by default.
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			offset		query		int		false	"Pagination offset"
-//	@Param			limit		query		int		false	"Max results (default 20)"
-//	@Param			parent		query		string	false	"Filter by parent session ID"
-//	@Param			archived	query		bool	false	"Include archived sessions instead of active ones"
-//	@Success		200			{object}	map[string][]SessionMetadata
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions [get]
 func (s *SessionService) handleListSessions() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
@@ -62,17 +51,7 @@ func (s *SessionService) handleListSessions() gin.HandlerFunc {
 
 // handleCreateSession godoc
 //
-//	@Summary		Create session
 //	@Description	Creates a new session
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		createSessionRequest	true	"Session options"
-//	@Success		201		{object}	SessionMetadata
-//	@Failure		400		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions [post]
 func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req createSessionRequest
@@ -127,15 +106,7 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 
 // handleGetSession godoc
 //
-//	@Summary		Get session
 //	@Description	Returns metadata for a single session by ID or name
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID or name"
-//	@Success		200	{object}	SessionMetadata
-//	@Failure		404	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id} [get]
 func (s *SessionService) handleGetSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("session_id")
@@ -161,20 +132,7 @@ type updateSessionRequest struct {
 
 // handleUpdateSession godoc
 //
-//	@Summary		Update session
 //	@Description	Patches mutable metadata on a session. Only provided fields are updated.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string				true	"Session ID or name"
-//	@Param			body		body		updateSessionRequest	true	"Fields to update"
-//	@Success		200			{object}	SessionMetadata
-//	@Failure		400			{object}	map[string]string
-//	@Failure		404			{object}	map[string]string
-//	@Failure		409			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id} [patch]
 func (s *SessionService) handleUpdateSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req updateSessionRequest
@@ -224,17 +182,7 @@ func (s *SessionService) handleUpdateSession() gin.HandlerFunc {
 
 // handleListMessages godoc
 //
-//	@Summary		List messages
 //	@Description	Returns messages for a session in chronological order
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id		path		string	true	"Session ID"
-//	@Param			offset	query		int		false	"Skip N most-recent messages (HEAD-anchored; offset=1 omits the latest message)"
-//	@Param			limit	query		int		false	"Max results (default 50)"
-//	@Success		200		{object}	map[string][]Message
-//	@Failure		404		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/messages [get]
 func (s *SessionService) handleListMessages() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("session_id")
@@ -267,16 +215,7 @@ func (s *SessionService) handleListMessages() gin.HandlerFunc {
 
 // handleGetMessage godoc
 //
-//	@Summary		Get message
 //	@Description	Returns a single message by ID
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID"
-//	@Param			msg_id		path		string	true	"Message ID"
-//	@Success		200			{object}	Message
-//	@Failure		404			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/messages/{msg_id} [get]
 func (s *SessionService) handleGetMessage() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionID := c.Param("session_id")
@@ -301,16 +240,7 @@ func (s *SessionService) handleGetMessage() gin.HandlerFunc {
 
 // handleCompactMessages godoc
 //
-//	@Summary		Compact messages
 //	@Description	Removes intermediate tool call and tool result messages to reduce context size
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID"
-//	@Success		200	{object}	compactResult
-//	@Failure		404	{object}	map[string]string
-//	@Failure		500	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/messages/compact [patch]
 func (s *SessionService) handleCompactMessages() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("session_id")
@@ -340,17 +270,7 @@ func (s *SessionService) handleCompactMessages() gin.HandlerFunc {
 
 // handleDeleteSession godoc
 //
-//	@Summary		Delete session
 //	@Description	Permanently deletes a session and all its data. Only archived sessions may be deleted; archive the session first to preserve its history as a resource.
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path	string	true	"Session ID or name"
-//	@Success		204
-//	@Failure		400	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Failure		500	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id} [delete]
 func (s *SessionService) handleDeleteSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		s.mu.Lock()
@@ -376,14 +296,7 @@ func (s *SessionService) handleDeleteSession() gin.HandlerFunc {
 
 // handleSummarizeMessages godoc
 //
-//	@Summary		Summarize messages
 //	@Description	Summarizes the session history into a compressed context message (not yet implemented)
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			id	path		string	true	"Session ID"
-//	@Failure		501	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{id}/messages/summarize [patch]
 func (s *SessionService) handleSummarizeMessages() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, gin.H{"error": "summarize not yet implemented"})
@@ -401,19 +314,7 @@ type cloneRequest struct {
 
 // handleArchiveSession godoc
 //
-//	@Summary		Archive session
 //	@Description	Walks the named ref (default HEAD), stores an envelope through the resource layer, and flips the session to immutable.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string			true	"Session ID or name"
-//	@Param			body		body		archiveRequest	false	"Archive options"
-//	@Success		200			{object}	ArchiveResult
-//	@Failure		404			{object}	map[string]string
-//	@Failure		409			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/archive [post]
 func (s *SessionService) handleArchiveSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req archiveRequest
@@ -443,18 +344,7 @@ func (s *SessionService) handleArchiveSession() gin.HandlerFunc {
 
 // handleCloneSession godoc
 //
-//	@Summary		Clone archived session
 //	@Description	Replays an archive envelope into a fresh live session whose HEAD points at the archived tip.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string			true	"Source session ID, name, or archive resource ID"
-//	@Param			body		body		cloneRequest	false	"Clone options"
-//	@Success		201			{object}	SessionMetadata
-//	@Failure		404			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/clone [post]
 func (s *SessionService) handleCloneSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req cloneRequest

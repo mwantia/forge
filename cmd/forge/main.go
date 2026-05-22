@@ -1,5 +1,3 @@
-//go:generate swag init -g cmd/forge/main.go -o docs --parseDependency --parseInternal
-
 package main
 
 import (

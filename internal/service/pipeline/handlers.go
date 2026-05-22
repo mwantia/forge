@@ -25,18 +25,7 @@ type commitRequest struct {
 
 // handleCommit godoc
 //
-//	@Summary		Commit message
 //	@Description	Appends a user message to the given session and streams the pipeline response as NDJSON. Each line is a WireEvent JSON object.
-//	@Tags			pipeline
-//	@Accept			json
-//	@Produce		application/x-ndjson
-//	@Param			body	body		commitRequest		true	"Commit request"
-//	@Success		200		{object}	WireEvent			"NDJSON stream; one event per line"
-//	@Failure		400		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/commit [post]
 func (s *PipelineService) handleCommit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req commitRequest
@@ -171,18 +160,7 @@ func sumUsage(a, b previewUsage) previewUsage {
 
 // handlePreview godoc
 //
-//	@Summary		Preview pipeline input
 //	@Description	Returns the assembled system prompt and chat-message slice that would be sent to the provider, without persisting the new user message or calling the LLM. Use to debug prompt composition.
-//	@Tags			pipeline
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		previewRequest	true	"Preview request"
-//	@Success		200		{object}	previewResponse
-//	@Failure		400		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/preview [post]
 func (s *PipelineService) handlePreview() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req previewRequest

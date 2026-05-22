@@ -21,17 +21,7 @@ func dagObjectKey(hash string) string { return dag.ObjectKey(hash) }
 
 // handleDagCat godoc
 //
-//	@Summary		Fetch a DAG object
 //	@Description	Returns the raw canonical JSON for a content-addressed object. ?pretty=true indents the output. Prefix matching (>=4 hex chars) resolved server-side. Sets X-Forge-Object-Type header.
-//	@Tags			system
-//	@Produce		json
-//	@Param			hash	path		string	true	"Full or prefix (>=4 chars) SHA-256 hex hash"
-//	@Param			pretty	query		bool	false	"Indent output"
-//	@Success		200		{object}	map[string]any
-//	@Failure		400		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/objects/{hash} [get]
 func (s *SystemService) handleDagCat() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -65,15 +55,7 @@ func (s *SystemService) handleDagCat() gin.HandlerFunc {
 
 // handleDagType godoc
 //
-//	@Summary		Detect object type
 //	@Description	Returns the type of a DAG object without fetching its full body.
-//	@Tags			system
-//	@Produce		json
-//	@Param			hash	path		string	true	"Full or prefix (>=4 chars) SHA-256 hex hash"
-//	@Success		200		{object}	map[string]any
-//	@Failure		404		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/objects/{hash}/type [get]
 func (s *SystemService) handleDagType() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -107,16 +89,7 @@ type dagLogEntry struct {
 
 // handleDagLog godoc
 //
-//	@Summary		Walk session log
 //	@Description	Returns NDJSON of {hash, short_hash, role, preview, created_at} walking from the ref tip to the root. Mirrors git log --oneline.
-//	@Tags			system
-//	@Produce		application/x-ndjson
-//	@Param			id		path		string	true	"Session ID"
-//	@Param			ref		query		string	false	"Ref name (default: HEAD)"
-//	@Success		200		{string}	string	"NDJSON stream"
-//	@Failure		404		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/sessions/{id}/log [get]
 func (s *SystemService) handleDagLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -165,17 +138,7 @@ func (s *SystemService) handleDagLog() gin.HandlerFunc {
 
 // handleDagDiff godoc
 //
-//	@Summary		Diff two DAG objects
 //	@Description	Fetches both objects, computes a unified diff of their canonical JSON, and returns it as text/plain.
-//	@Tags			system
-//	@Produce		plain
-//	@Param			a	query		string	true	"Hash A"
-//	@Param			b	query		string	true	"Hash B"
-//	@Success		200	{string}	string	"Unified diff"
-//	@Failure		400	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/diff [get]
 func (s *SystemService) handleDagDiff() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -218,16 +181,7 @@ type verifyResult struct {
 
 // handleDagVerify godoc
 //
-//	@Summary		Verify DAG integrity
 //	@Description	Walks reachable objects from the given ref, re-hashes each blob, and reports mismatches or missing parents.
-//	@Tags			system
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		verifyRequest	true	"Verify options"
-//	@Success		200		{object}	map[string]any
-//	@Failure		400		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/verify [post]
 func (s *SystemService) handleDagVerify() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req verifyRequest
@@ -301,15 +255,7 @@ func (s *SystemService) handleDagVerify() gin.HandlerFunc {
 
 // handleDagObjects godoc
 //
-//	@Summary		List or count DAG objects
 //	@Description	?list=false (default) returns {"count":N}. ?list=true streams NDJSON of {hash, shard}. ?prefix=<xx> filters by 2-char shard prefix.
-//	@Tags			system
-//	@Produce		json
-//	@Param			prefix	query		string	false	"2-char shard prefix"
-//	@Param			list	query		bool	false	"Stream object entries instead of counting"
-//	@Success		200		{object}	map[string]any
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/objects [get]
 func (s *SystemService) handleDagObjects() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -353,15 +299,7 @@ func (s *SystemService) handleDagObjects() gin.HandlerFunc {
 
 // handleDagGC godoc
 //
-//	@Summary		Garbage-collect DAG objects
 //	@Description	Walks every session ref, marks reachable objects, and deletes (or reports) the rest. ?dry_run=true returns stats without deleting.
-//	@Tags			system
-//	@Produce		json
-//	@Param			dry_run	query		bool	false	"Report without deleting"
-//	@Success		200		{object}	map[string]any
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/system/dag/gc [post]
 func (s *SystemService) handleDagGC() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()

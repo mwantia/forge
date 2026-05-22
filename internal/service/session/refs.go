@@ -26,15 +26,7 @@ type refUpdateRequest struct {
 
 // handleListRefs godoc
 //
-//	@Summary		List session branches
 //	@Description	Returns all refs (HEAD + branches) for a session as a name -> hash map.
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID"
-//	@Success		200			{object}	map[string]any
-//	@Failure		404			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/refs [get]
 func (s *SessionService) handleListRefs() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -69,18 +61,7 @@ func (s *SessionService) handleListRefs() gin.HandlerFunc {
 
 // handleCreateRef godoc
 //
-//	@Summary		Create session branch
 //	@Description	Creates a named branch pointing at a message hash. Fails with 409 when the ref already exists.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string				true	"Session ID"
-//	@Param			body		body		refCreateRequest	true	"Branch to create"
-//	@Success		201			{object}	map[string]string
-//	@Failure		400			{object}	map[string]string
-//	@Failure		409			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/refs [post]
 func (s *SessionService) handleCreateRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req refCreateRequest
@@ -113,19 +94,7 @@ func (s *SessionService) handleCreateRef() gin.HandlerFunc {
 
 // handleUpdateRef godoc
 //
-//	@Summary		Move or rename branch
 //	@Description	Atomically advances or renames a branch. Set "hash" to move (CAS when "expected_hash" is also set). Set "name" to rename — returns 409 if the target name already exists.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string				true	"Session ID"
-//	@Param			ref			path		string				true	"Current ref name"
-//	@Param			body		body		refUpdateRequest	true	"Move or rename payload"
-//	@Success		200			{object}	map[string]string
-//	@Failure		400			{object}	map[string]string
-//	@Failure		409			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/refs/{ref} [patch]
 func (s *SessionService) handleUpdateRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req refUpdateRequest
@@ -226,15 +195,7 @@ func (s *SessionService) handleUpdateRef() gin.HandlerFunc {
 
 // handleDeleteRef godoc
 //
-//	@Summary		Delete session branch
 //	@Description	Removes a branch ref. Missing refs are not an error.
-//	@Tags			sessions
-//	@Param			session_id	path	string	true	"Session ID"
-//	@Param			ref			path	string	true	"Ref name"
-//	@Success		204
-//	@Failure		404	{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/refs/{ref} [delete]
 func (s *SessionService) handleDeleteRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ref := c.Param("ref")
@@ -258,21 +219,7 @@ func (s *SessionService) handleDeleteRef() gin.HandlerFunc {
 
 // handleRevertRef godoc
 //
-//	@Summary		Hard-revert a session branch
 //	@Description	CAS-moves the named ref to the target hash, orphaning messages between the current tip and the target. Prefer fork_from on /pipeline/commit for non-destructive branching.
-//	@Tags			sessions
-//	@Accept			json
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID"
-//	@Param			ref			path		string	true	"Ref name"
-//	@Param			body		body		map[string]any	true	"Body with 'to' field (target hash)"
-//	@Success		204
-//	@Failure		400		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Failure		409		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/refs/{ref}/revert [post]
 func (s *SessionService) handleRevertRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ref := c.Param("ref")
@@ -317,19 +264,7 @@ func (s *SessionService) handleRevertRef() gin.HandlerFunc {
 
 // handleMessageDiff godoc
 //
-//	@Summary		Diff two messages
 //	@Description	Returns a Myers diff on the Content field of two message objects identified by their content hashes.
-//	@Tags			sessions
-//	@Produce		json
-//	@Param			session_id	path		string	true	"Session ID"
-//	@Param			msg_id		path		string	true	"First message hash (or prefix)"
-//	@Param			to			query		string	true	"Second message hash (or prefix)"
-//	@Success		200			{object}	map[string]any
-//	@Failure		400			{object}	map[string]string
-//	@Failure		404			{object}	map[string]string
-//	@Failure		500			{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/messages/{msg_id}/diff [get]
 func (s *SessionService) handleMessageDiff() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sessionID := c.Param("session_id")

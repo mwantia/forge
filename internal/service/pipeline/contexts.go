@@ -29,15 +29,7 @@ type materializedResponse struct {
 
 // handleGetContext godoc
 //
-//	@Summary		Get prompt context
 //	@Description	Returns the raw PromptContext blob for a hash. The materialized form is at GET /v1/contexts/{hash}/materialized.
-//	@Tags			contexts
-//	@Produce		json
-//	@Param			hash	path		string	true	"PromptContext hash"
-//	@Success		200		{object}	map[string]any
-//	@Failure		404		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/contexts/{hash} [get]
 func (s *PipelineService) handleGetContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hash := c.Param("hash")
@@ -53,16 +45,7 @@ func (s *PipelineService) handleGetContext() gin.HandlerFunc {
 
 // handleMaterializeContext godoc
 //
-//	@Summary		Materialize prompt context
 //	@Description	Resolves a PromptContext's referenced message hashes into a fully expanded chat slice.
-//	@Tags			contexts
-//	@Produce		json
-//	@Param			hash	path		string	true	"PromptContext hash"
-//	@Success		200		{object}	map[string]any
-//	@Failure		404		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/contexts/{hash}/materialized [get]
 func (s *PipelineService) handleMaterializeContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -109,19 +92,7 @@ type replayRequest struct {
 
 // handleReplayContext godoc
 //
-//	@Summary		Replay prompt context
 //	@Description	Re-commits a stored PromptContext to a provider and streams the response as NDJSON. The original session is not modified; this is purely a debugging surface.
-//	@Tags			contexts
-//	@Accept			json
-//	@Produce		application/x-ndjson
-//	@Param			hash	path		string			true	"PromptContext hash"
-//	@Param			body	body		replayRequest	false	"Optional model + options override"
-//	@Success		200		{object}	WireEvent		"NDJSON stream; one event per line"
-//	@Failure		400		{object}	map[string]string
-//	@Failure		404		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/contexts/{hash}/replay [post]
 func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()

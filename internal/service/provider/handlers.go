@@ -9,14 +9,7 @@ import (
 
 // handleListAllModels godoc
 //
-//	@Summary		List all models
 //	@Description	Returns all models from every provider alongside locally configured model templates
-//	@Tags			provider
-//	@Produce		json
-//	@Param			type	query		string	false	"Filter local models by type (chat|embed)"
-//	@Success		200	{object}	object
-//	@Failure		500	{object}	map[string]string
-//	@Router			/v1/provider/models [get]
 func (s *ProviderService) handleListAllModels() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if kind := c.Query("type"); kind != "" {
@@ -39,12 +32,7 @@ func (s *ProviderService) handleListAllModels() gin.HandlerFunc {
 
 // handleListProviders godoc
 //
-//	@Summary		List providers
 //	@Description	Returns names of all loaded provider plugins
-//	@Tags			provider
-//	@Produce		json
-//	@Success		200	{object}	map[string][]string
-//	@Router			/v1/provider/ [get]
 func (s *ProviderService) handleListProviders() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		s.mu.RLock()
@@ -60,14 +48,7 @@ func (s *ProviderService) handleListProviders() gin.HandlerFunc {
 
 // handleGetProvider godoc
 //
-//	@Summary		Get provider
 //	@Description	Returns info for a single provider plugin by name
-//	@Tags			provider
-//	@Produce		json
-//	@Param			name	path		string	true	"Provider name"
-//	@Success		200		{object}	object
-//	@Failure		404		{object}	map[string]string
-//	@Router			/v1/provider/{name} [get]
 func (s *ProviderService) handleGetProvider() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
@@ -89,14 +70,7 @@ func (s *ProviderService) handleGetProvider() gin.HandlerFunc {
 
 // handleListModels godoc
 //
-//	@Summary		List models
 //	@Description	Returns all models available from a provider
-//	@Tags			provider
-//	@Produce		json
-//	@Param			name	path		string	true	"Provider name"
-//	@Success		200		{object}	object
-//	@Failure		500		{object}	map[string]string
-//	@Router			/v1/provider/{name}/models [get]
 func (s *ProviderService) handleListModels() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		name := c.Param("name")
@@ -112,15 +86,7 @@ func (s *ProviderService) handleListModels() gin.HandlerFunc {
 
 // handleGetModel godoc
 //
-//	@Summary		Get model
 //	@Description	Returns info for a single model from a provider
-//	@Tags			provider
-//	@Produce		json
-//	@Param			name	path		string	true	"Provider name"
-//	@Param			model	path		string	true	"Model name"
-//	@Success		200		{object}	object
-//	@Failure		404		{object}	map[string]string
-//	@Router			/v1/provider/{name}/models/{model} [get]
 func (s *ProviderService) handleGetModel() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		providerName := c.Param("name")
@@ -137,18 +103,8 @@ func (s *ProviderService) handleGetModel() gin.HandlerFunc {
 
 // handleEmbed godoc
 //
-//	@Summary		Embed text
 //	@Description	Returns embedding vectors for the given content using the specified model.
 //	@Description	model accepts "provider/model" or a forge alias (e.g. "forge/my-embed").
-//	@Tags			provider
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		map[string]any	true	"{ model: string, content: string }"
-//	@Success		200		{object}	map[string]any
-//	@Failure		400		{object}	map[string]string
-//	@Failure		500		{object}	map[string]string
-//	@Security		BearerAuth
-//	@Router			/v1/provider/embed [post]
 func (s *ProviderService) handleEmbed() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
