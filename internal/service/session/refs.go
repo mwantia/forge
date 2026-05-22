@@ -34,7 +34,7 @@ type refUpdateRequest struct {
 //	@Success		200			{object}	map[string]any
 //	@Failure		404			{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/branch [get]
+//	@Router			/v1/sessions/{session_id}/refs [get]
 func (s *SessionService) handleListRefs() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -80,7 +80,7 @@ func (s *SessionService) handleListRefs() gin.HandlerFunc {
 //	@Failure		400			{object}	map[string]string
 //	@Failure		409			{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/branch [post]
+//	@Router			/v1/sessions/{session_id}/refs [post]
 func (s *SessionService) handleCreateRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req refCreateRequest
@@ -125,7 +125,7 @@ func (s *SessionService) handleCreateRef() gin.HandlerFunc {
 //	@Failure		400			{object}	map[string]string
 //	@Failure		409			{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/branch/{ref} [patch]
+//	@Router			/v1/sessions/{session_id}/refs/{ref} [patch]
 func (s *SessionService) handleUpdateRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req refUpdateRequest
@@ -234,7 +234,7 @@ func (s *SessionService) handleUpdateRef() gin.HandlerFunc {
 //	@Success		204
 //	@Failure		404	{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/branch/{ref} [delete]
+//	@Router			/v1/sessions/{session_id}/refs/{ref} [delete]
 func (s *SessionService) handleDeleteRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ref := c.Param("ref")
@@ -272,7 +272,7 @@ func (s *SessionService) handleDeleteRef() gin.HandlerFunc {
 //	@Failure		409		{object}	map[string]string
 //	@Failure		500		{object}	map[string]string
 //	@Security		BearerAuth
-//	@Router			/v1/sessions/{session_id}/branch/{ref}/revert [post]
+//	@Router			/v1/sessions/{session_id}/refs/{ref}/revert [post]
 func (s *SessionService) handleRevertRef() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ref := c.Param("ref")

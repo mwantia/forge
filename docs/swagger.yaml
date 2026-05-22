@@ -231,6 +231,11 @@ definitions:
           per-tool annotations; "basic" includes only plugin-level prose; "none"
           omits all plugin and tool blocks entirely.
         type: string
+      total_duration_ms:
+        description: |-
+          TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline
+          commits for this session. Updated asynchronously after each commit.
+        type: integer
       updated_at:
         type: string
       usage:
@@ -1170,7 +1175,7 @@ paths:
       summary: Archive session
       tags:
       - sessions
-  /v1/sessions/{session_id}/branch:
+  /v1/sessions/{session_id}/refs:
     get:
       description: Returns all refs (HEAD + branches) for a session as a name -> hash
         map.
@@ -1242,7 +1247,7 @@ paths:
       summary: Create session branch
       tags:
       - sessions
-  /v1/sessions/{session_id}/branch/{ref}:
+  /v1/sessions/{session_id}/refs/{ref}:
     delete:
       description: Removes a branch ref. Missing refs are not an error.
       parameters:
@@ -1319,7 +1324,7 @@ paths:
       summary: Move or rename branch
       tags:
       - sessions
-  /v1/sessions/{session_id}/branch/{ref}/revert:
+  /v1/sessions/{session_id}/refs/{ref}/revert:
     post:
       consumes:
       - application/json

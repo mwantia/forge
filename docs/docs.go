@@ -1421,7 +1421,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/sessions/{session_id}/branch": {
+        "/v1/sessions/{session_id}/refs": {
             "get": {
                 "security": [
                     {
@@ -1530,7 +1530,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/sessions/{session_id}/branch/{ref}": {
+        "/v1/sessions/{session_id}/refs/{ref}": {
             "delete": {
                 "security": [
                     {
@@ -1646,7 +1646,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/sessions/{session_id}/branch/{ref}/revert": {
+        "/v1/sessions/{session_id}/refs/{ref}/revert": {
             "post": {
                 "security": [
                     {
@@ -3084,6 +3084,10 @@ const docTemplate = `{
                 "tools_verbosity": {
                     "description": "ToolsVerbosity controls how much plugin/tool guidance appears in the\nassembled system prompt: \"full\" (default) includes plugin prose and\nper-tool annotations; \"basic\" includes only plugin-level prose; \"none\"\nomits all plugin and tool blocks entirely.",
                     "type": "string"
+                },
+                "total_duration_ms": {
+                    "description": "TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline\ncommits for this session. Updated asynchronously after each commit.",
+                    "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"

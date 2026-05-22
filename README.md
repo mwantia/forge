@@ -251,9 +251,9 @@ PATCH  /v1/sessions/:id/messages/compact    # rewrites HEAD without tool turns
 PATCH  /v1/sessions/:id/messages/summarize  # 501 not implemented
 
 GET    /v1/sessions/:id/messages/:a/diff/:b       # Myers diff on Content of two messages
-GET    /v1/sessions/:id/branch                    POST   /v1/sessions/:id/branch
-PATCH  /v1/sessions/:id/branch/:ref               DELETE /v1/sessions/:id/branch/:ref
-POST   /v1/sessions/:id/branch/:ref/revert        # hard CAS revert; body: {"to":"<hash>"}
+GET    /v1/sessions/:id/refs                    POST   /v1/sessions/:id/refs
+PATCH  /v1/sessions/:id/refs/:ref               DELETE /v1/sessions/:id/refs/:ref
+POST   /v1/sessions/:id/refs/:ref/revert        # hard CAS revert; body: {"to":"<hash>"}
 
 POST   /v1/sessions/:id/archive             # build envelope, store, flip immutable
 POST   /v1/sessions/:id/clone               # replay envelope into fresh live session
