@@ -10,16 +10,19 @@ const (
 	EventStateFailed  EventState = "failed"
 )
 
-// FireResponse is the JSON body returned by GET/POST /v1/events/:id/fire.
-type FireResponse struct {
+// PushResponse is the JSON body returned by GET/POST /v1/events/:id/push.
+type PushResponse struct {
 	EventID         string     `json:"event_id"`
 	Status          string     `json:"status"`
-	FiredAt         time.Time  `json:"fired_at"`
+	PushedAt        time.Time  `json:"pushed_at"`
 	Branch          string     `json:"branch,omitempty"`
 	QueueSize       int        `json:"queue_size,omitempty"`
 	QueueCapacity   int        `json:"queue_capacity,omitempty"`
 	Evicted         bool       `json:"evicted,omitempty"`
 	WindowExpiresAt *time.Time `json:"window_expires_at,omitempty"`
+	// Content holds the assistant's response text when the push was synchronous
+	// (async=false). Empty for queued or window-open pushes.
+	Content string `json:"content,omitempty"`
 }
 
 // EventStatus is the JSON body returned by GET /v1/events and GET /v1/events/:id.

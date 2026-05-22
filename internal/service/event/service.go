@@ -64,8 +64,8 @@ func (s *EventService) Init(_ context.Context) error {
 	g := s.router.AuthGroup("/events")
 	g.GET("", s.handleList())
 	g.GET("/:id", s.handleGet())
-	g.GET("/:id/fire", s.handleFire())
-	g.POST("/:id/fire", s.handleFire())
+	g.GET("/:id/push", s.handlePush())
+	g.POST("/:id/push", s.handlePush())
 	g.POST("/:id/pause", s.handlePause())
 	g.POST("/:id/resume", s.handleResume())
 
@@ -87,8 +87,11 @@ func (s *EventService) findConfig(id string) *EventConfig {
 	return nil
 }
 
-// fire implements the fire semantics from §1.3 of the proposal.
-func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (FireResponse, int) {
+// push implements the push semantics for event endpoints.
+// When async=false the immediate-dispatch path blocks until the pipeline
+// finishes and returns the assistant's response in PushResponse.Content.
+// Queued and window-open paths always return immediately (async behaviour).
+func (s *EventService) push(cfg *EventConfig, payload []byte, baseRef string, async bool) (PushResponse, int) {
 	now := time.Now()
 
 	if ws := s.state(cfg.ID); func() bool {
@@ -96,10 +99,23 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 		defer ws.mu.Unlock()
 		return ws.paused
 	}() {
-		return FireResponse{EventID: cfg.ID, Status: "paused", FiredAt: now}, http.StatusServiceUnavailable
+		return PushResponse{EventID: cfg.ID, Status: "paused", PushedAt: now}, http.StatusServiceUnavailable
 	}
 
 	if cfg.Options == nil || cfg.Options.Timespan == "" {
+		if !async {
+			branch, content, err := s.dispatchForeground(cfg, []EventInfo{{payload, now}}, baseRef)
+			ws := s.state(cfg.ID)
+			ws.mu.Lock()
+			ws.lastErr = err
+			ws.mu.Unlock()
+			if err != nil {
+				s.logger.Error("sync dispatch failed", "event", cfg.ID, "error", err)
+				return PushResponse{EventID: cfg.ID, Status: "error", PushedAt: now}, http.StatusInternalServerError
+			}
+			return PushResponse{EventID: cfg.ID, Status: "dispatched", PushedAt: now, Branch: branch, Content: content}, http.StatusOK
+		}
+
 		branch, err := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
 		if err != nil {
 			s.logger.Error("immediate dispatch failed", "event", cfg.ID, "error", err)
@@ -107,24 +123,23 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 			ws.mu.Lock()
 			ws.lastErr = err
 			ws.mu.Unlock()
-			return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
+			return PushResponse{EventID: cfg.ID, Status: "error", PushedAt: now}, http.StatusInternalServerError
 		}
 		ws := s.state(cfg.ID)
 		ws.mu.Lock()
 		ws.lastErr = nil
 		ws.mu.Unlock()
-		return FireResponse{EventID: cfg.ID, Status: "dispatched", FiredAt: now, Branch: branch}, http.StatusOK
+		return PushResponse{EventID: cfg.ID, Status: "dispatched", PushedAt: now, Branch: branch}, http.StatusOK
 	}
 
 	dur, err := time.ParseDuration(cfg.Options.Timespan)
 	if err != nil {
 		s.logger.Error("invalid timespan", "event", cfg.ID, "timespan", cfg.Options.Timespan, "error", err)
-		return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
+		return PushResponse{EventID: cfg.ID, Status: "error", PushedAt: now}, http.StatusInternalServerError
 	}
 
 	ws := s.state(cfg.ID)
 	ws.mu.Lock()
-	defer ws.mu.Unlock()
 
 	if ws.timer == nil {
 		// Window idle → dispatch immediately and open window.
@@ -132,25 +147,27 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 		ws.expires = now.Add(dur)
 		logger := s.logger.With("event", cfg.ID)
 		ws.timer = time.AfterFunc(dur, func() { s.onWindowExpiry(cfg, logger) })
-
 		ws.mu.Unlock()
-		branch, dispErr := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
-		ws.mu.Lock()
 
+		branch, dispErr := s.dispatchNow(cfg, []EventInfo{{payload, now}}, baseRef)
+
+		ws.mu.Lock()
 		if dispErr != nil {
 			ws.timer.Stop()
 			ws.timer = nil
 			ws.expires = time.Time{}
 			ws.lastErr = dispErr
-			s.logger.Error("first-fire dispatch failed", "event", cfg.ID, "error", dispErr)
-			return FireResponse{EventID: cfg.ID, Status: "error", FiredAt: now}, http.StatusInternalServerError
+			ws.mu.Unlock()
+			s.logger.Error("first-push dispatch failed", "event", cfg.ID, "error", dispErr)
+			return PushResponse{EventID: cfg.ID, Status: "error", PushedAt: now}, http.StatusInternalServerError
 		}
 		ws.lastErr = nil
 		exp := ws.expires
-		return FireResponse{
+		ws.mu.Unlock()
+		return PushResponse{
 			EventID:         cfg.ID,
 			Status:          "dispatched",
-			FiredAt:         now,
+			PushedAt:        now,
 			Branch:          branch,
 			WindowExpiresAt: &exp,
 		}, http.StatusOK
@@ -159,10 +176,11 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 	// Window is open.
 	exp := ws.expires
 	if cfg.Options.MaxQueue == 0 {
-		return FireResponse{
+		ws.mu.Unlock()
+		return PushResponse{
 			EventID:         cfg.ID,
 			Status:          "window_open",
-			FiredAt:         now,
+			PushedAt:        now,
 			WindowExpiresAt: &exp,
 		}, http.StatusOK
 	}
@@ -174,12 +192,14 @@ func (s *EventService) fire(cfg *EventConfig, payload []byte, baseRef string) (F
 		evicted = true
 	}
 	ws.queue = append(ws.queue, EventInfo{payload, now})
+	queueSize := len(ws.queue)
+	ws.mu.Unlock()
 
-	return FireResponse{
+	return PushResponse{
 		EventID:         cfg.ID,
 		Status:          "queued",
-		FiredAt:         now,
-		QueueSize:       len(ws.queue),
+		PushedAt:        now,
+		QueueSize:       queueSize,
 		QueueCapacity:   cfg.Options.MaxQueue,
 		Evicted:         evicted,
 		WindowExpiresAt: &exp,
@@ -270,7 +290,7 @@ func (s *EventService) handleGet() gin.HandlerFunc {
 	}
 }
 
-func (s *EventService) handleFire() gin.HandlerFunc {
+func (s *EventService) handlePush() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cfg := s.findConfig(c.Param("id"))
 		if cfg == nil {
@@ -279,6 +299,7 @@ func (s *EventService) handleFire() gin.HandlerFunc {
 		}
 
 		baseRef := c.Query("ref")
+		async := c.Query("async") == "true"
 		var payload []byte
 
 		if c.Request.Method == http.MethodGet {
@@ -292,7 +313,7 @@ func (s *EventService) handleFire() gin.HandlerFunc {
 			payload = body
 		}
 
-		resp, status := s.fire(cfg, payload, baseRef)
+		resp, status := s.push(cfg, payload, baseRef, async)
 		c.JSON(status, resp)
 	}
 }
