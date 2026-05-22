@@ -38,6 +38,11 @@ type SessionManager interface {
 	// a provider so the materialized prompt is reproducible.
 	PutPromptContext(ctx context.Context, p *dag.PromptContext) (string, error)
 
+	// PutToolCatalog stores a ToolCatalog snapshot in the global object
+	// store and returns its content hash. Called by recordPromptContext so
+	// replays use exactly the tool set that was active at dispatch time.
+	PutToolCatalog(ctx context.Context, t *dag.ToolCatalog) (string, error)
+
 	// GetPromptContext loads a previously stored PromptContext by hash.
 	GetPromptContext(ctx context.Context, hash string) (*dag.PromptContext, error)
 
@@ -86,6 +91,10 @@ type SessionManager interface {
 	// subsequent dispatches advance targetBranch instead of the previous one.
 	// Returns an error if targetBranch does not exist.
 	CheckoutRef(ctx context.Context, sessionID, targetBranch string) error
+
+	// AccumulateDuration adds ms to the session's running TotalDurationMs.
+	// Failures are logged and swallowed so timing never breaks a commit.
+	AccumulateDuration(ctx context.Context, sessionID string, ms int64)
 }
 
 // ResolveSession implements SessionManager.
@@ -200,6 +209,29 @@ func (s *SessionService) accumulateUsage(ctx context.Context, sessionID string, 
 	}
 }
 
+// AccumulateDuration implements SessionManager.
+func (s *SessionService) AccumulateDuration(ctx context.Context, sessionID string, ms int64) {
+	if ms <= 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	meta, err := s.store.LoadSession(ctx, sessionID)
+	if err != nil {
+		s.logger.Warn("duration accumulate: load session failed", "session", sessionID, "error", err)
+		return
+	}
+
+	meta.TotalDurationMs += ms
+	meta.UpdatedAt = time.Now()
+
+	if err := s.store.SaveSession(ctx, meta); err != nil {
+		s.logger.Warn("duration accumulate: save session failed", "session", sessionID, "error", err)
+	}
+}
+
 // HeadHash implements SessionManager.
 func (s *SessionService) HeadHash(ctx context.Context, sessionID string) (string, error) {
 	s.mu.RLock()
@@ -214,6 +246,14 @@ func (s *SessionService) PutPromptContext(ctx context.Context, p *dag.PromptCont
 	defer s.mu.Unlock()
 
 	return s.store.objects.PutPromptContext(ctx, p)
+}
+
+// PutToolCatalog implements SessionManager.
+func (s *SessionService) PutToolCatalog(ctx context.Context, t *dag.ToolCatalog) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.store.objects.PutToolCatalog(ctx, t)
 }
 
 // GetPromptContext implements SessionManager.
@@ -237,29 +277,7 @@ func (s *SessionService) ListMessagesFromRef(ctx context.Context, sessionID, ref
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	tip, err := s.store.refs.Read(ctx, sessionID, ref)
-	if err != nil {
-		if errors.Is(err, dag.ErrNotFound) {
-			return []*Message{}, nil
-		}
-		return nil, err
-	}
-
-	entries, err := dag.Walk(ctx, s.store.objects, s.store.refs, sessionID, tip, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-
-	metas, err := s.store.loadAllMetas(ctx, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*Message, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, fromDagMessageObj(e.Hash, e.Message, metas[e.Hash]))
-	}
-
-	return out, nil
+	return s.store.ListMessagesFromRef(ctx, sessionID, ref, offset, limit)
 }
 
 // ListRefs implements SessionManager.

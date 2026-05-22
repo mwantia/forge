@@ -37,6 +37,9 @@ type SessionMetadata struct {
 	// and are offered as callable tools. Built-in namespaces (sessions,
 	// resource) always remain active regardless of this list.
 	Plugins []string `json:"plugins,omitempty"`
+	// TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline
+	// commits for this session. Updated asynchronously after each commit.
+	TotalDurationMs int64 `json:"total_duration_ms,omitempty"`
 }
 
 // Message is the session-layer projection of a dag.MessageObj plus its

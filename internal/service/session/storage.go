@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mwantia/forge/internal/service/session/dag"
@@ -27,27 +28,45 @@ type DagStore struct {
 	storage storage.StorageBackend
 	objects *dag.ObjectStore
 	refs    *dag.RefStore
+
+	cacheMu   sync.RWMutex
+	metaCache map[string]*SessionMetadata // session ID → metadata
+
+	msgMetaMu    sync.RWMutex
+	msgMetaCache map[string]map[string]*dag.MessageMeta // session ID → hash → MessageMeta
 }
 
 func NewDagStore(s storage.StorageBackend) *DagStore {
 	return &DagStore{
-		storage: s,
-		objects: dag.NewObjectStore(s),
-		refs:    dag.NewRefStore(s),
+		storage:      s,
+		objects:      dag.NewObjectStore(s),
+		refs:         dag.NewRefStore(s),
+		metaCache:    make(map[string]*SessionMetadata),
+		msgMetaCache: make(map[string]map[string]*dag.MessageMeta),
 	}
 }
 
 // --- session metadata ---
 
 func (m *DagStore) LoadSession(ctx context.Context, id string) (*SessionMetadata, error) {
+	m.cacheMu.RLock()
+	if cached, ok := m.metaCache[id]; ok {
+		m.cacheMu.RUnlock()
+		return cached, nil
+	}
+	m.cacheMu.RUnlock()
+
 	meta := &SessionMetadata{}
 	if err := m.storage.ReadJson(ctx, constructSessionKey(id), meta); err != nil {
 		return nil, fmt.Errorf("failed to load session %q: %w", id, err)
 	}
-
 	if meta.ID == "" {
 		return nil, fmt.Errorf("invalid session id received: %s", id)
 	}
+
+	m.cacheMu.Lock()
+	m.metaCache[id] = meta
+	m.cacheMu.Unlock()
 
 	return meta, nil
 }
@@ -56,14 +75,40 @@ func (m *DagStore) SaveSession(ctx context.Context, s *SessionMetadata) error {
 	if err := m.storage.WriteJson(ctx, constructSessionKey(s.ID), s); err != nil {
 		return fmt.Errorf("failed to save session %q: %w", s.ID, err)
 	}
+	if s.Name != "" {
+		// Best-effort name→ID index; FindSessionByName falls back to full scan on miss.
+		_ = m.storage.WriteRaw(ctx, "names/"+s.Name, []byte(s.ID))
+	}
+
+	m.cacheMu.Lock()
+	m.metaCache[s.ID] = s
+	m.cacheMu.Unlock()
 
 	return nil
 }
 
 func (m *DagStore) DeleteSession(ctx context.Context, id string) error {
+	// Remove name index entry before wiping the session data.
+	if cached, ok := func() (*SessionMetadata, bool) {
+		m.cacheMu.RLock()
+		defer m.cacheMu.RUnlock()
+		v, ok := m.metaCache[id]
+		return v, ok
+	}(); ok && cached.Name != "" {
+		_ = m.storage.DeleteEntry(ctx, "names/"+cached.Name)
+	}
+
 	if err := m.storage.DeletePrefix(ctx, constructSessionPrefix(id)); err != nil {
 		return fmt.Errorf("failed to delete session %q: %w", id, err)
 	}
+
+	m.cacheMu.Lock()
+	delete(m.metaCache, id)
+	m.cacheMu.Unlock()
+
+	m.msgMetaMu.Lock()
+	delete(m.msgMetaCache, id)
+	m.msgMetaMu.Unlock()
 
 	return nil
 }
@@ -120,22 +165,28 @@ func (m *DagStore) ListSessions(ctx context.Context, archived bool, offset, limi
 }
 
 func (m *DagStore) FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error) {
+	// Fast path: name→ID index written by SaveSession.
+	if b, err := m.storage.ReadRaw(ctx, "names/"+name); err == nil && len(b) > 0 {
+		id := strings.TrimSpace(string(b))
+		if meta, err := m.LoadSession(ctx, id); err == nil {
+			return meta, nil
+		}
+		// Index entry stale (session deleted without index cleanup) — fall through.
+	}
+
+	// Fallback: full scan for sessions pre-dating the index.
 	entries, err := m.storage.ListEntry(ctx, "sessions/")
 	if err != nil {
 		return nil, err
 	}
-
 	for _, e := range entries {
 		if !strings.HasSuffix(e, "/") {
 			continue
 		}
-
-		id := strings.TrimSuffix(e, "/")
-		meta, err := m.LoadSession(ctx, id)
+		meta, err := m.LoadSession(ctx, strings.TrimSuffix(e, "/"))
 		if err != nil {
 			continue
 		}
-
 		if meta.Name == name {
 			return meta, nil
 		}
@@ -287,21 +338,19 @@ func (m *DagStore) ListMessagesFromRef(ctx context.Context, sessionID, branch st
 }
 
 func (m *DagStore) CountMessages(ctx context.Context, sessionID string) (int, error) {
-	head, err := m.HeadHash(ctx, sessionID)
+	// P-2: count log sidecars rather than walking and decoding the full object chain.
+	// One ListEntry call (a directory scan) instead of N gzip-decompress + JSON-unmarshal cycles.
+	entries, err := m.storage.ListEntry(ctx, logPrefix(sessionID))
 	if err != nil {
 		return 0, err
 	}
-
-	if head == "" {
-		return 0, nil
+	count := 0
+	for _, e := range entries {
+		if strings.HasSuffix(e, ".json") {
+			count++
+		}
 	}
-
-	entries, err := dag.Walk(ctx, m.objects, m.refs, sessionID, head, 0, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	return len(entries), nil
+	return count, nil
 }
 
 // CompactToolsMessages rewrites the active branch with all "tool" turns
@@ -403,10 +452,26 @@ func logKey(sessionID string, createdAt time.Time, hash string) string {
 }
 
 func (m *DagStore) writeLogEntry(ctx context.Context, sessionID string, meta *dag.MessageMeta) error {
-	return m.storage.WriteJson(ctx, logKey(sessionID, meta.CreatedAt, meta.Hash), meta)
+	if err := m.storage.WriteJson(ctx, logKey(sessionID, meta.CreatedAt, meta.Hash), meta); err != nil {
+		return err
+	}
+	m.msgMetaMu.Lock()
+	if m.msgMetaCache[sessionID] == nil {
+		m.msgMetaCache[sessionID] = make(map[string]*dag.MessageMeta)
+	}
+	m.msgMetaCache[sessionID][meta.Hash] = meta
+	m.msgMetaMu.Unlock()
+	return nil
 }
 
 func (m *DagStore) loadAllMetas(ctx context.Context, sessionID string) (map[string]*dag.MessageMeta, error) {
+	m.msgMetaMu.RLock()
+	if cached, ok := m.msgMetaCache[sessionID]; ok {
+		m.msgMetaMu.RUnlock()
+		return cached, nil
+	}
+	m.msgMetaMu.RUnlock()
+
 	prefix := logPrefix(sessionID)
 	entries, err := m.storage.ListEntry(ctx, prefix)
 	if err != nil {
@@ -418,23 +483,18 @@ func (m *DagStore) loadAllMetas(ctx context.Context, sessionID string) (map[stri
 		if !strings.HasSuffix(e, ".json") {
 			continue
 		}
-
-		var key string
-		if strings.HasPrefix(e, prefix) {
-			key = e
-		} else {
-			key = prefix + e
-		}
-
 		meta := &dag.MessageMeta{}
-		if err := m.storage.ReadJson(ctx, key, meta); err != nil {
+		if err := m.storage.ReadJson(ctx, prefix+e, meta); err != nil {
 			continue // corrupt sidecar; skip rather than poisoning the map
 		}
-
 		if meta.Hash != "" {
 			out[meta.Hash] = meta
 		}
 	}
+
+	m.msgMetaMu.Lock()
+	m.msgMetaCache[sessionID] = out
+	m.msgMetaMu.Unlock()
 
 	return out, nil
 }
