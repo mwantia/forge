@@ -50,6 +50,7 @@ func (s *PluginsService) Init(ctx context.Context) error {
 		group.GET("/", s.handleListPlugins())
 		group.GET("/:name", s.handleGetPlugin())
 		group.GET("/:name/capabilities", s.handleGetPluginCapabilities())
+		group.GET("/:name/health", s.handleGetPluginHealth())
 	}
 
 	return nil

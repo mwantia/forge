@@ -1,10 +1,12 @@
 package plugins
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
 // handleListPlugins godoc
@@ -58,9 +60,53 @@ func (s *PluginsService) handleGetPluginCapabilities() gin.HandlerFunc {
 			return
 		}
 		if driver.Capabilities == nil {
-			c.JSON(http.StatusOK, &plugins.DriverCapabilities{})
+			c.JSON(http.StatusOK, &sdkplugins.DriverCapabilities{})
 			return
 		}
 		c.JSON(http.StatusOK, driver.Capabilities)
+	}
+}
+
+// handleGetPluginHealth godoc
+//
+//	@Description	Returns live health status for a single plugin driver
+func (s *PluginsService) handleGetPluginHealth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		name := c.Param("name")
+
+		s.mu.RLock()
+		driver, ok := s.drivers[name]
+		s.mu.RUnlock()
+
+		if !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "plugin not found: " + name})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+		defer cancel()
+
+		h, _ := driver.Driver.GetPluginHealth(ctx)
+
+		var types []string
+		if driver.Capabilities != nil {
+			types = driver.Capabilities.Types
+		}
+		resp := gin.H{
+			"name":  name,
+			"types": types,
+		}
+		if h != nil {
+			resp["status"] = h.Status
+			resp["code"] = h.Code
+			resp["message"] = h.Message
+			resp["action"] = h.Action
+			resp["latency"] = h.Latency.Nanoseconds()
+		} else {
+			resp["status"] = sdkplugins.StatusUnhealthy
+			resp["code"] = sdkplugins.HealthCodeConfigInvalid
+			resp["message"] = "no health response"
+		}
+		c.JSON(http.StatusOK, resp)
 	}
 }

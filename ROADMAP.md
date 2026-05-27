@@ -61,7 +61,7 @@ CLI output is plain text by default; `--json` emits newline-delimited JSON for s
 
 | Item | Status | Notes |
 |---|---|---|
-| `commit_session` tool | **Missing** | Returns `"not yet implemented"`. See `internal/service/session/tools.go:59`. The other sub-session tools are wired. |
+| `commit_session` tool | **Done** | Registered as `pipeline__commit_session`; `pipeline/tools.go:14` dispatches to `PipelineService.CommitSync` which blocks until the sub-session's tool-loop finishes. |
 | `PATCH /messages/summarize` | **Stub (501)** | `handlers.go:354`. Needs a pipeline round-trip: assemble history, call provider with a summarize prompt, replace branch with a single summary message. |
 | Automatic GC trigger | **Won't fix** | `forge system gc` is sufficient; schedule via cron if needed. Background tickers explicitly avoided. |
 
@@ -73,9 +73,9 @@ Proposal: `../docs/07-proposal-agent-lifecycle-runner.md`
 
 | Item | Status | Notes |
 |---|---|---|
-| `container.Cleanup` fan-out | **Incomplete** | `Agent.Cleanup` manually calls three services; `sess`, `res`, `events`, `providers`, and `tools` are silently skipped. Fix: call `container.Cleanup(ctx)` after the manual plugins teardown. |
-| `Serve` via errgroup | **Not started** | Long-lived services (`srv`, `met`, `pipe`) are goroutined manually. Wrapping them in an `errgroup` with propagating cancellation would surface errors and stop the agent cleanly on first failure. |
-| Sequential-init vs. concurrent-loop split | **Not started** | `providers`, `toolsSvc`, `sess`, `res`, `events` run to completion; `srv`, `met`, `pipe` are loops. A `service.Runner` abstraction would make this explicit and remove the boilerplate in `agent.go`. |
+| `container.Cleanup` fan-out | **Done** | `agent.go:122` fans out over all 10 services (pipe, events, sysSvc, sess, res, toolsSvc, providers, srv, met, plugins) with a global shutdown timeout + per-service 5 s timeout. |
+| `Serve` via errgroup | **Not started** | Long-lived services (`srv`, `met`, `pipe`) use `sync.WaitGroup` goroutines. Wrapping them in an `errgroup` with propagating cancellation would surface errors and stop the agent cleanly on first failure. |
+| Sequential-init vs. concurrent-loop split | **Done (no abstraction)** | Pattern is explicit in `agent.go`: sequential init (plugins → providers → toolsSvc → sess → res → events), then concurrent loops (srv / met / pipe) via `a.wait.Go`. No formal `service.Runner` type was added; the boilerplate remains but the separation is clear. |
 
 ---
 
@@ -161,7 +161,7 @@ yet listed in `plugins.yaml` and therefore excluded from the `all` build tag.
 | `plane` | Yes | |
 | `consul` | Yes | |
 | `nomad` | Yes | |
-| `discord` | **No** | Requires channel service. |
+| `discord` | Yes | Requires channel service for full functionality. |
 | `mcp` | **No** | |
 | `browser` | **No** | |
 
