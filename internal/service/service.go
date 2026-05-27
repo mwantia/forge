@@ -7,7 +7,9 @@ import (
 )
 
 type Service interface {
-	container.LifecycleService
+	container.Lifecycle
+	container.PreLifecycle
+	container.PostLifecycle
 
 	Serve(context.Context) error
 }

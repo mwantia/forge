@@ -47,7 +47,7 @@ func init() {
 	}
 }
 
-func (s *TemplateService) Init(ctx context.Context) error {
+func (s *TemplateService) PostInit(ctx context.Context) error {
 	base, err := NewTemplate(
 		WithRuntime(),
 		WithStdlib(),

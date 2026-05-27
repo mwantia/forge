@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/fabric/pkg/container"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	"github.com/mwantia/forge/internal/service"
 	"github.com/mwantia/forge/internal/service/metrics"
 	"github.com/mwantia/forge/internal/service/plugins"
@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func (s *ProviderService) Init(ctx context.Context) error {
+func (s *ProviderService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

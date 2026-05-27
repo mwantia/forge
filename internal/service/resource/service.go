@@ -42,7 +42,7 @@ func init() {
 	}
 }
 
-func (s *ResourceService) Init(ctx context.Context) error {
+func (s *ResourceService) PostInit(ctx context.Context) error {
 	if err := s.metrics.Register(ResourceOperationsTotal, ResourceOperationDuration); err != nil {
 		return fmt.Errorf("failed to register metrics: %w", err)
 	}
@@ -66,7 +66,7 @@ func (s *ResourceService) Init(ctx context.Context) error {
 	if err := s.tools.RegisterNamespaceMetadata(namespace, tools.NamespaceMetadata{
 		Description: "Built-in long-term resource store: persist and semantically retrieve context across sessions.",
 		Builtin:     true,
-		System: `Built-in resources persist context across turns and sessions, indexed for semantic retrieval. Store facts the user wants remembered (preferences, project context, recurring constraints) — not transient turn details. Retrieve before answering when the question references prior work that may not be in the current message history. Path defaults to the caller session (/sessions/<id>); use /global for agent-wide facts or any explicit path to share across sessions.`,
+		System:      `Built-in resources persist context across turns and sessions, indexed for semantic retrieval. Store facts the user wants remembered (preferences, project context, recurring constraints) — not transient turn details. Retrieve before answering when the question references prior work that may not be in the current message history. Path defaults to the caller session (/sessions/<id>); use /global for agent-wide facts or any explicit path to share across sessions.`,
 	}); err != nil {
 		return fmt.Errorf("failed to register namespace metadata for %q: %w", namespace, err)
 	}

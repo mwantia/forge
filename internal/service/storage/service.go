@@ -38,7 +38,7 @@ func init() {
 	}
 }
 
-func (s *StorageService) Init(ctx context.Context) error {
+func (s *StorageService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -63,7 +63,7 @@ func (s *StorageService) Init(ctx context.Context) error {
 	}
 
 	if serv, ok := backend.(service.Service); ok {
-		if err := serv.Init(ctx); err != nil {
+		if err := serv.PostInit(ctx); err != nil {
 			return fmt.Errorf("failed to initialize backend: %w", err)
 		}
 	}

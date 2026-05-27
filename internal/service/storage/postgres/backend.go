@@ -34,7 +34,7 @@ func NewPostgresBackend(logger hclog.Logger, dsn string, maxConns int32) *Postgr
 	}
 }
 
-func (b *PostgresBackend) Init(ctx context.Context) error {
+func (b *PostgresBackend) PostInit(ctx context.Context) error {
 	cfg, err := pgxpool.ParseConfig(b.dsn)
 	if err != nil {
 		return fmt.Errorf("postgres: invalid DSN: %w", err)

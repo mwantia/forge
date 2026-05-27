@@ -37,7 +37,7 @@ func init() {
 	}
 }
 
-func (r *MetricsService) Init(context.Context) error {
+func (r *MetricsService) PostInit(context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func (s *PluginsService) Init(ctx context.Context) error {
+func (s *PluginsService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

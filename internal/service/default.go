@@ -11,7 +11,12 @@ func (*UnimplementedService) Cleanup(context.Context) error {
 }
 
 // Init implements [Service].
-func (*UnimplementedService) Init(context.Context) error {
+func (*UnimplementedService) PreInit(ctx context.Context) error {
+	return nil
+}
+
+// Init implements [Service].
+func (*UnimplementedService) PostInit(ctx context.Context) error {
 	return nil
 }
 

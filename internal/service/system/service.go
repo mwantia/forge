@@ -30,7 +30,7 @@ func init() {
 	}
 }
 
-func (s *SystemService) Init(ctx context.Context) error {
+func (s *SystemService) PostInit(ctx context.Context) error {
 	if err := s.registerForgeTools(); err != nil {
 		return err
 	}

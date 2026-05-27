@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-func (r *SandboxService) Init(context.Context) error {
+func (r *SandboxService) PostInit(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

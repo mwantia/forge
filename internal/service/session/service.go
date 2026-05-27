@@ -41,7 +41,7 @@ func init() {
 	}
 }
 
-func (s *SessionService) Init(ctx context.Context) error {
+func (s *SessionService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

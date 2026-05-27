@@ -47,7 +47,7 @@ func init() {
 	}
 }
 
-func (s *PipelineService) Init(ctx context.Context) error {
+func (s *PipelineService) PostInit(ctx context.Context) error {
 	if err := s.metrics.Register(PipelineMessagesTotal, PipelineToolCallsTotal); err != nil {
 		return fmt.Errorf("failed to register metrics: %w", err)
 	}

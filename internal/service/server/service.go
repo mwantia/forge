@@ -40,7 +40,7 @@ func init() {
 	}
 }
 
-func (s *ServerService) Init(ctx context.Context) error {
+func (s *ServerService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
