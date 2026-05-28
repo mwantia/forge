@@ -284,6 +284,10 @@ github.com/muesli/termenv v0.16.0 h1:S5AlUN9dENB57rsbnkPyfdGuWIlkmzJjbFf0Tf5FWUc
 github.com/muesli/termenv v0.16.0/go.mod h1:ZRfOIKPFDYQoDFF4Olj7/QJbW60Ol/kL1pU3VfY/Cnk=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
+github.com/mwantia/fabric/v2 v2.0.0 h1:l9VIIHMG5xmk0g0DsEwE/2dY+PeNXxlaMMvFxgOow24=
+github.com/mwantia/fabric/v2 v2.0.0/go.mod h1:fDInV3FW0cIzerP7LCBVxju3IWuXbDiMjP7gxW+GrGs=
+github.com/mwantia/forge-sdk v0.3.0 h1:rtTtOPeeF7nOTZDAfR8GFU9ZWxsNFrUrlfy1rOtyCsA=
+github.com/mwantia/forge-sdk v0.3.0/go.mod h1:zl5617ub8TnO7/c6fCqvxs0bDovevyR1aUPglUFb+6c=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/oklog/run v1.1.0 h1:GEenZ1cK0+q0+wsJew9qUg/DyD8k3JzYsZAi5gYi2mA=
 github.com/oklog/run v1.1.0/go.mod h1:sVPdnTZT1zYwAJeCMu2Th4T21pA3FPOQRfWjQlk7DVU=

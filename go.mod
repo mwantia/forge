@@ -17,7 +17,7 @@ require (
 	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-unifi v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-sdk v0.1.0
+	github.com/mwantia/forge-sdk v0.3.0
 	github.com/sergi/go-diff v1.4.0
 	github.com/viterin/vek v0.4.2
 	github.com/zclconf/go-cty v1.18.1
@@ -137,10 +137,6 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/mwantia/fabric/v2 => /home/mwantia/Repositories/02-projects/01-github/01-golang/fabric
-
-replace github.com/mwantia/forge-sdk => ../sdk
 
 replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
 
