@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/mwantia/forge/internal/service/template"
+	"github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 func Parse(path string, tmpl *template.Template) (*AgentConfig, error) {

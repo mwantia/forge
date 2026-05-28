@@ -5,7 +5,7 @@ import (
 
 	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
 	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
-	"github.com/mwantia/forge/internal/service/template"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ func SessionsArchiveCmd(client func() *v2.ForgeApi) *cobra.Command {
 			}
 			name := rename
 			if renameRandom {
-				name = template.GenerateUniqueName()
+				name = infratemplate.GenerateUniqueName()
 			}
 			c := client()
 			ctx := cmd.Context()

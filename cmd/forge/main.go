@@ -8,39 +8,39 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/forge/cmd/forge/client"
 	cliserver "github.com/mwantia/forge/cmd/forge/server"
-	"github.com/mwantia/forge/internal/agent"
+	"github.com/mwantia/forge/internal/application/agent"
+	appevent "github.com/mwantia/forge/internal/application/event"
+	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
+	appplugins "github.com/mwantia/forge/internal/application/plugins"
+	appresource "github.com/mwantia/forge/internal/application/resource"
+	appsandbox "github.com/mwantia/forge/internal/application/sandbox"
+	appsession "github.com/mwantia/forge/internal/application/session"
+	appsystem "github.com/mwantia/forge/internal/application/system"
+	apptools "github.com/mwantia/forge/internal/application/tools"
 	_ "github.com/mwantia/forge/internal/config"
+	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
+	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
+	infrastorage "github.com/mwantia/forge/internal/infrastructure/storage"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 	forgelog "github.com/mwantia/forge/internal/log"
-	"github.com/mwantia/forge/internal/service/event"
-	"github.com/mwantia/forge/internal/service/metrics"
-	"github.com/mwantia/forge/internal/service/pipeline"
-	"github.com/mwantia/forge/internal/service/plugins"
-	"github.com/mwantia/forge/internal/service/resource"
-	"github.com/mwantia/forge/internal/service/sandbox"
-	"github.com/mwantia/forge/internal/service/server"
-	"github.com/mwantia/forge/internal/service/session"
-	"github.com/mwantia/forge/internal/service/storage"
-	"github.com/mwantia/forge/internal/service/system"
-	"github.com/mwantia/forge/internal/service/template"
-	"github.com/mwantia/forge/internal/service/tools"
 	"github.com/spf13/cobra"
 )
 
 // Ensure init() registrations run for all service packages.
 var (
-	_ *agent.Agent              = nil
-	_ *event.EventService       = nil
-	_ *metrics.MetricsService   = nil
-	_ *pipeline.PipelineService = nil
-	_ *plugins.PluginsService   = nil
-	_ *resource.ResourceService = nil
-	_ *sandbox.SandboxService   = nil
-	_ *server.ServerService     = nil
-	_ *session.SessionService   = nil
-	_ *storage.StorageService   = nil
-	_ *system.SystemService     = nil
-	_ *template.TemplateService = nil
-	_ *tools.ToolsService       = nil
+	_ *agent.Agent                    = nil
+	_ *appevent.EventService          = nil
+	_ *inframetrics.MetricsService    = nil
+	_ *apppipeline.PipelineService    = nil
+	_ *appplugins.PluginsService      = nil
+	_ *appresource.ResourceService    = nil
+	_ *appsandbox.SandboxService      = nil
+	_ *infraserver.ServerService      = nil
+	_ *appsession.SessionService      = nil
+	_ *infrastorage.StorageService    = nil
+	_ *appsystem.SystemService        = nil
+	_ *infratemplate.TemplateService  = nil
+	_ *apptools.ToolsService          = nil
 )
 
 var (

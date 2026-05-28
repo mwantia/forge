@@ -6,12 +6,12 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/mwantia/forge/internal/service/template"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // Decode decodes an hcl.Body into T using gohcl. Returns zero value if body is nil.
-func Decode[T any](body hcl.Body, tmpl *template.Template) (T, error) {
+func Decode[T any](body hcl.Body, tmpl *infratemplate.Template) (T, error) {
 	var target T
 	if body == nil {
 		return target, nil
@@ -23,7 +23,7 @@ func Decode[T any](body hcl.Body, tmpl *template.Template) (T, error) {
 	return target, nil
 }
 
-func DecodeBody(body hcl.Body, tmpl *template.Template) (map[string]any, error) {
+func DecodeBody(body hcl.Body, tmpl *infratemplate.Template) (map[string]any, error) {
 	if body == nil {
 		return make(map[string]any), nil
 	}
@@ -47,7 +47,7 @@ func DecodeBody(body hcl.Body, tmpl *template.Template) (map[string]any, error) 
 	return result, nil
 }
 
-func decodeSyntaxBody(body *hclsyntax.Body, tmpl *template.Template) (map[string]any, error) {
+func decodeSyntaxBody(body *hclsyntax.Body, tmpl *infratemplate.Template) (map[string]any, error) {
 	result := make(map[string]any)
 
 	for name, attr := range body.Attributes {

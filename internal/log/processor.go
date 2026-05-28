@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/mwantia/fabric/pkg/container"
+	"github.com/mwantia/fabric/v2/pkg/container"
 )
 
-// LoggerTagProcessor handles fabric:"logger" and fabric:"logger:<name>" tags
+// LoggerTagProcessor handles fabric:"logger" and fabric:"logger=<name>" tags
 // for automatic logger injection with optional named loggers.
 //
 // Supported tag formats:
 //   - `fabric:"logger"` - Injects the base logger service
-//   - `fabric:"logger:<name>"` - Injects a named logger (e.g., logger.Named("database"))
+//   - `fabric:"logger=<name>"` - Injects a named logger (e.g., logger.Named("database"))
 type HcLogTagProcessor struct {
 }
 
@@ -37,25 +37,25 @@ func (p *HcLogTagProcessor) GetPriority() int {
 // CanProcess returns true if this processor can handle the given tag value.
 // The LoggerTagProcessor handles:
 //   - "logger" - for base logger injection
-//   - "logger:<name>" - for named logger injection
+//   - "logger=<name>" - for named logger injection
 //
 // All matching is case-insensitive.
 func (p *HcLogTagProcessor) CanProcess(value string) bool {
-	return strings.EqualFold(value, "logger") || strings.HasPrefix(strings.ToLower(value), "logger:")
+	return strings.EqualFold(value, "logger") || strings.HasPrefix(strings.ToLower(value), "logger=")
 }
 
 // Process handles the injection of loggers for fabric:"logger" tags.
 // It supports both base and named logger injection:
 //   - "logger" - resolves the base LoggerService
-//   - "logger:<name>" - resolves the base LoggerService and calls Named(name)
+//   - "logger=<name>" - resolves the base LoggerService and calls Named(name)
 //
 // The method parses the tag value to extract the logger name and then
 // resolves the appropriate logger from the container.
 func (p *HcLogTagProcessor) Process(ctx context.Context, sc *container.ServiceContainer, field reflect.StructField, value string) (any, error) {
 	// Parse the tag value to extract the logger name
 	loggerName := ""
-	if strings.Contains(value, ":") {
-		parts := strings.SplitN(value, ":", 2)
+	if strings.Contains(value, "=") {
+		parts := strings.SplitN(value, "=", 2)
 		if len(parts) == 2 {
 			loggerName = strings.TrimSpace(parts[1])
 		}

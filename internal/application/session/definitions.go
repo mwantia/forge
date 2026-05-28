@@ -1,0 +1,202 @@
+package session
+
+import "github.com/mwantia/forge-sdk/pkg/plugins"
+
+// ToolsDefinitions are registered under the "sessions" namespace at Init.
+var ToolsDefinitions = []plugins.ToolDefinition{
+	{
+		Name:        "update_session_title",
+		Description: `Set a short, human-readable title for a session that summarises the conversation topic.`,
+		Tags:        []string{"session", "update", "metadata"},
+		Annotations: plugins.ToolAnnotations{
+			Idempotent: true,
+			CostHint:   plugins.ToolCostFree,
+			System: `
+Set once the topic is clear (usually after the first 1–2 user turns). Aim for under 60 characters — this title appears in session lists.
+Don't keep retitling on every turn; only update if the topic shifts substantively.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session to update."},
+				"title":      {Type: "string", Description: "The title to assign to this session."},
+			},
+			Required: []string{"session_id", "title"},
+		},
+	},
+	{
+		Name: "update_session_description",
+		Description: `Set a longer description for a session that provides additional context about the conversation.
+		This description will be used as additional context for each conversation as system prompt.`,
+		Tags: []string{"session", "update", "metadata"},
+		Annotations: plugins.ToolAnnotations{
+			Idempotent: true,
+			CostHint:   plugins.ToolCostFree,
+			System: `
+The description is injected as the session-layer system prompt on every subsequent turn — keep it concise and durable.
+Use for constraints/goals that should stick across the whole conversation, not for one-turn details.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id":  {Type: "string", Description: "The ID of the session to update."},
+				"description": {Type: "string", Description: "The description to assign to this session."},
+			},
+			Required: []string{"session_id", "description"},
+		},
+	},
+	{
+		Name:        "read_session",
+		Description: `Get the current state of a session by its ID including metadata and session information.`,
+		Tags:        []string{"session", "read", "metadata"},
+		Annotations: plugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   plugins.ToolCostFree,
+			System: `
+Use to inspect another session's metadata (e.g. a sub-session you spawned). Skip this for the current session — its metadata is already implicit in the system prompt.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session to retrieve."},
+			},
+			Required: []string{"session_id"},
+		},
+	},
+	{
+		Name:        "list_sub_sessions",
+		Description: `List sub-sessions owned by the current session. Optionally filter by a different parent session ID.`,
+		Tags:        []string{"session", "list"},
+		Annotations: plugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   plugins.ToolCostCheap,
+			System: `
+Defaults to the current session as the parent. Use when the user asks "what did we delegate?" or before committing to an existing sub-session.
+Pagination defaults are sane — only override if the user asks for older entries.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"parent": {Type: "string", Description: "Filter by parent session ID. Defaults to the current session ID."},
+				"limit":  {Type: "integer", Description: "Maximum number of sessions to return. Defaults to 20."},
+				"offset": {Type: "integer", Description: "Pagination offset. Defaults to 0."},
+			},
+		},
+	},
+	{
+		Name:        "create_session",
+		Description: `Create a new sub-session owned by the current session. The new session inherits the current session's model and tools unless overridden.`,
+		Tags:        []string{"session", "create"},
+		Annotations: plugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   plugins.ToolCostFree,
+			System: `
+Spawn a focused sub-session for a specific delegated task. Always scope the sub-session to only the plugins it actually needs:
+
+- Set "plugins" to the minimal list of plugin namespaces required (e.g. ["skills"] for a file task, ["consul"] for a service-discovery lookup).
+  Built-in namespaces (sessions, resource) are always available regardless of this list.
+
+Narrowing plugins and verbosity keeps the context window small and the model focused. Pair with commit_session to drive the sub-session.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"model":       {Type: "string", Description: "LLM model to use. Defaults to the current session's model."},
+				"title":       {Type: "string", Description: "Optional short title for the sub-session."},
+				"description": {Type: "string", Description: "Optional description for the sub-session."},
+				"system":      {Type: "string", Description: "Optional system prompt for the sub-session."},
+				"plugins":     {Type: "array", Description: "Plugin namespaces to allow in the sub-session (e.g. [\"skills\", \"consul\"]). When set, only the listed namespaces appear in the system prompt and are offered as tools. Built-in namespaces (sessions, resource) are always active."},
+			},
+		},
+	},
+	{
+		Name:        "list_message_history",
+		Description: `Retrieve the message history of a session.`,
+		Tags:        []string{"session", "list", "history", "message"},
+		Annotations: plugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   plugins.ToolCostCheap,
+			System: `
+Use for inspecting a different session's transcript — the current session's history is already in your context. Pair with read_message when you need the full body of a specific entry the list returns.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session to list messages from."},
+				"limit":      {Type: "integer", Description: "Maximum number of messages to return. Defaults to 50."},
+				"offset":     {Type: "integer", Description: "Pagination offset. Defaults to 0."},
+			},
+			Required: []string{"session_id"},
+		},
+	},
+	{
+		Name:        "archive_session",
+		Description: `Walk a session ref to root, persist an archive envelope through the resource layer, and flip the session to immutable.`,
+		Tags:        []string{"session", "archive"},
+		Annotations: plugins.ToolAnnotations{
+			CostHint: plugins.ToolCostModerate,
+			System: `
+Archive a session when the user signals it's done — wrap-up phrasing, "save this for later", or before a long pause. The session becomes immutable: no further commits or ref moves succeed.
+Pair with clone_archived_session to fork a live successor off the archive.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session to archive. Defaults to the caller session."},
+				"ref":        {Type: "string", Description: "Ref to archive. Defaults to HEAD."},
+			},
+		},
+	},
+	{
+		Name:        "clone_archived_session",
+		Description: `Replay an archive envelope into a fresh live session whose HEAD points at the archived tip.`,
+		Tags:        []string{"session", "clone"},
+		Annotations: plugins.ToolAnnotations{
+			CostHint: plugins.ToolCostModerate,
+			System: `
+Use to revive an archived session as a new live conversation — e.g. the user wants to "pick up where we left off" on a session that was archived.
+The clone has its own ID and ref set; lineage to the source is recorded as parent_session_id.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"source_id": {Type: "string", Description: "Source session ID (live archived session) or archive resource ID."},
+				"name":      {Type: "string", Description: "Optional name for the clone. Defaults to <source-name>-clone-<n>."},
+			},
+			Required: []string{"source_id"},
+		},
+	},
+	{
+		Name:        "read_message",
+		Description: `Retrieve a single message by its ID from a session.`,
+		Tags:        []string{"session", "read", "message"},
+		Annotations: plugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   plugins.ToolCostFree,
+			System: `
+Use after list_message_history when you've identified one entry worth reading in full. Don't loop read_message across many IDs to rebuild a transcript — list_message_history already returns enough metadata.
+`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"session_id": {Type: "string", Description: "The ID of the session containing the message."},
+				"message_id": {Type: "string", Description: "The ID of the message to retrieve."},
+			},
+			Required: []string{"session_id", "message_id"},
+		},
+	},
+}

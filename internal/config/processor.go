@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/mwantia/fabric/pkg/container"
-	"github.com/mwantia/forge/internal/service/template"
+	"github.com/mwantia/fabric/v2/pkg/container"
+	"github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 // ConfigTagProcessor handles fabric:"config:<block>" tags.
@@ -49,7 +49,7 @@ func (p *ConfigTagProcessor) GetPriority() int { return 50 }
 
 func (p *ConfigTagProcessor) CanProcess(value string) bool {
 	lower := strings.ToLower(value)
-	return lower == "config" || strings.HasPrefix(lower, "config:")
+	return lower == "config" || strings.HasPrefix(lower, "config=")
 }
 
 func (p *ConfigTagProcessor) Process(_ context.Context, _ *container.ServiceContainer, field reflect.StructField, value string) (any, error) {
@@ -64,7 +64,7 @@ func (p *ConfigTagProcessor) Process(_ context.Context, _ *container.ServiceCont
 		return nil, fmt.Errorf("template not yet loaded (SetConfig must be called with a template before Resolve)")
 	}
 
-	_, blockName, _ := strings.Cut(value, ":")
+	_, blockName, _ := strings.Cut(value, "=")
 	blockName = strings.ToLower(strings.TrimSpace(blockName))
 	if blockName == "" {
 		return cfg, nil
