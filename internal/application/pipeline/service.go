@@ -10,6 +10,7 @@ import (
 	approot "github.com/mwantia/forge/internal/application"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	dompipeline "github.com/mwantia/forge/internal/domain/pipeline"
+	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
@@ -32,10 +33,11 @@ type PipelineService struct {
 	config  PipelineConfig                 `fabric:"config=pipeline"`
 	logger  hclog.Logger                   `fabric:"logger=pipeline"`
 
-	sessions  appsession.SessionManager    `fabric:"inject"`
-	tools     domtool.ToolsRegistar        `fabric:"inject"`
-	provider  domprovider.ProviderRegistar `fabric:"inject"`
-	resources domresource.ResourceRegistar `fabric:"inject"`
+	sessions  appsession.SessionManager       `fabric:"inject"`
+	tools     domtool.ToolsRegistar           `fabric:"inject"`
+	provider  domprovider.ProviderRegistar    `fabric:"inject"`
+	resources domresource.ResourceRegistar    `fabric:"inject"`
+	approvals domapprovals.ApprovalRegistar   `fabric:"inject"`
 }
 
 func init() {

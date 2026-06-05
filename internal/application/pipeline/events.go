@@ -62,11 +62,20 @@ type DoneEvent struct {
 	Duration int64                  `json:"duration,omitempty"`
 }
 
-func (ChunkEvent) pipelineEvent()      {}
-func (ToolCallEvent) pipelineEvent()   {}
+// ApprovalEvent signals that a tool call is awaiting human approval.
+type ApprovalEvent struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+	CallID string `json:"call_id,omitempty"`
+}
+
+func (ChunkEvent) pipelineEvent()    {}
+func (ToolCallEvent) pipelineEvent() {}
 func (ToolResultEvent) pipelineEvent() {}
-func (ErrorEvent) pipelineEvent()      {}
-func (DoneEvent) pipelineEvent()       {}
+func (ErrorEvent) pipelineEvent()    {}
+func (DoneEvent) pipelineEvent()     {}
+func (ApprovalEvent) pipelineEvent() {}
 
 // WireEvent is the JSON-serializable envelope used at transport adapter boundaries.
 // The Type field identifies the event; Data holds the marshaled concrete event payload.
@@ -89,6 +98,8 @@ func ToWireEvent(ev PipelineEvent) (WireEvent, error) {
 		evType = "error"
 	case DoneEvent:
 		evType = "done"
+	case ApprovalEvent:
+		evType = "approval"
 	default:
 		return WireEvent{}, fmt.Errorf("unknown pipeline event type: %T", ev)
 	}

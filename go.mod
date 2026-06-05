@@ -138,6 +138,8 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
+replace github.com/mwantia/forge-sdk => ../sdk
+
 replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
 
 replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills

@@ -11,6 +11,7 @@ import (
 
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	appsession "github.com/mwantia/forge/internal/application/session"
+	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 )
 
 // PipelineExecutor is the interface for running a session pipeline.
@@ -297,6 +298,44 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 	}
 
 	namespace, name := strings.ToLower(parts[0]), strings.ToLower(parts[1])
+	fullName := tc.Name
+
+	if s.approvals != nil {
+		if s.approvals.CheckDeny(fullName) {
+			return fmt.Sprintf("error: tool %q is not permitted", fullName), true
+		}
+
+		if !s.approvals.CheckAllow(fullName) {
+			def, err := s.tools.GetToolDefinition(namespace, name)
+
+			if err == nil && (def.Annotations.RequiresConfirmation || def.Annotations.Destructive) {
+				req := sdkplugins.ApprovalRequest{
+					Type:    sdkplugins.ApprovalTypeToolCall,
+					Title:   fullName,
+					Message: "Tool requires approval before execution.",
+					Details: tc.Arguments,
+				}
+
+				meta := domapprovals.ApprovalMeta{
+					Plugin:   namespace,
+					ToolName: name,
+					ToolArgs: tc.Arguments,
+				}
+
+				rec, createErr := s.approvals.Create(ctx, req, meta)
+				if createErr != nil || rec.Status != domapprovals.StatusAllowed {
+					reason := "denied"
+
+					if rec != nil {
+						reason = string(rec.Status)
+					}
+
+					return fmt.Sprintf("error: tool call %q was %s", fullName, reason), true
+				}
+			}
+		}
+	}
+
 	resp, err := s.tools.ExecuteToolWithCallID(ctx, namespace, name, tc.Arguments, tc.ID)
 	if err != nil {
 		s.logger.Warn("Tool execution error", "tool", tc.Name, "error", err)

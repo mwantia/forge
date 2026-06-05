@@ -9,6 +9,7 @@ import (
 	"github.com/mwantia/forge/cmd/forge/client"
 	cliserver "github.com/mwantia/forge/cmd/forge/server"
 	"github.com/mwantia/forge/internal/application/agent"
+	appapprovals "github.com/mwantia/forge/internal/application/approvals"
 	appevent "github.com/mwantia/forge/internal/application/event"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appplugins "github.com/mwantia/forge/internal/application/plugins"
@@ -29,6 +30,7 @@ import (
 // Ensure init() registrations run for all service packages.
 var (
 	_ *agent.Agent                    = nil
+	_ *appapprovals.ApprovalService   = nil
 	_ *appevent.EventService          = nil
 	_ *inframetrics.MetricsService    = nil
 	_ *apppipeline.PipelineService    = nil
@@ -76,6 +78,7 @@ func main() {
 	cmd.AddCommand(client.NewContextsCommand())
 	cmd.AddCommand(client.NewEventsCommand())
 	cmd.AddCommand(client.NewSystemCommand())
+	cmd.AddCommand(client.NewApprovalsCommand())
 
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
