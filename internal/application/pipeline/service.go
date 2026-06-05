@@ -44,6 +44,7 @@ func init() {
 	container.MustRegister[*PipelineService](
 		container.AsSingleton(),
 		container.With[PipelineExecutor](),
+		container.With[PipelineCommitter](),
 		container.With[dompipeline.BackgroundDispatcher](),
 	)
 }

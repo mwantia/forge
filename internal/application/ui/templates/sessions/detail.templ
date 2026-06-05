@@ -1,0 +1,285 @@
+package tmplsessions
+
+import (
+	"strings"
+
+	appsession "github.com/mwantia/forge/internal/application/session"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
+)
+
+templ Detail(
+	meta *appsession.SessionMetadata,
+	messages []*appsession.Message,
+	refs map[string]string,
+	activeRef string,
+) {
+	@layout.Base(meta.Name) {
+		@layout.Topbar(meta.Name, activeRef, "")
+		<div class="grid grid-cols-[260px_1fr] flex-1 overflow-hidden">
+			<!-- LEFT SIDEBAR -->
+			<aside class="bg-bg-1 border-r border-line flex flex-col overflow-hidden">
+				<!-- Mini DAG header -->
+				<div class="flex items-center justify-between px-3 py-2 border-b border-line-soft">
+					<span class="text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
+					<a
+						href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
+						class="text-[11px] text-ink-3 hover:text-ink transition-colors"
+					>expand →</a>
+				</div>
+				<!-- Mini DAG thumbnail (HTMX-loaded) -->
+				<div
+					id="mini-dag"
+					hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+					class="shrink-0 border-b border-line-soft overflow-hidden max-h-[200px]"
+				>
+					<div class="px-3 py-2 text-ink-4 text-[11px]">Loading…</div>
+				</div>
+				<!-- Refs panel (HTMX-swappable) -->
+				<div
+					id="refs-panel"
+					hx-get={ "/ui/sessions/" + meta.ID + "/refs" }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+					class="flex-1 overflow-y-auto"
+				>
+					<div class="px-3 py-3 text-ink-3 text-xs">Loading refs…</div>
+				</div>
+				<!-- Session info footer -->
+				<div class="px-3 py-3 border-t border-line-soft space-y-1 shrink-0">
+					<div class="font-mono text-[11px] text-ink-4">{ meta.Model }</div>
+					if meta.Description != "" {
+						<div class="text-[11px] text-ink-3 truncate" title={ meta.Description }>{ meta.Description }</div>
+					}
+					<div class="text-[11px] text-ink-4">Updated { relativeTime(meta.UpdatedAt) }</div>
+				</div>
+				<!-- Session actions -->
+				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
+					<button
+						class="btn-ghost text-xs flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+						hx-delete={ "/ui/sessions/" + meta.ID }
+						hx-confirm={ "Delete session '" + meta.Name + "'?" }
+						hx-target="body"
+						hx-push-url="/ui/sessions"
+					>
+						Delete
+					</button>
+				</div>
+			</aside>
+			<!-- MAIN AREA: thread + composer -->
+			<div id="session-main" class="flex flex-col overflow-hidden">
+				<!-- Message thread -->
+				<div
+					id="thread"
+					class="flex-1 overflow-y-auto px-6 py-4 space-y-3"
+					x-data={ "composer('" + meta.ID + "')" }
+				>
+					for _, msg := range messages {
+						if msg.Role != "system" {
+							@MessageBubble(msg)
+						}
+					}
+					<!-- Streaming bubble: visible only while streaming -->
+					<div x-show="streaming" x-cloak class="flex gap-3 items-start">
+						<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+						<div class="bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap max-w-[640px]" x-text="streamBuffer"></div>
+					</div>
+					if meta.ArchivedAt != nil {
+						<div class="text-center text-ink-4 text-xs py-4 border-t border-line-soft">Session archived — read-only</div>
+					}
+				</div>
+				<!-- Composer -->
+				if meta.ArchivedAt == nil {
+					<div
+						class="border-t border-line-soft px-4 py-3 shrink-0"
+						x-data={ "composer('" + meta.ID + "')" }
+					>
+						<textarea
+							id="composer-input"
+							rows="3"
+							placeholder="Message… (⌘↵ or Ctrl↵ to send)"
+							class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+							x-model="draft"
+							@keydown.meta.enter.prevent="send()"
+							@keydown.ctrl.enter.prevent="send()"
+						></textarea>
+						<div class="flex justify-between items-center mt-2">
+							<span class="text-ink-4 text-xs" x-show="streaming">Streaming…</span>
+							<span class="text-ink-4 text-xs" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
+							<button
+								class="btn-accent text-[12px]"
+								:disabled="streaming || !draft.trim()"
+								@click="send()"
+							>Send</button>
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+		<script>
+			// Shared SSE stream reader — parses `event: X\ndata: Y\n\n` format.
+			function parseSseStream(reader, onEvent) {
+				const dec = new TextDecoder();
+				let buf = '';
+				let eventName = '';
+
+				async function pump() {
+					const { done, value } = await reader.read();
+					if (done) return;
+					buf += dec.decode(value, { stream: true });
+
+					const lines = buf.split('\n');
+					buf = lines.pop() ?? '';
+
+					for (const line of lines) {
+						if (line.startsWith('event: ')) {
+							eventName = line.slice(7).trim();
+						} else if (line.startsWith('data: ')) {
+							onEvent(eventName, line.slice(6));
+							eventName = '';
+						}
+					}
+					return pump();
+				}
+				return pump();
+			}
+
+			function composer(sessionId) {
+				return {
+					streaming: false,
+					streamBuffer: '',
+					draft: '',
+
+					async send() {
+						const content = this.draft.trim();
+						if (!content || this.streaming) return;
+
+						const ref = document.querySelector('input[name=ref]')?.value ?? '';
+						this.draft = '';
+						this.streaming = true;
+						this.streamBuffer = '';
+
+						try {
+							const resp = await fetch(`/ui/sessions/${sessionId}/commit`, {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body: new URLSearchParams({ content, ref }),
+							});
+
+							if (!resp.ok || !resp.body) {
+								this.streaming = false;
+								console.error('Commit failed:', resp.status);
+								return;
+							}
+
+							await parseSseStream(resp.body.getReader(), (event, data) => {
+								if (event === 'chunk') {
+									this.streamBuffer += data;
+								} else if (event === 'done') {
+									this.streaming = false;
+									this.streamBuffer = '';
+									// Reload thread + mini-dag via HTMX
+									htmx.ajax('GET', window.location.href, {
+										target: '#thread',
+										swap: 'innerHTML',
+										select: '#thread',
+									});
+									htmx.ajax('GET', `/ui/sessions/${sessionId}/dag/mini`, {
+										target: '#mini-dag',
+										swap: 'innerHTML',
+									});
+									htmx.ajax('GET', `/ui/sessions/${sessionId}/refs`, {
+										target: '#refs-panel',
+										swap: 'innerHTML',
+									});
+								} else if (event === 'error') {
+									this.streaming = false;
+									this.streamBuffer = '';
+									console.error('Pipeline error:', data);
+								}
+							});
+						} catch (err) {
+							this.streaming = false;
+							this.streamBuffer = '';
+							console.error('Composer error:', err);
+						}
+					},
+				};
+			}
+		</script>
+		<!-- Hidden ref input shared across composer instances -->
+		<input type="hidden" name="ref" value={ activeRef } id="active-ref"/>
+	}
+}
+
+templ MessageBubble(msg *appsession.Message) {
+	<div class={ "flex gap-3 items-start", roleClass(msg.Role) }>
+		<div class={ "w-6 h-6 rounded text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold", roleAvatarClass(msg.Role) }>
+			{ roleInitial(msg.Role) }
+		</div>
+		<div class="flex flex-col gap-1 max-w-[640px]">
+			<div class="bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap">
+				{ msg.Content }
+			</div>
+			if len(msg.ToolCalls) > 0 {
+				for _, tc := range msg.ToolCalls {
+					@ToolCallRow(tc)
+				}
+			}
+			<div class="text-[11px] text-ink-4 font-mono">{ shortHash(msg.Hash) }</div>
+		</div>
+	</div>
+}
+
+templ ToolCallRow(tc appsession.MessageToolCall) {
+	<div class="flex items-center gap-2 px-2 py-1 rounded bg-accent-soft border border-accent-line text-[11.5px] font-mono text-ink-2">
+		<span class="text-accent">⚡</span>
+		<span>{ tc.Name }</span>
+		if tc.Result != "" {
+			<span class="text-ink-4 truncate max-w-[240px]">→ { truncate(tc.Result, 80) }</span>
+		}
+		if tc.IsError {
+			<span class="text-rem">error</span>
+		}
+	</div>
+}
+
+func roleClass(role string) string {
+	if role == "user" {
+		return "justify-end flex-row-reverse"
+	}
+	return ""
+}
+
+func roleAvatarClass(role string) string {
+	switch role {
+	case "user":
+		return "bg-accent/20 text-accent"
+	case "assistant":
+		return "bg-ok/20 text-ok"
+	default:
+		return "bg-line text-ink-3"
+	}
+}
+
+func roleInitial(role string) string {
+	if len(role) == 0 {
+		return "?"
+	}
+	return strings.ToUpper(role[:1])
+}
+
+func shortHash(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}

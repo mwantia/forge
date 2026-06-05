@@ -1,0 +1,154 @@
+package uidag
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	appsession "github.com/mwantia/forge/internal/application/session"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
+)
+
+templ Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) {
+	@layout.Base("DAG — " + meta.Name) {
+		@layout.Topbar(meta.Name, "", "")
+		<main class="flex-1 overflow-auto p-6">
+			<div class="flex items-center justify-between mb-4">
+				<h1 class="text-lg font-semibold">Session DAG — { meta.Name }</h1>
+				<a href={ templ.SafeURL("/ui/sessions/" + meta.ID) } class="btn-ghost text-xs">← Back</a>
+			</div>
+			if len(nodes) == 0 {
+				<p class="text-ink-3 text-sm">No messages yet.</p>
+			} else {
+				<div class="overflow-auto border border-line rounded-md bg-bg-1">
+					<svg
+						width="880"
+						height={ svgHeight(nodes) }
+						class="font-mono text-xs"
+					>
+						for _, e := range edges {
+							@dagEdge(e, nodes)
+						}
+						for _, n := range nodes {
+							@dagNode(n)
+						}
+					</svg>
+				</div>
+			}
+		</main>
+	}
+}
+
+templ dagEdge(e Edge, nodes []Node) {
+	{{ from := findNode(e.From, nodes) }}
+	{{ to := findNode(e.To, nodes) }}
+	if from != nil && to != nil {
+		<line
+			x1={ fmtF(from.X) }
+			y1={ fmtF(from.Y) }
+			x2={ fmtF(to.X) }
+			y2={ fmtF(to.Y) }
+			stroke="#262a33"
+			stroke-width="2"
+		></line>
+	}
+}
+
+templ dagNode(n Node) {
+	<g>
+		<circle
+			cx={ fmtF(n.X) }
+			cy={ fmtF(n.Y) }
+			r="14"
+			fill={ nodeColor(n.Kind) }
+			stroke={ nodeStroke(n.Kind) }
+			stroke-width="1.5"
+		></circle>
+		<text
+			x={ fmtF(n.X) }
+			y={ fmtF(n.Y + 4) }
+			text-anchor="middle"
+			fill="#e6e7ea"
+			font-size="10"
+		>
+			{ roleInitial(n.Kind) }
+		</text>
+		if n.Label != "" {
+			<text
+				x={ fmtF(n.X + 22) }
+				y={ fmtF(n.Y + 4) }
+				fill="#e8a531"
+				font-size="10"
+			>
+				{ n.Label }
+			</text>
+		}
+		<text
+			x={ fmtF(n.X - 22) }
+			y={ fmtF(n.Y + 4) }
+			text-anchor="end"
+			fill="#565963"
+			font-size="9"
+		>
+			{ shortHashDag(n.Hash) }
+		</text>
+	</g>
+}
+
+func findNode(id string, nodes []Node) *Node {
+	for i := range nodes {
+		if nodes[i].ID == id {
+			return &nodes[i]
+		}
+	}
+	return nil
+}
+
+func fmtF(f float64) string {
+	return strconv.FormatFloat(f, 'f', 1, 64)
+}
+
+func svgHeight(nodes []Node) string {
+	if len(nodes) == 0 {
+		return "100"
+	}
+	return fmt.Sprintf("%.0f", nodes[len(nodes)-1].Y+60)
+}
+
+func nodeColor(kind string) string {
+	switch kind {
+	case "user":
+		return "rgba(232,165,49,0.18)"
+	case "assistant":
+		return "rgba(109,201,122,0.18)"
+	case "tool":
+		return "rgba(232,165,49,0.08)"
+	default:
+		return "rgba(38,42,51,0.8)"
+	}
+}
+
+func nodeStroke(kind string) string {
+	switch kind {
+	case "user":
+		return "#e8a531"
+	case "assistant":
+		return "#6dc97a"
+	default:
+		return "#343844"
+	}
+}
+
+func roleInitial(role string) string {
+	if len(role) == 0 {
+		return "?"
+	}
+	return strings.ToUpper(role[:1])
+}
+
+func shortHashDag(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
+}

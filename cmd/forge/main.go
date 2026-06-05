@@ -18,6 +18,7 @@ import (
 	appsession "github.com/mwantia/forge/internal/application/session"
 	appsystem "github.com/mwantia/forge/internal/application/system"
 	apptools "github.com/mwantia/forge/internal/application/tools"
+	appui "github.com/mwantia/forge/internal/application/ui"
 	_ "github.com/mwantia/forge/internal/config"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
@@ -29,20 +30,21 @@ import (
 
 // Ensure init() registrations run for all service packages.
 var (
-	_ *agent.Agent                    = nil
-	_ *appapprovals.ApprovalService   = nil
-	_ *appevent.EventService          = nil
-	_ *inframetrics.MetricsService    = nil
-	_ *apppipeline.PipelineService    = nil
-	_ *appplugins.PluginsService      = nil
-	_ *appresource.ResourceService    = nil
-	_ *appsandbox.SandboxService      = nil
-	_ *infraserver.ServerService      = nil
-	_ *appsession.SessionService      = nil
-	_ *infrastorage.StorageService    = nil
-	_ *appsystem.SystemService        = nil
-	_ *infratemplate.TemplateService  = nil
-	_ *apptools.ToolsService          = nil
+	_ *agent.Agent                   = nil
+	_ *appui.UIService               = nil
+	_ *appapprovals.ApprovalService  = nil
+	_ *appevent.EventService         = nil
+	_ *inframetrics.MetricsService   = nil
+	_ *apppipeline.PipelineService   = nil
+	_ *appplugins.PluginsService     = nil
+	_ *appresource.ResourceService   = nil
+	_ *appsandbox.SandboxService     = nil
+	_ *infraserver.ServerService     = nil
+	_ *appsession.SessionService     = nil
+	_ *infrastorage.StorageService   = nil
+	_ *appsystem.SystemService       = nil
+	_ *infratemplate.TemplateService = nil
+	_ *apptools.ToolsService         = nil
 )
 
 var (

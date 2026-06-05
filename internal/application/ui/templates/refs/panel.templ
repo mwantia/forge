@@ -1,0 +1,80 @@
+package tmplrefs
+
+import "sort"
+
+templ Panel(sessionID string, refs map[string]string) {
+	<div class="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft">
+		Refs
+	</div>
+	<div class="flex flex-col py-1">
+		for _, name := range sortedRefs(refs) {
+			@RefRow(sessionID, name, refs[name])
+		}
+	</div>
+	<div class="px-3 py-2 border-t border-line-soft">
+		<form
+			hx-post={ "/ui/sessions/" + sessionID + "/refs" }
+			hx-target="#refs-panel"
+			hx-swap="innerHTML"
+			class="flex gap-1"
+		>
+			<input
+				type="hidden"
+				name="hash"
+				hx-get={ "/ui/sessions/" + sessionID + "/refs/_head_hash" }
+				hx-trigger="load"
+			/>
+			<input
+				type="text"
+				name="name"
+				placeholder="branch name"
+				class="flex-1 bg-bg border border-line rounded px-2 py-1 text-[12px] text-ink placeholder-ink-4 focus:outline-none focus:border-accent/50"
+			/>
+			<button type="submit" class="btn-ghost text-[11px] px-2">+</button>
+		</form>
+	</div>
+}
+
+templ RefRow(sessionID, name, hash string) {
+	<div class="flex items-center gap-2 px-3 py-1.5 hover:bg-bg-2 group">
+		<span class="ref-pill shrink-0">{ name }</span>
+		<span class="font-mono text-[11px] text-ink-4 flex-1 truncate">{ shortHash(hash) }</span>
+		<button
+			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity"
+			hx-post={ "/ui/sessions/" + sessionID + "/refs/" + name + "/checkout" }
+			hx-target="body"
+			hx-push-url="true"
+			title="checkout"
+		>
+			⎇
+		</button>
+		<button
+			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity"
+			hx-delete={ "/ui/sessions/" + sessionID + "/refs/" + name }
+			hx-confirm={ "Delete ref '" + name + "'?" }
+			hx-target="#refs-panel"
+			hx-swap="innerHTML"
+			title="delete"
+		>
+			✕
+		</button>
+	</div>
+}
+
+func shortHash(hash string) string {
+	if len(hash) > 7 {
+		return hash[:7]
+	}
+	return hash
+}
+
+func sortedRefs(refs map[string]string) []string {
+	names := make([]string, 0, len(refs))
+	for k := range refs {
+		if k != "HEAD" {
+			names = append(names, k)
+		}
+	}
+	sort.Strings(names)
+	return names
+}

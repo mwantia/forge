@@ -1,0 +1,85 @@
+package tmplsessions
+
+import (
+	"fmt"
+	"time"
+
+	appsession "github.com/mwantia/forge/internal/application/session"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
+)
+
+templ List(sessions []*appsession.SessionMetadata, archived bool) {
+	@layout.Base("Sessions") {
+		@layout.Topbar("", "", "")
+		<main class="flex-1 overflow-auto">
+			<div class="max-w-4xl mx-auto px-6 py-10">
+				<div class="flex items-end justify-between mb-6">
+					<div>
+						<h1 class="text-[22px] font-semibold tracking-tight">Sessions</h1>
+						<p class="text-ink-3 text-[13px] mt-1">
+							Content-addressed Merkle DAG. Branch from any message, fork on edit.
+						</p>
+					</div>
+					<button
+						class="btn-accent"
+						hx-get="/ui/sessions/new"
+						hx-target="body"
+						hx-push-url="true"
+					>
+						New session
+					</button>
+				</div>
+				if len(sessions) == 0 {
+					<div class="text-ink-3 text-sm py-8">No sessions yet. Create one to get started.</div>
+				} else {
+					<div class="flex flex-col border border-line rounded-md overflow-hidden">
+						<div class="grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft bg-bg-1">
+							<span>Name / Model</span>
+							<span>Status</span>
+							<span>Updated</span>
+						</div>
+						for _, s := range sessions {
+							<a
+								href={ templ.SafeURL("/ui/sessions/" + s.ID) }
+								class="grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-3 items-center border-b border-line-soft hover:bg-bg-1 transition-colors last:border-0"
+							>
+								<span class="flex flex-col gap-0.5">
+									<span class="text-ink font-medium text-[13.5px]">{ s.Name }</span>
+									if s.Title != "" {
+										<span class="text-ink-3 text-xs truncate">{ s.Title }</span>
+									}
+									<span class="font-mono text-[11px] text-ink-4">{ s.Model }</span>
+								</span>
+								<span class="flex flex-wrap gap-1">
+									if s.ArchivedAt != nil {
+										<span class="ref-pill">archived</span>
+									}
+									if s.Parent != "" {
+										<span class="ref-pill">sub-session</span>
+									}
+								</span>
+								<span class="text-ink-3 text-[12px]">{ relativeTime(s.UpdatedAt) }</span>
+							</a>
+						}
+					</div>
+				}
+			</div>
+		</main>
+	}
+}
+
+func relativeTime(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 7*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	default:
+		return t.Format("Jan 2, 2006")
+	}
+}

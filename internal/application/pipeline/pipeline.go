@@ -14,6 +14,12 @@ import (
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 )
 
+// PipelineCommitter is the narrow interface used by the UI service to initiate
+// a streaming pipeline commit without depending on the concrete PipelineService.
+type PipelineCommitter interface {
+	CommitStream(ctx context.Context, sessionID, ref, content string) (<-chan WireEvent, error)
+}
+
 // PipelineExecutor is the interface for running a session pipeline.
 type PipelineExecutor interface {
 	RunSessionPipeline(ctx context.Context, s *Session, out chan<- PipelineEvent) error

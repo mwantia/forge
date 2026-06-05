@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0b0c0f;
+    color: #e6e7ea;
+  }
+  [x-cloak] { display: none !important; }
+}
+
+@layer components {
+  .ref-pill {
+    @apply inline-flex items-center px-1.5 py-px rounded font-mono text-[11px];
+    background: rgba(232,165,49,0.12);
+    color: #e8a531;
+    border: 1px solid rgba(232,165,49,0.32);
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center px-3.5 py-1.5 rounded font-semibold text-[13px] cursor-pointer border-none no-underline transition-colors;
+    background: #e8a531;
+    color: #0b0c0f;
+    &:hover { background: #f0b840; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center px-3 py-1.5 rounded font-medium text-[13px] cursor-pointer no-underline transition-colors;
+    background: transparent;
+    color: #b9bcc4;
+    border: 1px solid #262a33;
+    &:hover { border-color: #343844; color: #e6e7ea; }
+  }
+}

@@ -9,6 +9,7 @@ import (
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 type SessionManager = domsession.SessionManager
@@ -298,6 +299,57 @@ func (s *SessionService) CheckoutRef(ctx context.Context, sessionID, targetBranc
 	}
 
 	return s.store.refs.WriteSymRef(ctx, sessionID, dag.HEAD, targetBranch)
+}
+
+// ListParentSessions returns top-level sessions (parentID="") or children of
+// a given parent, optionally including archived sessions.
+func (s *SessionService) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.store.ListParentSessions(ctx, parentID, archived, offset, limit)
+}
+
+// CreateSession creates a new session and initialises its HEAD ref.
+func (s *SessionService) CreateSession(ctx context.Context, model, name, title, description, parent, toolsVerbosity string, plugins []string) (*SessionMetadata, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if name == "" {
+		name = infratemplate.GenerateUniqueName()
+	}
+	if existing, err := s.store.FindSessionByName(ctx, name); err == nil && existing != nil {
+		return nil, fmt.Errorf("session name already exists: %s", name)
+	}
+	now := time.Now()
+	meta := &SessionMetadata{
+		ID:             DeriveSessionID(name, now.UnixNano(), parent),
+		Name:           name,
+		Title:          title,
+		Description:    description,
+		Parent:         parent,
+		Model:          model,
+		ToolsVerbosity: toolsVerbosity,
+		Plugins:        plugins,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	if err := s.store.SaveSession(ctx, meta); err != nil {
+		return nil, fmt.Errorf("save session: %w", err)
+	}
+	if err := s.store.refs.WriteSymRef(ctx, meta.ID, dag.HEAD, dag.MAIN); err != nil {
+		s.logger.Warn("create session: HEAD symref init failed", "session", meta.ID, "error", err)
+	}
+	return meta, nil
+}
+
+// DeleteSession removes a session and all its associated data.
+func (s *SessionService) DeleteSession(ctx context.Context, idOrName string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	meta, err := s.resolveSessionLocked(ctx, idOrName)
+	if err != nil {
+		return err
+	}
+	return s.store.DeleteSession(ctx, meta.ID)
 }
 
 var _ SessionManager = (*SessionService)(nil)

@@ -1,0 +1,72 @@
+package uidag
+
+import "fmt"
+
+templ Mini(nodes []Node, edges []Edge, sessionID string) {
+	<div class="px-2 pt-2 pb-1 overflow-hidden">
+		if len(nodes) == 0 {
+			<div class="text-ink-4 text-[11px] px-1 py-2">No messages yet</div>
+		} else {
+			<svg
+				width="220"
+				height={ miniSVGHeight(nodes) }
+				class="w-full font-mono overflow-visible"
+			>
+				for _, e := range edges {
+					@miniEdge(e, nodes)
+				}
+				for _, n := range nodes {
+					@miniNode(n)
+				}
+			</svg>
+		}
+	</div>
+	<div class="px-3 pb-2 flex justify-between font-mono text-[11px] text-ink-4">
+		<span>{ fmt.Sprintf("%d nodes", len(nodes)) }</span>
+	</div>
+}
+
+templ miniEdge(e Edge, nodes []Node) {
+	{{ from := findNode(e.From, nodes) }}
+	{{ to := findNode(e.To, nodes) }}
+	if from != nil && to != nil {
+		<line
+			x1={ fmtF(from.X) }
+			y1={ fmtF(from.Y) }
+			x2={ fmtF(to.X) }
+			y2={ fmtF(to.Y) }
+			stroke="#1d2027"
+			stroke-width="1.5"
+		></line>
+	}
+}
+
+templ miniNode(n Node) {
+	<circle
+		cx={ fmtF(n.X) }
+		cy={ fmtF(n.Y) }
+		r="6"
+		fill={ nodeColor(n.Kind) }
+		stroke={ nodeStroke(n.Kind) }
+		stroke-width="1"
+	></circle>
+	if n.Label != "" {
+		<text
+			x={ fmtF(n.X + 10) }
+			y={ fmtF(n.Y + 3) }
+			fill="#e8a531"
+			font-size="8"
+		>{ n.Label }</text>
+	}
+}
+
+func miniSVGHeight(nodes []Node) string {
+	if len(nodes) == 0 {
+		return "30"
+	}
+	h := nodes[len(nodes)-1].Y + 20
+	if h > 200 {
+		h = 200
+	}
+	return fmt.Sprintf("%.0f", h)
+}

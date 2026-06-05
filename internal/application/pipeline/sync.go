@@ -145,3 +145,48 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 	}
 	return sb.String(), nil
 }
+
+// CommitStream implements PipelineCommitter. It runs the full pipeline turn
+// for sessionID and returns a channel of WireEvents that the caller can range
+// over to stream the response. The channel is closed when the pipeline
+// finishes (DoneEvent or ErrorEvent).
+func (s *PipelineService) CommitStream(ctx context.Context, sessionID, ref, content string) (<-chan WireEvent, error) {
+	meta, err := s.sessions.ResolveSession(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve session: %w", err)
+	}
+	if ref == "" {
+		ref = dag.HEAD
+	}
+	if scoped, err := s.tmpl.Clone(appsession.SessionVars(meta)); err == nil {
+		if rendered, err := scoped.RenderBody(content); err == nil {
+			content = rendered
+		}
+	}
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
+	if err != nil {
+		return nil, err
+	}
+
+	raw := make(chan PipelineEvent, 32)
+	out := make(chan WireEvent, 32)
+	go func() {
+		if err := s.RunSessionPipeline(ctx, run.sess, raw); err != nil {
+			s.logger.Error("commit_stream pipeline error", "session", meta.ID, "error", err)
+		}
+	}()
+	go func() {
+		defer close(out)
+		for ev := range raw {
+			wire, err := ToWireEvent(ev)
+			if err != nil {
+				s.logger.Error("failed to convert pipeline event to wire", "error", err)
+				continue
+			}
+			out <- wire
+		}
+	}()
+	return out, nil
+}
+
+var _ PipelineCommitter = (*PipelineService)(nil)

@@ -1,0 +1,19 @@
+package layout
+
+templ Topbar(sessionName string, branch string, sha string) {
+	<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
+		<div class="flex items-center gap-3">
+			<a href="/ui/sessions" class="text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors">forge</a>
+			if sessionName != "" {
+				<span class="text-line-strong">/</span>
+				<span class="text-ink-2 text-sm font-medium">{ sessionName }</span>
+			}
+			if branch != "" {
+				<span class="ref-pill">{ branch }</span>
+			}
+			if sha != "" {
+				<span class="font-mono text-ink-4 text-xs">{ sha }</span>
+			}
+		</div>
+	</header>
+}

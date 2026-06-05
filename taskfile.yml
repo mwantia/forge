@@ -28,10 +28,30 @@ tasks:
         - go run ./tools/plugins -manifest plugins.yaml -out cmd/forge
         - task: setup
 
+    ui:templ:
+        desc: Regenerate Go code from .templ template files
+        cmds:
+        - templ generate ./internal/application/ui/...
+        sources:
+        - internal/application/ui/templates/**/*.templ
+
+    ui:css:
+        desc: Compile Tailwind CSS for embedded assets (requires Node)
+        dir: internal/application/ui
+        cmds:
+        - npx tailwindcss@3 -c tailwind.config.js -i assets/app.src.css -o assets/app.css --minify
+        sources:
+        - templates/**/*.templ
+
+    ui:
+        desc: Regenerate all UI artifacts (templates + CSS)
+        deps: [ui:templ, ui:css]
+
     build:
         desc: Compile the project into a static binary
         cmds:
         - task: generate
+        - task: ui:templ
         - go build -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
 
     run:

@@ -17,6 +17,7 @@ import (
 	appsession "github.com/mwantia/forge/internal/application/session"
 	appsystem "github.com/mwantia/forge/internal/application/system"
 	apptools "github.com/mwantia/forge/internal/application/tools"
+	"github.com/mwantia/forge/internal/application/ui"
 	"github.com/mwantia/forge/internal/config"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
@@ -38,6 +39,7 @@ type Agent struct {
 	toolsSvc  *apptools.ToolsService       `fabric:"inject"`
 	events    *appevent.EventService       `fabric:"inject"`
 	sysSvc    *appsystem.SystemService     `fabric:"inject"`
+	uiSvc     *ui.UIService                `fabric:"inject"`
 }
 
 func init() {
