@@ -8,6 +8,29 @@
     color: #e6e7ea;
   }
   [x-cloak] { display: none !important; }
+
+  /* Custom scrollbar — track transparent, thumb matches border palette */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #262a33 transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #262a33;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #343844;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 @layer components {
