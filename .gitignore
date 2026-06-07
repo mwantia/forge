@@ -39,3 +39,6 @@ cmd/forge/plugins.go
 
 # Local-only specific build files
 *.local
+
+# Task checksum cache
+.task/
