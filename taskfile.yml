@@ -42,6 +42,8 @@ tasks:
         - npx tailwindcss@3 -c tailwind.config.js -i assets/app.src.css -o assets/app.css --minify
         sources:
         - templates/**/*.templ
+        - assets/app.src.css
+        - tailwind.config.js
 
     ui:
         desc: Regenerate all UI artifacts (templates + CSS)
@@ -51,14 +53,15 @@ tasks:
         desc: Compile the project into a static binary
         cmds:
         - task: generate
-        - task: ui:templ
+        - task: ui
         - go build -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath -o ${BUILD_PATH} ${MAIN_PATH}
 
     run:
-        desc: Run the agent with the test configuration
+        desc: Run the agent with all available plugins and test configuration
         cmds:
-        - task: build
-        - ${BUILD_PATH} agent --config ${TEST_CONFIG_PATH}
+        - task: generate
+        - task: ui
+        - go run -tags all -a -ldflags '-s -w -extldflags "-static"' -trimpath ${MAIN_PATH} agent --config ${TEST_CONFIG_PATH}
         ignore_error: true
 
     release:

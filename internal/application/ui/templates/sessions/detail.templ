@@ -1,8 +1,12 @@
 package tmplsessions
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
@@ -14,10 +18,39 @@ templ Detail(
 	activeRef string,
 ) {
 	@layout.Base(meta.Name) {
-		@layout.Topbar(meta.Name, activeRef, "")
-		<div class="grid grid-cols-[260px_1fr] flex-1 overflow-hidden">
+		<div
+			x-data="{ sidebar: window.innerWidth >= 768 }"
+			@resize.window="sidebar = window.innerWidth >= 768"
+			class="flex flex-col flex-1 overflow-hidden"
+		>
+		<!-- Topbar with sidebar toggle -->
+		<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
+			<div class="flex items-center gap-3">
+				<button
+					@click="sidebar = !sidebar"
+					class="w-6 h-6 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2"
+					:title="sidebar ? 'Collapse sidebar' : 'Expand sidebar'"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+					</svg>
+				</button>
+				<a href="/ui/sessions" class="text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors">forge</a>
+				<span class="text-line-strong">/</span>
+				<span class="text-ink-2 text-sm font-medium">{ meta.Name }</span>
+				if activeRef != "" {
+					<span class="ref-pill">{ activeRef }</span>
+				}
+			</div>
+		</header>
+		<!-- Content -->
+		<div class="flex flex-1 overflow-hidden">
 			<!-- LEFT SIDEBAR -->
-			<aside class="bg-bg-1 border-r border-line flex flex-col overflow-hidden">
+			<aside
+				style="transition:width .15s ease"
+				:style="sidebar ? 'width:260px' : 'width:0'"
+				class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
+			>
 				<!-- Mini DAG header -->
 				<div class="flex items-center justify-between px-3 py-2 border-b border-line-soft">
 					<span class="text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
@@ -67,54 +100,63 @@ templ Detail(
 					</button>
 				</div>
 			</aside>
-			<!-- MAIN AREA: thread + composer -->
-			<div id="session-main" class="flex flex-col overflow-hidden">
-				<!-- Message thread -->
-				<div
-					id="thread"
-					class="flex-1 overflow-y-auto px-6 py-4 space-y-3"
-					x-data={ "composer('" + meta.ID + "')" }
-				>
-					for _, msg := range messages {
-						if msg.Role != "system" {
-							@MessageBubble(msg)
-						}
-					}
-					<!-- Streaming bubble: visible only while streaming -->
-					<div x-show="streaming" x-cloak class="flex gap-3 items-start">
-						<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-						<div class="bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap max-w-[640px]" x-text="streamBuffer"></div>
-					</div>
-					if meta.ArchivedAt != nil {
-						<div class="text-center text-ink-4 text-xs py-4 border-t border-line-soft">Session archived — read-only</div>
-					}
-				</div>
-				<!-- Composer -->
-				if meta.ArchivedAt == nil {
-					<div
-						class="border-t border-line-soft px-4 py-3 shrink-0"
-						x-data={ "composer('" + meta.ID + "')" }
-					>
-						<textarea
-							id="composer-input"
-							rows="3"
-							placeholder="Message… (⌘↵ or Ctrl↵ to send)"
-							class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
-							x-model="draft"
-							@keydown.meta.enter.prevent="send()"
-							@keydown.ctrl.enter.prevent="send()"
-						></textarea>
-						<div class="flex justify-between items-center mt-2">
-							<span class="text-ink-4 text-xs" x-show="streaming">Streaming…</span>
-							<span class="text-ink-4 text-xs" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
-							<button
-								class="btn-accent text-[12px]"
-								:disabled="streaming || !draft.trim()"
-								@click="send()"
-							>Send</button>
+			<!-- MAIN AREA: single scroll container; composer is sticky bottom -->
+			<div
+				id="session-main"
+				class="flex-1 overflow-y-auto min-w-0"
+				x-data={ "composer('" + meta.ID + "')" }
+			>
+				<!-- Wrapper fills at least the full viewport height so composer
+				     stays pinned to the bottom even with few messages -->
+				<div class="min-h-full flex flex-col">
+					<!-- Message thread -->
+					<div id="thread" class="flex-1 px-6 pt-4 pb-4">
+						<div class="max-w-[720px] mx-auto space-y-3">
+							for _, msg := range messages {
+								if msg.Role != "system" {
+									@MessageBubble(msg)
+								}
+							}
+							<!-- Streaming bubble: visible only while streaming -->
+							<div x-show="streaming" x-cloak class="flex gap-3 items-start">
+								<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+								<div class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px]" x-html="marked.parse(streamBuffer)"></div>
+							</div>
+							if meta.ArchivedAt != nil {
+								<div class="text-center text-ink-4 text-xs py-4 border-t border-line-soft">Session archived — read-only</div>
+							}
 						</div>
 					</div>
-				}
+					<!-- Composer: sticky to bottom of the scroll container -->
+					if meta.ArchivedAt == nil {
+						<div class="sticky bottom-0">
+							<!-- Gradient fade above composer -->
+							<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
+							<div class="bg-bg px-4 pb-3">
+								<div class="max-w-[720px] mx-auto">
+									<textarea
+										id="composer-input"
+										rows="3"
+										placeholder="Message… (⌘↵ or Ctrl↵ to send)"
+										class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+										x-model="draft"
+										@keydown.meta.enter.prevent="send()"
+										@keydown.ctrl.enter.prevent="send()"
+									></textarea>
+									<div class="flex justify-between items-center mt-2">
+										<span class="text-ink-4 text-xs" x-show="streaming">Streaming…</span>
+										<span class="text-ink-4 text-xs" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
+										<button
+											class="btn-accent text-[12px]"
+											:disabled="streaming || !draft.trim()"
+											@click="send()"
+										>Send</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					}
+				</div>
 			</div>
 		</div>
 		<script>
@@ -210,57 +252,188 @@ templ Detail(
 		</script>
 		<!-- Hidden ref input shared across composer instances -->
 		<input type="hidden" name="ref" value={ activeRef } id="active-ref"/>
+		</div> <!-- /x-data wrapper -->
 	}
 }
 
+// MessageBubble dispatches to the appropriate component based on role.
 templ MessageBubble(msg *appsession.Message) {
-	<div class={ "flex gap-3 items-start", roleClass(msg.Role) }>
-		<div class={ "w-6 h-6 rounded text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold", roleAvatarClass(msg.Role) }>
-			{ roleInitial(msg.Role) }
-		</div>
-		<div class="flex flex-col gap-1 max-w-[640px]">
-			<div class="bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap">
-				{ msg.Content }
+	if msg.Role == "tool" {
+		@ToolResultBubble(msg)
+	} else if msg.Role == "user" {
+		<!-- User message: right-aligned -->
+		<div class="flex gap-3 items-start justify-end">
+			<div class="flex flex-col gap-1 items-end max-w-[640px]">
+				<div class="bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap">
+					{ msg.Content }
+				</div>
+				<div class="text-[11px] text-ink-4 font-mono">{ shortHash(msg.Hash) }</div>
 			</div>
-			if len(msg.ToolCalls) > 0 {
+			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
+		</div>
+	} else {
+		<!-- Assistant message: left-aligned -->
+		<div class="flex gap-3 items-start">
+			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+			<div class="flex flex-col gap-1 max-w-[640px]">
+				if msg.Content != "" {
+					<div class="bg-bg-2 border border-line rounded-md px-3 py-2 prose">
+						@templ.Raw(renderMarkdown(msg.Content))
+					</div>
+				}
 				for _, tc := range msg.ToolCalls {
 					@ToolCallRow(tc)
 				}
-			}
-			<div class="text-[11px] text-ink-4 font-mono">{ shortHash(msg.Hash) }</div>
+				<div class="text-[11px] text-ink-4 font-mono">{ shortHash(msg.Hash) }</div>
+			</div>
 		</div>
+	}
+}
+
+// ToolResultBubble renders a role=tool message as a collapsed, muted component.
+// If content is empty it renders as a flat non-interactive row.
+templ ToolResultBubble(msg *appsession.Message) {
+	<div class="flex gap-3 items-start pl-10">
+		if msg.Content != "" {
+			<div x-data="{ open: false }" class="max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden">
+				<button
+					type="button"
+					@click="open = !open"
+					class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
+				>
+					<span
+						class="text-[8px] text-ink-4 shrink-0 select-none"
+						:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
+					>▶</span>
+					<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">result</span>
+					<span class="text-[11px] text-ink-3 flex-1 truncate">{ toolCallName(msg) }</span>
+					if toolCallIsError(msg) {
+						<span class="text-rem text-[10px] shrink-0">err</span>
+					}
+					<span class="text-ink-4 text-[10px] shrink-0" x-show="!open">···</span>
+				</button>
+				<div
+					class="relative border-t border-line-soft overflow-hidden"
+					style="max-height:3.5rem;overflow:hidden"
+					:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
+				>
+					<pre class="px-2 py-1.5 text-ink-4 text-[10.5px] whitespace-pre-wrap overflow-x-auto">{ prettifyJSON(msg.Content) }</pre>
+					<div
+						x-show="!open"
+						class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
+						style="background:linear-gradient(to bottom,transparent,rgb(17,19,24))"
+					></div>
+				</div>
+			</div>
+		} else {
+			<div class="max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
+				<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">result</span>
+				<span class="text-[11px] text-ink-3 flex-1 truncate">{ toolCallName(msg) }</span>
+				if toolCallIsError(msg) {
+					<span class="text-rem text-[10px] shrink-0">err</span>
+				}
+			</div>
+		}
 	</div>
 }
 
+// ToolCallRow renders a tool call request on an assistant message.
+// If arguments are present it's collapsible; otherwise a flat non-interactive row.
 templ ToolCallRow(tc appsession.MessageToolCall) {
-	<div class="flex items-center gap-2 px-2 py-1 rounded bg-accent-soft border border-accent-line text-[11.5px] font-mono text-ink-2">
-		<span class="text-accent">⚡</span>
-		<span>{ tc.Name }</span>
-		if tc.Result != "" {
-			<span class="text-ink-4 truncate max-w-[240px]">→ { truncate(tc.Result, 80) }</span>
-		}
-		if tc.IsError {
-			<span class="text-rem">error</span>
-		}
-	</div>
+	if len(tc.Arguments) > 0 {
+		<div x-data="{ open: false }" class="rounded border border-line-soft bg-bg-1 font-mono overflow-hidden">
+			<button
+				type="button"
+				@click="open = !open"
+				class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
+			>
+				<span
+					class="text-[8px] text-ink-4 shrink-0 select-none"
+					:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
+				>▶</span>
+				<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">call</span>
+				<span class="text-[11px] text-ink-3 flex-1 truncate">{ tc.Name }</span>
+				if tc.IsError {
+					<span class="text-rem text-[10px] shrink-0">err</span>
+				}
+				<span class="text-ink-4 text-[10px] shrink-0" x-show="!open">···</span>
+			</button>
+			<div
+				class="relative border-t border-line-soft overflow-hidden"
+				style="max-height:3.5rem;overflow:hidden"
+				:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
+			>
+				<pre class="px-2 py-1.5 text-ink-4 text-[10.5px] whitespace-pre-wrap overflow-x-auto">{ formatArgs(tc.Arguments) }</pre>
+				<div
+					x-show="!open"
+					class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
+					style="background:linear-gradient(to bottom,transparent,rgb(17,19,24))"
+				></div>
+			</div>
+		</div>
+	} else {
+		<div class="flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
+			<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">call</span>
+			<span class="text-[11px] text-ink-3 flex-1 truncate">{ tc.Name }</span>
+			if tc.IsError {
+				<span class="text-rem text-[10px] shrink-0">err</span>
+			}
+		</div>
+	}
 }
 
-func roleClass(role string) string {
-	if role == "user" {
-		return "justify-end flex-row-reverse"
+func toolCallName(msg *appsession.Message) string {
+	if len(msg.ToolCalls) > 0 {
+		return msg.ToolCalls[0].Name
 	}
-	return ""
+	return "unknown"
 }
 
-func roleAvatarClass(role string) string {
-	switch role {
-	case "user":
-		return "bg-accent/20 text-accent"
-	case "assistant":
-		return "bg-ok/20 text-ok"
-	default:
-		return "bg-line text-ink-3"
+func toolCallIsError(msg *appsession.Message) bool {
+	return len(msg.ToolCalls) > 0 && msg.ToolCalls[0].IsError
+}
+
+func formatArgs(args map[string]any) string {
+	b, err := json.MarshalIndent(args, "", "  ")
+	if err != nil {
+		return "{}"
 	}
+	return string(b)
+}
+
+var mdParser = goldmark.New(
+	goldmark.WithExtensions(
+		extension.Table,
+		extension.Strikethrough,
+		extension.TaskList,
+	),
+)
+
+func renderMarkdown(src string) string {
+	if src == "" {
+		return ""
+	}
+	var buf bytes.Buffer
+	if err := mdParser.Convert([]byte(src), &buf); err != nil {
+		return src
+	}
+	return buf.String()
+}
+
+func prettifyJSON(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) == 0 || (s[0] != '{' && s[0] != '[') {
+		return s
+	}
+	var v any
+	if err := json.Unmarshal([]byte(s), &v); err != nil {
+		return s
+	}
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return s
+	}
+	return string(b)
 }
 
 func roleInitial(role string) string {
