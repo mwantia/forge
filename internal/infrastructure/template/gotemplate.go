@@ -78,6 +78,7 @@ func (t *Template) GoData() (map[string]any, error) {
 //
 // Variable access:  {{ .session.id }},  {{ .runtime.version }}
 // Function calls:   {{ upper "foo" }},  {{ uuid }}
+// Nested render:    {{ render .model.system }}
 //
 // Unlike RenderConfig, this syntax never conflicts with HCL ${...} escaping
 // rules, making it suitable for human-authored body text and system prompts.
@@ -91,7 +92,24 @@ func (t *Template) RenderBody(text string) (string, error) {
 		return "", fmt.Errorf("template data: %w", err)
 	}
 
-	tmpl, err := gotemplate.New("").Funcs(t.GoFuncMap()).Parse(text)
+	fm := t.GoFuncMap()
+
+	// render is a recursive template renderer: it parses src as a template with
+	// the same funcmap and data as the enclosing template, enabling nested
+	// template expressions inside string variables (e.g. {{ render .model.system }}).
+	fm["render"] = func(src string) (string, error) {
+		sub, err := gotemplate.New("").Funcs(fm).Parse(src)
+		if err != nil {
+			return src, err
+		}
+		var buf bytes.Buffer
+		if err := sub.Execute(&buf, data); err != nil {
+			return src, err
+		}
+		return buf.String(), nil
+	}
+
+	tmpl, err := gotemplate.New("").Funcs(fm).Parse(text)
 	if err != nil {
 		return "", fmt.Errorf("template parse error: %w", err)
 	}

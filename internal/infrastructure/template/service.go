@@ -54,7 +54,7 @@ func (s *TemplateService) PostInit(ctx context.Context) error {
 		WithRuntime(),
 		WithStdlib(),
 		WithEnv(),
-		WithFilePath(),
+		WithFilePath("."),
 		WithGenerate(),
 		WithTime(),
 		WithBase64(),

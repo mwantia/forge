@@ -210,14 +210,29 @@ func WithTime() TemplateOption {
 	}
 }
 
-// WithFilePath registers file system access functions.
+// WithFilePath registers file system access functions confined to baseDir.
+// All paths are resolved relative to baseDir via os.Root, which rejects
+// absolute paths and any ".." components that would escape the root.
 //
 //	${file(path)}     — read the entire contents of a file as a string
-//	${path(path)}     — resolve a path to its absolute form
-func WithFilePath() TemplateOption {
+//	${path(path)}     — resolve a path to its absolute form within baseDir
+func WithFilePath(baseDir string) TemplateOption {
 	return func(t *Template) error {
 		t.mu.Lock()
 		defer t.mu.Unlock()
+
+		absBase, err := filepath.Abs(baseDir)
+		if err != nil {
+			return fmt.Errorf("resolve base dir %q: %w", baseDir, err)
+		}
+
+		openRoot := func() (*os.Root, error) {
+			r, err := os.OpenRoot(absBase)
+			if err != nil {
+				return nil, fmt.Errorf("open file root %q: %w", absBase, err)
+			}
+			return r, nil
+		}
 
 		t.funcs["file"] = function.New(&function.Spec{
 			Params: []function.Parameter{
@@ -230,7 +245,13 @@ func WithFilePath() TemplateOption {
 					return cty.NilVal, fmt.Errorf("empty argument for %q received", "path")
 				}
 
-				data, err := os.ReadFile(arg)
+				root, err := openRoot()
+				if err != nil {
+					return cty.NilVal, err
+				}
+				defer root.Close()
+
+				data, err := root.ReadFile(arg)
 				if err != nil {
 					return cty.NilVal, fmt.Errorf("failed to read file %q: %w", arg, err)
 				}
@@ -249,12 +270,18 @@ func WithFilePath() TemplateOption {
 					return cty.Value{}, fmt.Errorf("empty argument for %q received", "path")
 				}
 
-				abs, err := filepath.Abs(arg)
+				root, err := openRoot()
 				if err != nil {
-					return cty.NilVal, fmt.Errorf("failed to get absolute path for %q: %w", arg, err)
+					return cty.NilVal, err
+				}
+				defer root.Close()
+
+				// os.Root.Lstat rejects symlink escapes and path traversal.
+				if _, err := root.Lstat(arg); err != nil {
+					return cty.NilVal, fmt.Errorf("path %q escapes allowed directory: %w", arg, err)
 				}
 
-				return cty.StringVal(abs), nil
+				return cty.StringVal(filepath.Join(absBase, filepath.Clean(arg))), nil
 			},
 		})
 
