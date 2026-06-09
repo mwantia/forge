@@ -5,7 +5,7 @@ import "fmt"
 templ Mini(nodes []Node, edges []Edge, sessionID string) {
 	<div class="px-2 pt-2 pb-1 overflow-hidden">
 		if len(nodes) == 0 {
-			<div class="text-ink-4 text-[11px] px-1 py-2">No messages yet</div>
+			<div class="text-ink-4 text-ui-meta px-1 py-2">No messages yet</div>
 		} else {
 			<svg
 				width="220"
@@ -21,7 +21,7 @@ templ Mini(nodes []Node, edges []Edge, sessionID string) {
 			</svg>
 		}
 	</div>
-	<div class="px-3 pb-2 flex justify-between font-mono text-[11px] text-ink-4">
+	<div class="px-3 pb-2 flex justify-between font-mono text-ui-meta text-ink-4">
 		<span>{ fmt.Sprintf("%d nodes", len(nodes)) }</span>
 	</div>
 }

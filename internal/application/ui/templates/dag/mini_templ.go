@@ -36,7 +36,7 @@ func Mini(nodes []Node, edges []Edge, sessionID string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if len(nodes) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"text-ink-4 text-[11px] px-1 py-2\">No messages yet</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"text-ink-4 text-ui-meta px-1 py-2\">No messages yet</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -75,7 +75,7 @@ func Mini(nodes []Node, edges []Edge, sessionID string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div class=\"px-3 pb-2 flex justify-between font-mono text-[11px] text-ink-4\"><span>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><div class=\"px-3 pb-2 flex justify-between font-mono text-ui-meta text-ink-4\"><span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

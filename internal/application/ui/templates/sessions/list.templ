@@ -15,8 +15,8 @@ templ List(sessions []*appsession.SessionMetadata, archived bool) {
 			<div class="max-w-4xl mx-auto px-6 py-10">
 				<div class="flex items-end justify-between mb-6">
 					<div>
-						<h1 class="text-[22px] font-semibold tracking-tight">Sessions</h1>
-						<p class="text-ink-3 text-[13px] mt-1">
+						<h1 class="text-ui-h1 font-semibold tracking-tight">Sessions</h1>
+						<p class="text-ink-3 text-ui-ctrl mt-1">
 							Content-addressed Merkle DAG. Branch from any message, fork on edit.
 						</p>
 					</div>
@@ -33,7 +33,7 @@ templ List(sessions []*appsession.SessionMetadata, archived bool) {
 					<div class="text-ink-3 text-sm py-8">No sessions yet. Create one to get started.</div>
 				} else {
 					<div class="flex flex-col border border-line rounded-md overflow-hidden">
-						<div class="grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft bg-bg-1">
+						<div class="grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-2 text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft bg-bg-1">
 							<span>Name / Model</span>
 							<span>Status</span>
 							<span>Updated</span>
@@ -44,11 +44,11 @@ templ List(sessions []*appsession.SessionMetadata, archived bool) {
 								class="grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-3 items-center border-b border-line-soft hover:bg-bg-1 transition-colors last:border-0"
 							>
 								<span class="flex flex-col gap-0.5">
-									<span class="text-ink font-medium text-[13.5px]">{ s.Name }</span>
+									<span class="text-ink font-medium text-ui-body">{ s.Name }</span>
 									if s.Title != "" {
-										<span class="text-ink-3 text-xs truncate">{ s.Title }</span>
+										<span class="text-ink-3 text-ui-code truncate">{ s.Title }</span>
 									}
-									<span class="font-mono text-[11px] text-ink-4">{ s.Model }</span>
+									<span class="font-mono text-ui-meta text-ink-4">{ s.Model }</span>
 								</span>
 								<span class="flex flex-wrap gap-1">
 									if s.ArchivedAt != nil {
@@ -58,7 +58,7 @@ templ List(sessions []*appsession.SessionMetadata, archived bool) {
 										<span class="ref-pill">sub-session</span>
 									}
 								</span>
-								<span class="text-ink-3 text-[12px]">{ relativeTime(s.UpdatedAt) }</span>
+								<span class="text-ink-3 text-ui-code">{ relativeTime(s.UpdatedAt) }</span>
 							</a>
 						}
 					</div>

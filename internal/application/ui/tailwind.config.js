@@ -6,7 +6,7 @@ export const content = [
 export const theme = {
   extend: {
     colors: {
-      bg: '#0b0c0f',
+      bg: '#0e0f13',
       'bg-1': '#111318',
       'bg-2': '#15181f',
       'bg-3': '#1b1f27',
@@ -40,7 +40,18 @@ export const theme = {
       'accent-glow': '0 0 6px rgba(232,165,49,0.55)',
     },
     fontSize: {
-      '2xs': ['10px', '14px'],
+      // Legacy alias kept for any stale references.
+      '2xs':     ['10px', '14px'],
+      // Forge UI scale — use these instead of arbitrary text-[Npx] values.
+      'ui-dot':  ['12px',   { lineHeight: '12px' }], // collapse arrows ▶
+      'ui-label':['11px',   { lineHeight: '15px' }], // section caps, badge letters, meta keys
+      'ui-args': ['10.5px', { lineHeight: '15px' }], // JSON / args pre blocks
+      'ui-meta': ['11px',   { lineHeight: '16px' }], // sidebar body, hashes, loading text
+      'ui-sys':  ['11.5px', { lineHeight: '17px' }], // system-message pre content
+      'ui-code': ['12px',   { lineHeight: '16px' }], // inputs, inline code, raw toggle
+      'ui-ctrl': ['13px',   { lineHeight: '18px' }], // buttons, action controls
+      'ui-body': ['13.5px', { lineHeight: '20px' }], // message content, textarea
+      'ui-h1':   ['22px',   { lineHeight: '28px' }], // page title
     },
   },
 };

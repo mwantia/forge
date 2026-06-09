@@ -53,7 +53,7 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto\"><div class=\"max-w-4xl mx-auto px-6 py-10\"><div class=\"flex items-end justify-between mb-6\"><div><h1 class=\"text-[22px] font-semibold tracking-tight\">Sessions</h1><p class=\"text-ink-3 text-[13px] mt-1\">Content-addressed Merkle DAG. Branch from any message, fork on edit.</p></div><button class=\"btn-accent\" hx-get=\"/ui/sessions/new\" hx-target=\"body\" hx-push-url=\"true\">New session</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto\"><div class=\"max-w-4xl mx-auto px-6 py-10\"><div class=\"flex items-end justify-between mb-6\"><div><h1 class=\"text-ui-h1 font-semibold tracking-tight\">Sessions</h1><p class=\"text-ink-3 text-ui-ctrl mt-1\">Content-addressed Merkle DAG. Branch from any message, fork on edit.</p></div><button class=\"btn-accent\" hx-get=\"/ui/sessions/new\" hx-target=\"body\" hx-push-url=\"true\">New session</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -63,7 +63,7 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"flex flex-col border border-line rounded-md overflow-hidden\"><div class=\"grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft bg-bg-1\"><span>Name / Model</span> <span>Status</span> <span>Updated</span></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"flex flex-col border border-line rounded-md overflow-hidden\"><div class=\"grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-2 text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft bg-bg-1\"><span>Name / Model</span> <span>Status</span> <span>Updated</span></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -81,14 +81,14 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-3 items-center border-b border-line-soft hover:bg-bg-1 transition-colors last:border-0\"><span class=\"flex flex-col gap-0.5\"><span class=\"text-ink font-medium text-[13.5px]\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"grid grid-cols-[1fr_160px_160px] gap-3 px-4 py-3 items-center border-b border-line-soft hover:bg-bg-1 transition-colors last:border-0\"><span class=\"flex flex-col gap-0.5\"><span class=\"text-ink font-medium text-ui-body\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 47, Col: 66}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 47, Col: 65}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -99,14 +99,14 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 						return templ_7745c5c3_Err
 					}
 					if s.Title != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span class=\"text-ink-3 text-xs truncate\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span class=\"text-ink-3 text-ui-code truncate\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var5 string
 						templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(s.Title)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 49, Col: 61}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 49, Col: 66}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 						if templ_7745c5c3_Err != nil {
@@ -117,14 +117,14 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<span class=\"font-mono text-[11px] text-ink-4\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<span class=\"font-mono text-ui-meta text-ink-4\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(s.Model)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 51, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 51, Col: 66}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
@@ -146,14 +146,14 @@ func List(sessions []*appsession.SessionMetadata, archived bool) templ.Component
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</span> <span class=\"text-ink-3 text-[12px]\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</span> <span class=\"text-ink-3 text-ui-code\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(relativeTime(s.UpdatedAt))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 61, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 61, Col: 73}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {

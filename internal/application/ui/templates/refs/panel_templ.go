@@ -31,7 +31,7 @@ func Panel(sessionID string, refs map[string]string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft\">Refs</div><div class=\"flex flex-col py-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"px-3 py-2 text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft\">Refs</div><div class=\"flex flex-col py-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -67,7 +67,7 @@ func Panel(sessionID string, refs map[string]string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"load\"> <input type=\"text\" name=\"name\" placeholder=\"branch name\" class=\"flex-1 bg-bg border border-line rounded px-2 py-1 text-[12px] text-ink placeholder-ink-4 focus:outline-none focus:border-accent/50\"> <button type=\"submit\" class=\"btn-ghost text-[11px] px-2\">+</button></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-trigger=\"load\"> <input type=\"text\" name=\"name\" placeholder=\"branch name\" class=\"flex-1 bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder-ink-4 focus:outline-none focus:border-accent/50\"> <button type=\"submit\" class=\"btn-ghost text-ui-meta px-2\">+</button></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -109,20 +109,20 @@ func RefRow(sessionID, name, hash string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span> <span class=\"font-mono text-[11px] text-ink-4 flex-1 truncate\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span> <span class=\"font-mono text-ui-meta text-ink-4 flex-1 truncate\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(shortHash(hash))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/refs/panel.templ`, Line: 41, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/refs/panel.templ`, Line: 41, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span> <button class=\"opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity\" hx-post=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span> <button class=\"opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-ui-meta transition-opacity\" hx-post=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -135,7 +135,7 @@ func RefRow(sessionID, name, hash string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" hx-target=\"body\" hx-push-url=\"true\" title=\"checkout\">⎇</button> <button class=\"opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity\" hx-delete=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" hx-target=\"body\" hx-push-url=\"true\" title=\"checkout\">⎇</button> <button class=\"opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-ui-meta transition-opacity\" hx-delete=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -35,14 +35,14 @@
 
 @layer components {
   .ref-pill {
-    @apply inline-flex items-center px-1.5 py-px rounded font-mono text-[11px];
+    @apply inline-flex items-center px-1.5 py-px rounded font-mono text-ui-meta;
     background: rgba(232,165,49,0.12);
     color: #e8a531;
     border: 1px solid rgba(232,165,49,0.32);
   }
 
   .btn-accent {
-    @apply inline-flex items-center px-3.5 py-1.5 rounded font-semibold text-[13px] cursor-pointer border-none no-underline transition-colors;
+    @apply inline-flex items-center px-3.5 py-1.5 rounded font-semibold text-ui-ctrl cursor-pointer border-none no-underline transition-colors;
     background: #e8a531;
     color: #0b0c0f;
     &:hover { background: #f0b840; }
@@ -51,14 +51,14 @@
 
   /* Prose: markdown-rendered assistant message content */
   .prose {
-    @apply text-[13.5px] leading-relaxed text-ink;
+    @apply text-ui-body leading-relaxed text-ink;
 
     h1, h2, h3, h4 {
       @apply font-semibold text-ink mt-3 mb-1;
     }
     h1 { @apply text-base; }
-    h2 { @apply text-[14px]; }
-    h3, h4 { @apply text-[13.5px]; }
+    h2 { @apply text-sm; }
+    h3, h4 { @apply text-ui-body; }
 
     p { @apply mb-2; }
     p:last-child { @apply mb-0; }
@@ -74,13 +74,13 @@
     em { @apply italic; }
 
     code {
-      @apply font-mono text-[12px] rounded px-1 py-px;
+      @apply font-mono text-ui-code rounded px-1 py-px;
       background: rgba(255,255,255,0.07);
       color: #e8a531;
     }
 
     pre {
-      @apply font-mono text-[12px] rounded p-3 mb-2 overflow-x-auto;
+      @apply font-mono text-ui-code rounded p-3 mb-2 overflow-x-auto;
       background: #0b0c0f;
       border: 1px solid #262a33;
       code {
@@ -98,7 +98,7 @@
     hr { @apply my-3 border-line-soft; }
 
     table {
-      @apply w-full text-[13px] mb-2;
+      @apply w-full text-ui-ctrl mb-2;
       border-collapse: collapse;
       th, td { @apply px-2 py-1; border: 1px solid #262a33; }
       th { @apply font-semibold bg-bg-2; }
@@ -106,7 +106,7 @@
   }
 
   .btn-ghost {
-    @apply inline-flex items-center px-3 py-1.5 rounded font-medium text-[13px] cursor-pointer no-underline transition-colors;
+    @apply inline-flex items-center px-3 py-1.5 rounded font-medium text-ui-ctrl cursor-pointer no-underline transition-colors;
     background: transparent;
     color: #b9bcc4;
     border: 1px solid #262a33;

@@ -15,7 +15,7 @@ templ Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) {
 		<main class="flex-1 overflow-auto p-6">
 			<div class="flex items-center justify-between mb-4">
 				<h1 class="text-lg font-semibold">Session DAG — { meta.Name }</h1>
-				<a href={ templ.SafeURL("/ui/sessions/" + meta.ID) } class="btn-ghost text-xs">← Back</a>
+				<a href={ templ.SafeURL("/ui/sessions/" + meta.ID) } class="btn-ghost text-ui-code">← Back</a>
 			</div>
 			if len(nodes) == 0 {
 				<p class="text-ink-3 text-sm">No messages yet.</p>
@@ -24,7 +24,7 @@ templ Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) {
 					<svg
 						width="880"
 						height={ svgHeight(nodes) }
-						class="font-mono text-xs"
+						class="font-mono text-ui-code"
 					>
 						for _, e := range edges {
 							@dagEdge(e, nodes)

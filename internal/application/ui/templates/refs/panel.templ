@@ -3,7 +3,7 @@ package tmplrefs
 import "sort"
 
 templ Panel(sessionID string, refs map[string]string) {
-	<div class="px-3 py-2 text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft">
+	<div class="px-3 py-2 text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft">
 		Refs
 	</div>
 	<div class="flex flex-col py-1">
@@ -28,9 +28,9 @@ templ Panel(sessionID string, refs map[string]string) {
 				type="text"
 				name="name"
 				placeholder="branch name"
-				class="flex-1 bg-bg border border-line rounded px-2 py-1 text-[12px] text-ink placeholder-ink-4 focus:outline-none focus:border-accent/50"
+				class="flex-1 bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder-ink-4 focus:outline-none focus:border-accent/50"
 			/>
-			<button type="submit" class="btn-ghost text-[11px] px-2">+</button>
+			<button type="submit" class="btn-ghost text-ui-meta px-2">+</button>
 		</form>
 	</div>
 }
@@ -38,9 +38,9 @@ templ Panel(sessionID string, refs map[string]string) {
 templ RefRow(sessionID, name, hash string) {
 	<div class="flex items-center gap-2 px-3 py-1.5 hover:bg-bg-2 group">
 		<span class="ref-pill shrink-0">{ name }</span>
-		<span class="font-mono text-[11px] text-ink-4 flex-1 truncate">{ shortHash(hash) }</span>
+		<span class="font-mono text-ui-meta text-ink-4 flex-1 truncate">{ shortHash(hash) }</span>
 		<button
-			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity"
+			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-ui-meta transition-opacity"
 			hx-post={ "/ui/sessions/" + sessionID + "/refs/" + name + "/checkout" }
 			hx-target="body"
 			hx-push-url="true"
@@ -49,7 +49,7 @@ templ RefRow(sessionID, name, hash string) {
 			⎇
 		</button>
 		<button
-			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-[11px] transition-opacity"
+			class="opacity-0 group-hover:opacity-100 text-ink-4 hover:text-rem text-ui-meta transition-opacity"
 			hx-delete={ "/ui/sessions/" + sessionID + "/refs/" + name }
 			hx-confirm={ "Delete ref '" + name + "'?" }
 			hx-target="#refs-panel"
