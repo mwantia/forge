@@ -20,6 +20,12 @@ type PipelineCommitter interface {
 	CommitStream(ctx context.Context, sessionID, ref, content string) (<-chan WireEvent, error)
 }
 
+// PipelineRenderer renders a raw template string through a session's scoped
+// template engine (session vars, tool data, model data).
+type PipelineRenderer interface {
+	RenderContent(ctx context.Context, sessionID, content string) (string, error)
+}
+
 // PipelineExecutor is the interface for running a session pipeline.
 type PipelineExecutor interface {
 	RunSessionPipeline(ctx context.Context, s *Session, out chan<- PipelineEvent) error

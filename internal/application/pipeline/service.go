@@ -45,6 +45,7 @@ func init() {
 		container.AsSingleton(),
 		container.With[PipelineExecutor](),
 		container.With[PipelineCommitter](),
+		container.With[PipelineRenderer](),
 		container.With[dompipeline.BackgroundDispatcher](),
 	)
 }
@@ -93,6 +94,7 @@ func (s *PipelineService) PostInit(ctx context.Context) error {
 	{
 		group.POST("/commit", s.handleCommit())
 		group.POST("/preview", s.handlePreview())
+		group.POST("/render", s.handleRender())
 
 		group.GET("/contexts/:hash", s.handleGetContext())
 		group.GET("/contexts/:hash/materialized", s.handleMaterializeContext())

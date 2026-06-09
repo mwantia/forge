@@ -8,7 +8,9 @@ import (
 
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	appsession "github.com/mwantia/forge/internal/application/session"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 // pipelineRun holds the resolved session and user-message hash produced by
@@ -18,23 +20,66 @@ type pipelineRun struct {
 	userHash string
 }
 
-// preparePipelineRun is the shared setup sequence for all three pipeline entry
-// points (handleCommit, CommitSync, DispatchBackground). It:
+// RenderContent implements PipelineRenderer. It resolves the session, builds a
+// scoped template, and renders content through it. Returns the raw source on error.
+func (s *PipelineService) RenderContent(ctx context.Context, sessionID, content string) (string, error) {
+	meta, err := s.sessions.ResolveSession(ctx, sessionID)
+	if err != nil {
+		return content, err
+	}
+	scoped, err := s.buildScopedTemplate(ctx, meta)
+	if err != nil {
+		return content, err
+	}
+	return scoped.RenderBody(content)
+}
+
+var _ PipelineRenderer = (*PipelineService)(nil)
+
+// buildScopedTemplate clones the base template and injects session variables,
+// the live tool namespace tree, and the active model's config data.
+// Called once per commit; the resulting template renders all stored messages.
+func (s *PipelineService) buildScopedTemplate(ctx context.Context, meta *appsession.SessionMetadata) (*infratemplate.Template, error) {
+	return s.tmpl.Clone(
+		appsession.SessionVars(meta),
+		infratemplate.WithAnyValue("tools", buildToolsData(ctx, s.tools)),
+		infratemplate.WithAnyValue("model", buildModelData(ctx, s.provider, s.splitModelName, meta.Model)),
+	)
+}
+
+// buildModelData fetches the active model's config from the provider and
+// returns it as a map[string]any for injection as the .model template variable.
+// On any error an empty map is returned so the commit is never blocked.
+func buildModelData(ctx context.Context, provider domprovider.ProviderRegistar, splitFn func(string) (string, string, bool), modelRef string) map[string]any {
+	providerName, modelName, ok := splitFn(modelRef)
+	if !ok {
+		return map[string]any{}
+	}
+
+	m, err := provider.GetModel(ctx, providerName, modelName)
+	if err != nil || m == nil {
+		return map[string]any{}
+	}
+
+	return map[string]any{
+		"name":        modelName,
+		"provider":    providerName,
+		"system":      m.System,
+		"temperature": m.Temperature,
+	}
+}
+
+// preparePipelineRun is the shared setup for all pipeline entry points. It:
 //  1. Loads message history along ref.
-//  2. Initialises the system message if absent.
-//  3. Recalls relevant resources and injects them into the system turn.
-//  4. Persists the user message and appends it to the chat slice.
-//  5. Resolves and filters available tool calls.
-//  6. Records the PromptContext and stamps its hash.
-//
-// The caller is responsible for template rendering and ref/fork resolution
-// before calling this helper.
-func (s *PipelineService) preparePipelineRun(
-	ctx context.Context,
-	meta *appsession.SessionMetadata,
-	ref, content string,
-	output resolvedOutput,
-) (*pipelineRun, error) {
+//  2. Ensures a role=system message exists at history[0], storing the
+//     agent-level default on the very first commit if none is present yet.
+//  3. Builds a scoped template (session vars + live tool data).
+//  4. Renders the full history (including system) via buildChatMessages.
+//  5. Persists the user message as raw template source and appends its
+//     rendered form to the chat slice.
+//  6. Resolves and filters available tool calls.
+//  7. Records the PromptContext and stamps its hash.
+func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsession.SessionMetadata, ref, content string, output resolvedOutput) (*pipelineRun, error) {
 	var history []*appsession.Message
 	var err error
 	if ref == dag.HEAD {
@@ -46,18 +91,36 @@ func (s *PipelineService) preparePipelineRun(
 		return nil, fmt.Errorf("load history: %w", err)
 	}
 
+	// On the first commit there is no system message yet. Store the agent-level
+	// default as raw template source so it becomes history[0] for this and all
+	// future commits.
 	if len(history) == 0 || history[0].Role != "system" {
-		history, err = s.initSystemMessage(ctx, meta, ref, history)
-		if err != nil {
-			return nil, fmt.Errorf("init system message: %w", err)
+		systemSrc := s.config.System
+		if systemSrc == "" {
+			systemSrc = DefaultSystemTemplate
 		}
+		sysMsg := &appsession.Message{
+			Role:      "system",
+			Content:   systemSrc,
+			CreatedAt: time.Now(),
+		}
+		sysHash, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, sysMsg)
+		if err != nil {
+			s.logger.Warn("failed to store system message in DAG", "session", meta.ID, "error", err)
+		}
+		sysMsg.Hash = sysHash
+		history = append([]*appsession.Message{sysMsg}, history...)
 	}
 
-	chatMessages := buildChatMessages(history)
-	if resources := s.recallRelevantResources(ctx, meta.ID, content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
-		chatMessages[0].Content += "\n\n" + resources
+	scoped, err := s.buildScopedTemplate(ctx, meta)
+	if err != nil {
+		return nil, fmt.Errorf("build template: %w", err)
 	}
 
+	// Render the full history — system at [0], conversation after.
+	chatMessages := buildChatMessages(history, scoped, s.logger)
+
+	// Store user message as raw template source, then append its rendered form.
 	userMsg := &appsession.Message{
 		Role:      "user",
 		Content:   content,
@@ -68,9 +131,13 @@ func (s *PipelineService) preparePipelineRun(
 		return nil, fmt.Errorf("save user message: %w", err)
 	}
 
+	renderedContent := content
+	if r, err := scoped.RenderBody(content); err == nil {
+		renderedContent = r
+	}
 	chatMessages = append(chatMessages, sdkplugins.ChatMessage{
 		Role:    "user",
-		Content: content,
+		Content: renderedContent,
 	})
 
 	toolCalls, err := s.tools.GetAllToolCalls()
@@ -98,10 +165,8 @@ func (s *PipelineService) preparePipelineRun(
 	}, nil
 }
 
-// CommitSync implements session.CommitDispatcher. It runs the full pipeline
-// turn for sessionID synchronously — same setup as DispatchBackground, but
-// blocks until the tool-loop finishes and returns the concatenated assistant
-// response text.
+// CommitSync implements session.CommitDispatcher. Runs the full pipeline turn
+// synchronously and returns the concatenated assistant response text.
 func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, content string) (string, error) {
 	meta, err := s.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
@@ -110,12 +175,6 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 
 	if ref == "" {
 		ref = dag.HEAD
-	}
-
-	if scoped, err := s.tmpl.Clone(appsession.SessionVars(meta)); err == nil {
-		if rendered, err := scoped.RenderBody(content); err == nil {
-			content = rendered
-		}
 	}
 
 	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
@@ -146,10 +205,8 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 	return sb.String(), nil
 }
 
-// CommitStream implements PipelineCommitter. It runs the full pipeline turn
-// for sessionID and returns a channel of WireEvents that the caller can range
-// over to stream the response. The channel is closed when the pipeline
-// finishes (DoneEvent or ErrorEvent).
+// CommitStream implements PipelineCommitter. Runs the full pipeline turn and
+// returns a channel of WireEvents. The channel is closed when done or on error.
 func (s *PipelineService) CommitStream(ctx context.Context, sessionID, ref, content string) (<-chan WireEvent, error) {
 	meta, err := s.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
@@ -158,11 +215,7 @@ func (s *PipelineService) CommitStream(ctx context.Context, sessionID, ref, cont
 	if ref == "" {
 		ref = dag.HEAD
 	}
-	if scoped, err := s.tmpl.Clone(appsession.SessionVars(meta)); err == nil {
-		if rendered, err := scoped.RenderBody(content); err == nil {
-			content = rendered
-		}
-	}
+
 	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
 	if err != nil {
 		return nil, err

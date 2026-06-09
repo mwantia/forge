@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/go-hclog"
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 type commitRequest struct {
@@ -48,12 +49,6 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
-		}
-
-		if scoped, err := s.tmpl.Clone(appsession.SessionVars(meta)); err == nil {
-			if rendered, err := scoped.RenderBody(req.Content); err == nil {
-				req.Content = rendered
-			}
 		}
 
 		output := s.config.Output.resolve()
@@ -104,6 +99,50 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 		}
 
 		go s.sessions.AccumulateDuration(ctx, meta.ID, time.Since(start).Milliseconds())
+	}
+}
+
+type renderRequest struct {
+	SessionID string `json:"session_id" binding:"required"`
+	Content   string `json:"content"    binding:"required"`
+}
+
+type renderResponse struct {
+	Content string `json:"content"`
+}
+
+// handleRender godoc
+//
+//	@Description	Renders a template string through the session's scoped template engine (session vars, tool data, model data). Nothing is persisted and no LLM call is made.
+func (s *PipelineService) handleRender() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req renderRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx := c.Request.Context()
+
+		meta, err := s.sessions.ResolveSession(ctx, req.SessionID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		scoped, err := s.buildScopedTemplate(ctx, meta)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "template init: " + err.Error()})
+			return
+		}
+
+		rendered, err := scoped.RenderBody(req.Content)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, renderResponse{Content: rendered})
 	}
 }
 
@@ -182,15 +221,24 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			return
 		}
 
-		chatMessages := buildChatMessages(history)
-		if resources := s.recallRelevantResources(ctx, meta.ID, req.Content); resources != "" && len(chatMessages) > 0 && chatMessages[0].Role == "system" {
-			chatMessages[0].Content += "\n\n" + resources
+		scoped, err := s.buildScopedTemplate(ctx, meta)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "template init: " + err.Error()})
+			return
 		}
 
+		// Render the full history — system is at history[0] (or absent for a
+		// session that has never been committed; preview still works, just empty).
+		chatMessages := buildChatMessages(history, scoped, s.logger)
+
 		if req.Content != "" {
+			rendered := req.Content
+			if r, err := scoped.RenderBody(req.Content); err == nil {
+				rendered = r
+			}
 			chatMessages = append(chatMessages, sdkplugins.ChatMessage{
 				Role:    "user",
-				Content: req.Content,
+				Content: rendered,
 			})
 		}
 
@@ -216,7 +264,6 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 				resp.Total = sumUsage(resp.Total, usage)
 				continue
 			}
-
 			resp.Messages = append(resp.Messages, previewResponseMessage{
 				Role:    m.Role,
 				Content: m.Content,
@@ -227,40 +274,6 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, resp)
 	}
-}
-
-// recallRelevantResources queries the resource service for items that
-// match the user's input on the session's namespace and renders them as
-// the <relevant-resources> prompt block. Returns "" on any error or when
-// the resource registar is unbound — the commit must never break
-// because of a memory layer failure.
-func (s *PipelineService) recallRelevantResources(ctx context.Context, sessionID, query string) string {
-	if s.resources == nil || strings.TrimSpace(query) == "" {
-		return ""
-	}
-
-	const resourceRecallLimit = 5
-	hits, err := s.resources.Recall(ctx, sdkplugins.RecallQuery{
-		Path:  "/forge/sessions/" + sessionID + "/memories",
-		Query: query,
-		Limit: resourceRecallLimit,
-	})
-
-	if err != nil {
-		s.logger.Debug("resource recall failed", "session", sessionID, "error", err)
-		return ""
-	}
-
-	if len(hits) == 0 {
-		return ""
-	}
-
-	items := make([]resourceItem, 0, len(hits))
-	for _, h := range hits {
-		items = append(items, resourceItem{ID: h.ID, Content: h.Content})
-	}
-
-	return renderResourcesBlock(items)
 }
 
 // resolveCommitRef interprets the ?ref= and ?fork_from= commit query
@@ -380,41 +393,25 @@ func (s *PipelineService) fetchModelSystem(ctx context.Context, modelRef string)
 	return m.System
 }
 
-// initSystemMessage assembles and persists a system MessageObj as the root of
-// the target ref when none exists yet. It appends the system message to
-// history and returns the updated slice.
-func (s *PipelineService) initSystemMessage(ctx context.Context, meta *appsession.SessionMetadata, ref string, history []*appsession.Message) ([]*appsession.Message, error) {
-	scoped, err := s.tmpl.Clone(appsession.SessionVars(meta))
-	if err != nil {
-		return history, err
-	}
-
-	modelSystem := s.fetchModelSystem(ctx, meta.Model)
-	agentSystem := s.config.System
-	if agentSystem == "" {
-		agentSystem = DefaultAgentSystem
-	}
-
-	layers := collectPromptLayers(ctx, agentSystem, modelSystem, meta, s.tools, s.logger)
-	content := assembleSystemPrompt(layers, scoped, s.logger)
-
-	sysMsg := &appsession.Message{Role: "system", Content: content}
-	if _, err := s.sessions.AppendMessageToRef(ctx, meta.ID, ref, sysMsg); err != nil {
-		return history, err
-	}
-
-	return append([]*appsession.Message{sysMsg}, history...), nil
-}
-
-// buildChatMessages assembles the ChatMessage slice sent to the LLM from
-// the persisted history. The system message (role="system") is expected to be
-// history[0] when present; all roles pass through unchanged.
-func buildChatMessages(history []*appsession.Message) []sdkplugins.ChatMessage {
-	var messages []sdkplugins.ChatMessage
+// buildChatMessages assembles the ChatMessage slice sent to the LLM from the
+// persisted history. Every message's Content is rendered through tmpl so
+// template expressions resolve to their current values. On render failure the
+// raw source is used and the error is logged — the commit is never aborted
+// due to a template error in a stored message.
+func buildChatMessages(history []*appsession.Message, tmpl *infratemplate.Template, logger hclog.Logger) []sdkplugins.ChatMessage {
+	messages := make([]sdkplugins.ChatMessage, 0, len(history))
 	for _, msg := range history {
+		content := msg.Content
+
+		if rendered, err := tmpl.RenderBody(msg.Content); err != nil {
+			logger.Warn("template render failed for stored message", "role", msg.Role, "hash", msg.Hash, "error", err)
+		} else {
+			content = rendered
+		}
+
 		cm := sdkplugins.ChatMessage{
 			Role:    msg.Role,
-			Content: msg.Content,
+			Content: content,
 		}
 
 		switch msg.Role {
@@ -430,7 +427,6 @@ func buildChatMessages(history []*appsession.Message) []sdkplugins.ChatMessage {
 				}
 				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{ToolCalls: calls}
 			}
-
 		case "tool":
 			if len(msg.ToolCalls) > 0 {
 				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{
@@ -441,6 +437,5 @@ func buildChatMessages(history []*appsession.Message) []sdkplugins.ChatMessage {
 		}
 		messages = append(messages, cm)
 	}
-
 	return messages
 }

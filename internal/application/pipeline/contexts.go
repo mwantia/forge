@@ -73,10 +73,15 @@ func (s *PipelineService) handleMaterializeContext() gin.HandlerFunc {
 				return
 			}
 
+			content := obj.Content
+			if rendered, err := s.tmpl.RenderBody(obj.Content); err == nil {
+				content = rendered
+			}
+
 			resp.Messages = append(resp.Messages, materializedMessage{
 				Hash:      mh,
 				Role:      obj.Role,
-				Content:   obj.Content,
+				Content:   content,
 				ToolCalls: obj.ToolCalls,
 			})
 		}
@@ -123,9 +128,14 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 				return
 			}
 
+			content := obj.Content
+			if rendered, err := s.tmpl.RenderBody(obj.Content); err == nil {
+				content = rendered
+			}
+
 			messages = append(messages, sdkplugins.ChatMessage{
 				Role:    obj.Role,
-				Content: obj.Content,
+				Content: content,
 			})
 		}
 

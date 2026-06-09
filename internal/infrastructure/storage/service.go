@@ -44,18 +44,19 @@ func (s *StorageService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	tmpl := s.tmpl.Base()
 	logger := s.logger.Named(s.config.Type)
 
 	var backend StorageBackend
 	switch strings.ToLower(s.config.Type) {
 	case "file":
-		cfg, err := config.Decode[FileConfig](s.config.Body, s.tmpl.Base())
+		cfg, err := config.Decode[FileConfig](s.config.Body, tmpl)
 		if err != nil {
 			return fmt.Errorf("storage file config: %w", err)
 		}
 		backend = file.NewFileStorageBackend(logger, cfg.Path)
 	case "postgres":
-		cfg, err := config.Decode[PostgresConfig](s.config.Body, s.tmpl.Base())
+		cfg, err := config.Decode[PostgresConfig](s.config.Body, tmpl)
 		if err != nil {
 			return fmt.Errorf("storage postgres config: %w", err)
 		}
