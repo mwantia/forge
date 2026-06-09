@@ -16,9 +16,10 @@ import (
 type UIService struct {
 	approot.UnimplementedService
 
-	router   infraserver.HttpRouter        `fabric:"inject"`
-	sessions *appsession.SessionService    `fabric:"inject"`
-	pipeline apppipeline.PipelineCommitter `fabric:"inject"`
+	router   infraserver.HttpRouter         `fabric:"inject"`
+	sessions *appsession.SessionService     `fabric:"inject"`
+	pipeline apppipeline.PipelineCommitter  `fabric:"inject"`
+	renderer apppipeline.PipelineRenderer   `fabric:"inject"`
 
 	logger hclog.Logger `fabric:"logger=ui"`
 }
@@ -36,6 +37,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 
 	sess := &sessionHandlers{
 		sessions: u.sessions,
+		renderer: u.renderer,
 	}
 	g.GET("/sessions", sess.handleList())
 	g.POST("/sessions", sess.handleCreate())

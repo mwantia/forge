@@ -10,6 +10,7 @@ import (
 
 type sessionHandlers struct {
 	sessions sessionReader
+	renderer pipelineRenderer
 }
 
 func (h *sessionHandlers) handleList() gin.HandlerFunc {
@@ -64,9 +65,20 @@ func (h *sessionHandlers) handleDetail() gin.HandlerFunc {
 		}
 
 		ref := c.DefaultQuery("ref", "HEAD")
-		messages, _ := h.sessions.ListMessagesFromRef(ctx, meta.ID, ref, 0, 0)
+		raw, _ := h.sessions.ListMessagesFromRef(ctx, meta.ID, ref, 0, 0)
 		refs, _ := h.sessions.ListRefs(ctx, meta.ID)
 		activeRef := resolveActiveRef(refs, ref)
+
+		messages := make([]*tmplsessions.RenderedMessage, len(raw))
+		for i, msg := range raw {
+			rm := &tmplsessions.RenderedMessage{Message: msg, Rendered: msg.Content}
+			if h.renderer != nil {
+				if r, err := h.renderer.RenderContent(ctx, meta.ID, msg.Content); err == nil {
+					rm.Rendered = r
+				}
+			}
+			messages[i] = rm
+		}
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")

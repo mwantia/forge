@@ -19,3 +19,6 @@ type sessionReader interface {
 
 // pipelineCommitter aliases the pipeline package interface to avoid re-declaring it.
 type pipelineCommitter = apppipeline.PipelineCommitter
+
+// pipelineRenderer aliases the pipeline package interface to avoid re-declaring it.
+type pipelineRenderer = apppipeline.PipelineRenderer
