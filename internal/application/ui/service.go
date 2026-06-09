@@ -43,6 +43,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions", sess.handleCreate())
 	g.GET("/sessions/:id", sess.handleDetail())
 	g.DELETE("/sessions/:id", sess.handleDelete())
+	g.GET("/sessions/:id/node", sess.handleNodePanel())
 
 	refs := &refHandlers{
 		sessions: u.sessions,

@@ -48,10 +48,10 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 			>
 				<!-- Mini DAG header -->
 				<div class="flex items-center justify-between px-3 py-2 border-b border-line-soft">
-					<span class="text-[10px] uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
+					<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
 					<a
 						href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
-						class="text-[11px] text-ink-3 hover:text-ink transition-colors"
+						class="text-ui-meta text-ink-3 hover:text-ink transition-colors"
 					>expand →</a>
 				</div>
 				<!-- Mini DAG thumbnail (HTMX-loaded) -->
@@ -62,7 +62,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					hx-swap="innerHTML"
 					class="shrink-0 border-b border-line-soft overflow-hidden max-h-[200px]"
 				>
-					<div class="px-3 py-2 text-ink-4 text-[11px]">Loading…</div>
+					<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
 				</div>
 				<!-- Refs panel (HTMX-swappable) -->
 				<div
@@ -72,20 +72,20 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					hx-swap="innerHTML"
 					class="flex-1 overflow-y-auto"
 				>
-					<div class="px-3 py-3 text-ink-3 text-xs">Loading refs…</div>
+					<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
 				</div>
 				<!-- Session info footer -->
 				<div class="px-3 py-3 border-t border-line-soft space-y-1 shrink-0">
-					<div class="font-mono text-[11px] text-ink-4">{ meta.Model }</div>
+					<div class="font-mono text-ui-meta text-ink-4">{ meta.Model }</div>
 					if meta.Description != "" {
-						<div class="text-[11px] text-ink-3 truncate" title={ meta.Description }>{ meta.Description }</div>
+						<div class="text-ui-meta text-ink-3 truncate" title={ meta.Description }>{ meta.Description }</div>
 					}
-					<div class="text-[11px] text-ink-4">Updated { relativeTime(meta.UpdatedAt) }</div>
+					<div class="text-ui-meta text-ink-4">Updated { relativeTime(meta.UpdatedAt) }</div>
 				</div>
 				<!-- Session actions -->
 				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
 					<button
-						class="btn-ghost text-xs flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+						class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
 						hx-delete={ "/ui/sessions/" + meta.ID }
 						hx-confirm={ "Delete session '" + meta.Name + "'?" }
 						hx-target="body"
@@ -112,11 +112,11 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 							}
 							<!-- Streaming bubble: visible only while streaming -->
 							<div x-show="streaming" x-cloak class="flex gap-3 items-start">
-								<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+								<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
 								<div class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px]" x-html="marked.parse(streamBuffer)"></div>
 							</div>
 							if meta.ArchivedAt != nil {
-								<div class="text-center text-ink-4 text-xs py-4 border-t border-line-soft">Session archived — read-only</div>
+								<div class="text-center text-ink-4 text-ui-code py-4 border-t border-line-soft">Session archived — read-only</div>
 							}
 						</div>
 					</div>
@@ -131,16 +131,16 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 										id="composer-input"
 										rows="3"
 										placeholder="Message… (⌘↵ or Ctrl↵ to send)"
-										class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-[13.5px] text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+										class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
 										x-model="draft"
 										@keydown.meta.enter.prevent="send()"
 										@keydown.ctrl.enter.prevent="send()"
 									></textarea>
 									<div class="flex justify-between items-center mt-2">
-										<span class="text-ink-4 text-xs" x-show="streaming">Streaming…</span>
-										<span class="text-ink-4 text-xs" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
+										<span class="text-ink-4 text-ui-code" x-show="streaming">Streaming…</span>
+										<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
 										<button
-											class="btn-accent text-[12px]"
+											class="btn-accent text-ui-code"
 											:disabled="streaming || !draft.trim()"
 											@click="send()"
 										>Send</button>
@@ -151,6 +151,16 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					}
 				</div>
 			</div>
+			<!-- RIGHT SIDEBAR: Node panel -->
+			<aside
+				id="node-panel"
+				class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0 w-[280px]"
+				hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
+				hx-trigger="load"
+				hx-swap="innerHTML"
+			>
+				<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
+			</aside>
 		</div>
 		<script>
 			// Shared SSE stream reader — parses `event: X\ndata: Y\n\n` format.
@@ -228,6 +238,10 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 										target: '#refs-panel',
 										swap: 'innerHTML',
 									});
+									htmx.ajax('GET', `/ui/sessions/${sessionId}/node?ref=${ref}`, {
+										target: '#node-panel',
+										swap: 'innerHTML',
+									});
 								} else if (event === 'error') {
 									this.streaming = false;
 									this.streamBuffer = '';
@@ -259,7 +273,7 @@ templ MessageBubble(rm *RenderedMessage) {
 		<!-- User message: right-aligned -->
 		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start justify-end">
 			<div class="flex flex-col gap-1 items-end max-w-[640px]">
-				<div class="relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-[13.5px] leading-relaxed text-ink">
+				<div class="relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink">
 					<button
 						type="button"
 						@click="navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
@@ -270,24 +284,24 @@ templ MessageBubble(rm *RenderedMessage) {
 						<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 					</button>
 					<span x-show="!raw" class="whitespace-pre-wrap">{ rm.Rendered }</span>
-					<span x-show="raw" x-cloak class="font-mono text-[12px] whitespace-pre-wrap">{ rm.Content }</span>
+					<span x-show="raw" x-cloak class="font-mono text-ui-code whitespace-pre-wrap">{ rm.Content }</span>
 				</div>
 				<div class="flex items-center gap-2">
 					<button
 						@click="raw = !raw"
-						class="text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors"
+						class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
 						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
 						title="Toggle raw/rendered"
 					>{ "{}" }</button>
-					<div class="text-[11px] text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
+					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
 				</div>
 			</div>
-			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
+			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
 		</div>
 	} else {
 		<!-- Assistant message: left-aligned -->
 		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start">
-			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
 			<div class="flex flex-col gap-1 max-w-[640px]">
 				if rm.Rendered != "" || rm.Content != "" {
 					<div class="relative group bg-bg-2 border border-line rounded-md px-3 py-2">
@@ -303,7 +317,7 @@ templ MessageBubble(rm *RenderedMessage) {
 						<div x-show="!raw" class="prose">
 							@templ.Raw(renderMarkdown(rm.Rendered))
 						</div>
-						<pre x-show="raw" x-cloak class="text-ink-3 text-[12px] whitespace-pre-wrap font-mono leading-relaxed m-0">{ rm.Content }</pre>
+						<pre x-show="raw" x-cloak class="text-ink-3 text-ui-code whitespace-pre-wrap font-mono leading-relaxed m-0">{ rm.Content }</pre>
 					</div>
 				}
 				for _, tc := range rm.ToolCalls {
@@ -312,11 +326,11 @@ templ MessageBubble(rm *RenderedMessage) {
 				<div class="flex items-center gap-2">
 					<button
 						@click="raw = !raw"
-						class="text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors"
+						class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
 						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
 						title="Toggle raw/rendered"
 					>{ "{}" }</button>
-					<div class="text-[11px] text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
+					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
 				</div>
 			</div>
 		</div>
@@ -334,27 +348,27 @@ templ SystemBubble(rm *RenderedMessage) {
 				class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-bg-2 transition-colors"
 			>
 				<span
-					class="text-[8px] text-ink-4 shrink-0 select-none"
+					class="text-ui-dot text-ink-4 shrink-0 select-none"
 					:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
 				>▶</span>
-				<span class="text-[10px] text-ink-4 uppercase tracking-wide font-semibold shrink-0">system</span>
+				<span class="text-ui-label text-ink-4 uppercase tracking-wide font-semibold shrink-0">system</span>
 				<span class="flex-1"></span>
-				<span class="text-ink-4 text-[10px] shrink-0" x-show="!open">···</span>
+				<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
 			</button>
 			<div
 				class="relative border-t border-line-soft overflow-hidden"
 				style="max-height:0"
 				:style="open ? 'max-height:32rem;overflow-y:auto' : 'max-height:0;overflow:hidden'"
 			>
-				<pre x-show="!raw" class="px-3 py-2 text-ink-3 text-[11.5px] whitespace-pre-wrap font-mono leading-relaxed">{ rm.Rendered }</pre>
-				<pre x-show="raw" x-cloak class="px-3 py-2 text-ink-4 text-[11.5px] whitespace-pre-wrap font-mono leading-relaxed">{ rm.Content }</pre>
+				<pre x-show="!raw" class="px-3 py-2 text-ink-3 text-ui-sys whitespace-pre-wrap font-mono leading-relaxed">{ rm.Rendered }</pre>
+				<pre x-show="raw" x-cloak class="px-3 py-2 text-ink-4 text-ui-sys whitespace-pre-wrap font-mono leading-relaxed">{ rm.Content }</pre>
 			</div>
 		</div>
 		<div class="flex items-center gap-2">
 			<button
 				type="button"
 				@click="raw = !raw"
-				class="text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors"
+				class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
 				:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
 				title="Toggle raw/rendered"
 			>{ "{}" }</button>
@@ -367,7 +381,7 @@ templ SystemBubble(rm *RenderedMessage) {
 				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
 				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 			</button>
-			<div class="text-[11px] text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
+			<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) }</div>
 		</div>
 	</div>
 }
@@ -384,22 +398,22 @@ templ ToolResultBubble(rm *RenderedMessage) {
 					class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
 				>
 					<span
-						class="text-[8px] text-ink-4 shrink-0 select-none"
+						class="text-ui-dot text-ink-4 shrink-0 select-none"
 						:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
 					>▶</span>
-					<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">result</span>
-					<span class="text-[11px] text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
+					<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
+					<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
 					if toolCallIsError(rm) {
-						<span class="text-rem text-[10px] shrink-0">err</span>
+						<span class="text-rem text-ui-label shrink-0">err</span>
 					}
-					<span class="text-ink-4 text-[10px] shrink-0" x-show="!open">···</span>
+					<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
 				</button>
 				<div
 					class="relative border-t border-line-soft overflow-hidden"
 					style="max-height:3.5rem;overflow:hidden"
 					:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
 				>
-					<pre class="px-2 py-1.5 text-ink-4 text-[10.5px] whitespace-pre-wrap overflow-x-auto">{ prettifyJSON(rm.Content) }</pre>
+					<pre class="px-2 py-1.5 text-ink-4 text-ui-args whitespace-pre-wrap overflow-x-auto">{ prettifyJSON(rm.Content) }</pre>
 					<div
 						x-show="!open"
 						class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
@@ -409,10 +423,10 @@ templ ToolResultBubble(rm *RenderedMessage) {
 			</div>
 		} else {
 			<div class="max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
-				<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">result</span>
-				<span class="text-[11px] text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
+				<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
+				<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
 				if toolCallIsError(rm) {
-					<span class="text-rem text-[10px] shrink-0">err</span>
+					<span class="text-rem text-ui-label shrink-0">err</span>
 				}
 			</div>
 		}
@@ -430,22 +444,22 @@ templ ToolCallRow(tc appsession.MessageToolCall) {
 				class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
 			>
 				<span
-					class="text-[8px] text-ink-4 shrink-0 select-none"
+					class="text-ui-dot text-ink-4 shrink-0 select-none"
 					:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
 				>▶</span>
-				<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">call</span>
-				<span class="text-[11px] text-ink-3 flex-1 truncate">{ tc.Name }</span>
+				<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">call</span>
+				<span class="text-ui-meta text-ink-3 flex-1 truncate">{ tc.Name }</span>
 				if tc.IsError {
-					<span class="text-rem text-[10px] shrink-0">err</span>
+					<span class="text-rem text-ui-label shrink-0">err</span>
 				}
-				<span class="text-ink-4 text-[10px] shrink-0" x-show="!open">···</span>
+				<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
 			</button>
 			<div
 				class="relative border-t border-line-soft overflow-hidden"
 				style="max-height:3.5rem;overflow:hidden"
 				:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
 			>
-				<pre class="px-2 py-1.5 text-ink-4 text-[10.5px] whitespace-pre-wrap overflow-x-auto">{ formatArgs(tc.Arguments) }</pre>
+				<pre class="px-2 py-1.5 text-ink-4 text-ui-args whitespace-pre-wrap overflow-x-auto">{ formatArgs(tc.Arguments) }</pre>
 				<div
 					x-show="!open"
 					class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
@@ -455,10 +469,10 @@ templ ToolCallRow(tc appsession.MessageToolCall) {
 		</div>
 	} else {
 		<div class="flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
-			<span class="text-[10px] text-ink-4 uppercase tracking-wide shrink-0">call</span>
-			<span class="text-[11px] text-ink-3 flex-1 truncate">{ tc.Name }</span>
+			<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">call</span>
+			<span class="text-ui-meta text-ink-3 flex-1 truncate">{ tc.Name }</span>
 			if tc.IsError {
-				<span class="text-rem text-[10px] shrink-0">err</span>
+				<span class="text-rem text-ui-label shrink-0">err</span>
 			}
 		</div>
 	}

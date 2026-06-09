@@ -97,6 +97,47 @@ func (h *sessionHandlers) handleDelete() gin.HandlerFunc {
 	}
 }
 
+func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found: %v", err)
+			return
+		}
+
+		refs, _ := h.sessions.ListRefs(ctx, id)
+		ref := c.DefaultQuery("ref", "HEAD")
+		activeRef := resolveActiveRef(refs, ref)
+
+		messages, _ := h.sessions.ListMessagesFromRef(ctx, id, activeRef, 0, 0)
+
+		// Count sibling nodes: other ref tips that share the same parent as HEAD tip.
+		siblingCount := 0
+		if len(messages) > 0 {
+			headTip := messages[len(messages)-1]
+			for name, refHash := range refs {
+				if name == "HEAD" || name == activeRef || refHash == headTip.Hash {
+					continue
+				}
+				obj, err := h.sessions.GetMessageObj(ctx, refHash)
+				if err != nil {
+					continue
+				}
+				if obj.ParentHash == headTip.ParentHash {
+					siblingCount++
+				}
+			}
+		}
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		_ = tmplsessions.NodePanel(id, meta, messages, activeRef, siblingCount).Render(ctx, c.Writer)
+	}
+}
+
 // resolveActiveRef returns the best display branch name from the refs map.
 func resolveActiveRef(refs map[string]string, requested string) string {
 	if requested != "" && requested != "HEAD" {
