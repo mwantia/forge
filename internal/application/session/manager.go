@@ -341,6 +341,13 @@ func (s *SessionService) CreateSession(ctx context.Context, model, name, title, 
 	return meta, nil
 }
 
+// SaveSession implements SessionManager.
+func (s *SessionService) SaveSession(ctx context.Context, meta *SessionMetadata) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.store.SaveSession(ctx, meta)
+}
+
 // DeleteSession removes a session and all its associated data.
 func (s *SessionService) DeleteSession(ctx context.Context, idOrName string) error {
 	s.mu.Lock()

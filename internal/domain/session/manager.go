@@ -30,4 +30,5 @@ type SessionManager interface {
 	ResolveMessageHash(ctx context.Context, sessionID, hashOrPrefix string) (string, error)
 	CheckoutRef(ctx context.Context, sessionID, targetBranch string) error
 	AccumulateDuration(ctx context.Context, sessionID string, ms int64)
+	SaveSession(ctx context.Context, meta *SessionMetadata) error
 }

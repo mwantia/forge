@@ -19,6 +19,7 @@ type createSessionRequest struct {
 	Parent         string   `json:"parent"`
 	ToolsVerbosity string   `json:"tools_verbosity"`
 	Plugins        []string `json:"plugins"`
+	Template       string   `json:"template"`
 }
 
 type compactResult struct {
@@ -99,6 +100,21 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 			s.logger.Warn("create session: HEAD symref init failed", "session", meta.ID, "error", err)
 		}
 
+		// Store the system message as the first DAG entry so the pipeline always
+		// finds it at history[0]. If no template was supplied the pipeline will
+		// write the agent-level default on the first commit instead.
+		if req.Template != "" {
+			sysMsg := &Message{
+				Role:      "system",
+				Content:   req.Template,
+				CreatedAt: now,
+			}
+
+			if _, err := s.store.SaveMessage(c.Request.Context(), meta.ID, dag.HEAD, sysMsg); err != nil {
+				s.logger.Warn("create session: failed to store system message", "session", meta.ID, "error", err)
+			}
+		}
+
 		SessionsTotal.WithLabelValues("create").Inc()
 		c.JSON(http.StatusCreated, meta)
 	}
@@ -170,7 +186,6 @@ func (s *SessionService) handleUpdateSession() gin.HandlerFunc {
 		if req.Model != nil {
 			meta.Model = *req.Model
 		}
-
 		meta.UpdatedAt = time.Now()
 		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
