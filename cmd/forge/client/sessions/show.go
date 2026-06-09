@@ -7,20 +7,21 @@ import (
 	"time"
 
 	v2 "github.com/mwantia/forge-sdk/pkg/api/v2"
+	"github.com/mwantia/forge-sdk/pkg/api/v2/pipeline"
 	"github.com/mwantia/forge-sdk/pkg/api/v2/sessions"
 	"github.com/mwantia/forge/cmd/forge/helpers"
 	"github.com/spf13/cobra"
 )
 
 func SessionsShowCmd(client func() *v2.ForgeApi) *cobra.Command {
-	var noRender bool
+	var render bool
 
 	cmd := &cobra.Command{
 		Use:   "show <session-id> <message-id>",
 		Short: "Show the content of a single message",
 		Long: "Fetch a single message by session ID/name and message hash (or prefix) and\n" +
 			"print its content, role, and timestamp. Tool call arguments and results are\n" +
-			"rendered inline. Pass --no-render to skip markdown rendering.",
+			"rendered inline. Pass --render to evaluate template expressions and render markdown.",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resp, err := client().Sessions.GetMessage(cmd.Context(), sessions.SessionsGetMessageRequest{
@@ -32,6 +33,18 @@ func SessionsShowCmd(client func() *v2.ForgeApi) *cobra.Command {
 			}
 			msg := resp.Message
 
+			content := msg.Content
+			if render && content != "" {
+				rendered, err := client().Pipeline.Render(cmd.Context(), pipeline.PipelineRenderRequest{
+					SessionID: args[0],
+					Content:   content,
+				})
+				if err != nil {
+					return fmt.Errorf("render: %w", err)
+				}
+				content = rendered.Content
+			}
+
 			var sb strings.Builder
 			sb.WriteString("---\n")
 			fmt.Fprintf(&sb, "Hash:    %s\n", msg.Hash)
@@ -39,9 +52,9 @@ func SessionsShowCmd(client func() *v2.ForgeApi) *cobra.Command {
 			fmt.Fprintf(&sb, "Created: %s\n", msg.CreatedAt.Format(time.DateTime))
 			sb.WriteString("---\n")
 
-			if msg.Content != "" {
+			if content != "" {
 				sb.WriteString("\n")
-				sb.WriteString(msg.Content)
+				sb.WriteString(content)
 			}
 
 			for _, tc := range msg.ToolCalls {
@@ -63,11 +76,11 @@ func SessionsShowCmd(client func() *v2.ForgeApi) *cobra.Command {
 				}
 			}
 
-			fmt.Println(helpers.RenderMarkdown(sb.String(), noRender))
+			fmt.Println(helpers.RenderMarkdown(sb.String(), !render))
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&noRender, "no-render", false, "Print raw content without markdown rendering")
+	cmd.Flags().BoolVar(&render, "render", false, "Evaluate template expressions and render markdown")
 	return cmd
 }
