@@ -97,6 +97,38 @@ func (h *sessionHandlers) handleDelete() gin.HandlerFunc {
 	}
 }
 
+func (h *sessionHandlers) handleThread() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found: %v", err)
+			return
+		}
+
+		refs, _ := h.sessions.ListRefs(ctx, meta.ID)
+		activeRef := resolveActiveRef(refs, c.DefaultQuery("ref", ""))
+		raw, _ := h.sessions.ListMessagesFromRef(ctx, meta.ID, activeRef, 0, 0)
+
+		messages := make([]*tmplsessions.RenderedMessage, len(raw))
+		for i, msg := range raw {
+			rm := &tmplsessions.RenderedMessage{Message: msg, Rendered: msg.Content}
+			if h.renderer != nil {
+				if r, err := h.renderer.RenderContent(ctx, meta.ID, msg.Content); err == nil {
+					rm.Rendered = r
+				}
+			}
+			messages[i] = rm
+		}
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		_ = tmplsessions.Thread(messages, meta.ArchivedAt != nil).Render(ctx, c.Writer)
+	}
+}
+
 func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()

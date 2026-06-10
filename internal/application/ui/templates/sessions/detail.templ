@@ -11,11 +11,53 @@ import (
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
 
+// PendingUserBubble is returned alongside StreamBubble as an OOB beforeend swap into
+// #thread. Shows the user's message immediately before the LLM response starts streaming.
+// Replaced by the full thread OOB swap when "done" fires.
+templ PendingUserBubble(content string) {
+	<div id="thread" hx-swap-oob="beforeend">
+		<div class="max-w-[720px] mx-auto mt-3">
+			<div class="flex gap-3 items-start justify-end">
+				<div class="flex flex-col gap-1 items-end max-w-[640px]">
+					<div class="bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap">{ content }</div>
+				</div>
+				<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
+			</div>
+		</div>
+	</div>
+}
+
+// StreamBubble is swapped into #stream-area (innerHTML) by POST /ui/sessions/:id/commit.
+// The inner div opens an SSE connection immediately. Goldmark-rendered HTML blocks arrive
+// as "chunk" events (beforeend). The "done" event removes this div (outerHTML → empty)
+// and OOB-swaps all sidebar panels in one payload.
+templ StreamBubble(streamURL string) {
+	<div
+		id="stream-active"
+		hx-ext="sse"
+		sse-connect={ streamURL }
+		sse-swap="done"
+		hx-swap="outerHTML"
+	>
+		<div class="max-w-[720px] mx-auto flex gap-3 items-start">
+			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
+			<div
+				id="stream-content"
+				sse-swap="chunk"
+				hx-swap="beforeend"
+				class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]"
+			>
+				<span class="text-ink-4 text-ui-meta animate-pulse">···</span>
+			</div>
+		</div>
+	</div>
+}
+
 templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs map[string]string, activeRef string) {
 	@layout.Base(meta.Name) {
 		<div
-			x-data="{ sidebar: window.innerWidth >= 768 }"
-			@resize.window="sidebar = window.innerWidth >= 768"
+			x-data="{ sidebar: window.innerWidth >= 768, nodePanel: window.innerWidth >= 1200 }"
+			@resize.window="sidebar = window.innerWidth >= 768; nodePanel = window.innerWidth >= 1200"
 			class="flex flex-col flex-1 overflow-hidden"
 		>
 		<!-- Topbar with sidebar toggle -->
@@ -43,7 +85,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 			<!-- LEFT SIDEBAR -->
 			<aside
 				style="transition:width .15s ease"
-				:style="sidebar ? 'width:260px' : 'width:0'"
+				:style="sidebar ? 'width:280px' : 'width:0'"
 				class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
 			>
 				<!-- Mini DAG header -->
@@ -99,27 +141,22 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 			<div
 				id="session-main"
 				class="flex-1 overflow-y-auto min-w-0"
-				x-data={ "composer('" + meta.ID + "')" }
+				x-data="{ draft: '', streaming: false }"
+				@forge:streaming-start.document="streaming = true; draft = ''"
+				@forge:streaming-end.document="streaming = false"
 			>
 				<!-- Wrapper fills at least the full viewport height so composer
-				     stays pinned to the bottom even with few messages -->
+				    stays pinned to the bottom even with few messages -->
 				<div class="min-h-full flex flex-col">
-					<!-- Message thread -->
-					<div id="thread" class="flex-1 px-6 pt-4 pb-4">
-						<div class="max-w-[720px] mx-auto space-y-3">
-							for _, rm := range messages {
-								@MessageBubble(rm)
-							}
-							<!-- Streaming bubble: visible only while streaming -->
-							<div x-show="streaming" x-cloak class="flex gap-3 items-start">
-								<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-								<div class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px]" x-html="marked.parse(streamBuffer)"></div>
-							</div>
-							if meta.ArchivedAt != nil {
-								<div class="text-center text-ink-4 text-ui-code py-4 border-t border-line-soft">Session archived — read-only</div>
-							}
-						</div>
+					<!-- Message thread — OOB-swapped after commit done -->
+					<div
+						id="thread"
+						class="flex-1 px-6 pt-4 pb-2"
+					>
+						@Thread(messages, meta.ArchivedAt != nil)
 					</div>
+					<!-- Stream area: empty until POST /commit swaps in StreamBubble -->
+					<div id="stream-area" class="px-6 pb-2"></div>
 					<!-- Composer: sticky to bottom of the scroll container -->
 					if meta.ArchivedAt == nil {
 						<div class="sticky bottom-0">
@@ -127,24 +164,35 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 							<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
 							<div class="bg-bg px-4 pb-3">
 								<div class="max-w-[720px] mx-auto">
-									<textarea
-										id="composer-input"
-										rows="3"
-										placeholder="Message… (⌘↵ or Ctrl↵ to send)"
-										class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
-										x-model="draft"
-										@keydown.meta.enter.prevent="send()"
-										@keydown.ctrl.enter.prevent="send()"
-									></textarea>
-									<div class="flex justify-between items-center mt-2">
-										<span class="text-ink-4 text-ui-code" x-show="streaming">Streaming…</span>
-										<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to send</span>
-										<button
-											class="btn-accent text-ui-code"
-											:disabled="streaming || !draft.trim()"
-											@click="send()"
-										>Send</button>
-									</div>
+									<form
+										id="composer-form"
+										hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
+										hx-target="#stream-area"
+										hx-swap="innerHTML"
+										hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
+									>
+										<input type="hidden" name="ref" value={ activeRef }/>
+										<textarea
+											id="composer-input"
+											name="content"
+											rows="3"
+											placeholder="Message… (⌘↵ or Ctrl↵ to commit)"
+											class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+											x-model="draft"
+											@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+											@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+										></textarea>
+										<div class="flex justify-between items-center mt-2">
+											<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
+											<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
+											<button
+												id="composer-submit"
+												type="submit"
+												class="btn-accent text-ui-code"
+												:disabled="streaming || !draft.trim()"
+											>Commit</button>
+										</div>
+									</form>
 								</div>
 							</div>
 						</div>
@@ -154,7 +202,9 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 			<!-- RIGHT SIDEBAR: Node panel -->
 			<aside
 				id="node-panel"
-				class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0 w-[280px]"
+				style="transition:width .15s ease"
+				:style="nodePanel ? 'width:280px' : 'width:0'"
+				class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0"
 				hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
 				hx-trigger="load"
 				hx-swap="innerHTML"
@@ -163,104 +213,61 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 			</aside>
 		</div>
 		<script>
-			// Shared SSE stream reader — parses `event: X\ndata: Y\n\n` format.
-			function parseSseStream(reader, onEvent) {
-				const dec = new TextDecoder();
-				let buf = '';
-				let eventName = '';
-
-				async function pump() {
-					const { done, value } = await reader.read();
-					if (done) return;
-					buf += dec.decode(value, { stream: true });
-
-					const lines = buf.split('\n');
-					buf = lines.pop() ?? '';
-
-					for (const line of lines) {
-						if (line.startsWith('event: ')) {
-							eventName = line.slice(7).trim();
-						} else if (line.startsWith('data: ')) {
-							onEvent(eventName, line.slice(6));
-							eventName = '';
-						}
-					}
-					return pump();
+			(function() {
+				// Bridge HTMX SSE lifecycle → Alpine custom events for streaming state.
+				// Also stops the chunk MutationObserver registered below.
+				function onStreamEnd() {
+					stopObserving();
+					document.dispatchEvent(new CustomEvent('forge:streaming-end'));
 				}
-				return pump();
-			}
+				document.body.addEventListener('htmx:sseClose', onStreamEnd);
+				document.body.addEventListener('htmx:sseError', onStreamEnd);
 
-			function composer(sessionId) {
-				return {
-					streaming: false,
-					streamBuffer: '',
-					draft: '',
+				// Auto-scroll session-main to bottom when chat content updates.
+				function scrollToBottom() {
+					const main = document.getElementById('session-main');
+					if (main) main.scrollTop = main.scrollHeight;
+				}
 
-					async send() {
-						const content = this.draft.trim();
-						if (!content || this.streaming) return;
+				// For SSE chunks: MutationObserver on #stream-content fires synchronously
+				// on every DOM mutation, bypassing HTMX's event system entirely.
+				let chunkObserver = null;
+				function observeStreamContent() {
+					const el = document.getElementById('stream-content');
+					if (!el || chunkObserver) return;
+					chunkObserver = new MutationObserver(scrollToBottom);
+					chunkObserver.observe(el, { childList: true, subtree: true });
+				}
+				function stopObserving() {
+					if (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }
+				}
 
-						const ref = document.querySelector('input[name=ref]')?.value ?? '';
-						this.draft = '';
-						this.streaming = true;
-						this.streamBuffer = '';
-
-						try {
-							const resp = await fetch(`/ui/sessions/${sessionId}/commit`, {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-								body: new URLSearchParams({ content, ref }),
-							});
-
-							if (!resp.ok || !resp.body) {
-								this.streaming = false;
-								console.error('Commit failed:', resp.status);
-								return;
-							}
-
-							await parseSseStream(resp.body.getReader(), (event, data) => {
-								if (event === 'chunk') {
-									this.streamBuffer += data;
-								} else if (event === 'done') {
-									this.streaming = false;
-									this.streamBuffer = '';
-									// Reload thread + mini-dag via HTMX
-									htmx.ajax('GET', window.location.href, {
-										target: '#thread',
-										swap: 'innerHTML',
-										select: '#thread',
-									});
-									htmx.ajax('GET', `/ui/sessions/${sessionId}/dag/mini`, {
-										target: '#mini-dag',
-										swap: 'innerHTML',
-									});
-									htmx.ajax('GET', `/ui/sessions/${sessionId}/refs`, {
-										target: '#refs-panel',
-										swap: 'innerHTML',
-									});
-									htmx.ajax('GET', `/ui/sessions/${sessionId}/node?ref=${ref}`, {
-										target: '#node-panel',
-										swap: 'innerHTML',
-									});
-								} else if (event === 'error') {
-									this.streaming = false;
-									this.streamBuffer = '';
-									console.error('Pipeline error:', data);
-								}
-							});
-						} catch (err) {
-							this.streaming = false;
-							this.streamBuffer = '';
-							console.error('Composer error:', err);
-						}
-					},
-				};
-			}
+				// Set up chunk observer when streaming bubble lands in #stream-area.
+				document.body.addEventListener('htmx:afterSwap', function(e) {
+					const id = e.detail.target?.id;
+					if (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }
+					else if (id === 'thread') { scrollToBottom(); }
+				});
+				// OOB swaps: pending user bubble + done panel updates.
+				document.body.addEventListener('htmx:oobAfterSwap', function(e) {
+					if (e.detail.target?.id === 'thread') scrollToBottom();
+				});
+			})();
 		</script>
-		<!-- Hidden ref input shared across composer instances -->
-		<input type="hidden" name="ref" value={ activeRef } id="active-ref"/>
 		</div> <!-- /x-data wrapper -->
 	}
+}
+
+// Thread renders the message list — returned as a partial by /ui/sessions/:id/thread.
+templ Thread(messages []*RenderedMessage, archived bool) {
+	<div class="max-w-[720px] mx-auto space-y-3">
+		for _, rm := range messages {
+			@MessageBubble(rm)
+		}
+		if archived {
+			<div class="text-center text-ink-4 text-ui-code py-4 border-t border-line-soft">Session archived — read-only</div>
+		}
+	</div>
 }
 
 // MessageBubble dispatches to the appropriate component based on role.

@@ -42,7 +42,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " — Forge</title><link rel=\"stylesheet\" href=\"/ui/assets/app.css\"><script src=\"/ui/assets/htmx.min.js\"></script><script src=\"/ui/assets/marked.min.js\"></script><script src=\"/ui/assets/alpine.min.js\" defer></script></head><body class=\"bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " — Forge</title><link rel=\"stylesheet\" href=\"/ui/assets/app.css\"><script src=\"/ui/assets/htmx.min.js\" defer></script><script src=\"/ui/assets/htmx-ext-sse.js\" defer></script><script src=\"/ui/assets/alpine.min.js\" defer></script></head><body class=\"bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-//go:embed assets/app.css assets/htmx.min.js assets/alpine.min.js assets/marked.min.js
+//go:embed assets/app.css assets/htmx.min.js assets/htmx-ext-sse.js assets/alpine.min.js
 var staticFiles embed.FS
 
 // staticFS returns the embedded assets as an http.FileSystem rooted at "assets/".

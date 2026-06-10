@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"encoding/json"
-	"html"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
 )
 
 type pipelineHandlers struct {
@@ -14,7 +14,6 @@ type pipelineHandlers struct {
 
 func (h *pipelineHandlers) handleCommit() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
 		id := c.Param("id")
 		ref := c.PostForm("ref")
 		content := c.PostForm("content")
@@ -24,56 +23,13 @@ func (h *pipelineHandlers) handleCommit() gin.HandlerFunc {
 			return
 		}
 
-		events, err := h.pipeline.CommitStream(ctx, id, ref, content)
-		if err != nil {
-			c.String(http.StatusInternalServerError, "pipeline error: %v", err)
-			return
-		}
+		token := newStreamToken(id, ref, content)
+		streamURL := fmt.Sprintf("/ui/sessions/%s/stream?token=%s&ref=%s", id, token, ref)
 
-		c.Header("Content-Type", "text/event-stream")
-		c.Header("Cache-Control", "no-cache")
-		c.Header("X-Accel-Buffering", "no")
-		c.Writer.WriteHeader(http.StatusOK)
-
-		flusher, _ := c.Writer.(http.Flusher)
-
-		for ev := range events {
-			switch ev.Type {
-			case "token":
-				var chunk struct {
-					Text string `json:"text"`
-				}
-				if err := json.Unmarshal(ev.Data, &chunk); err == nil {
-					c.SSEvent("chunk", html.EscapeString(chunk.Text))
-				}
-			case "tool_call":
-				var tc struct {
-					Name string `json:"name"`
-				}
-				if err := json.Unmarshal(ev.Data, &tc); err == nil {
-					c.SSEvent("tool", html.EscapeString(tc.Name))
-				}
-			case "done":
-				c.SSEvent("done", "")
-				if flusher != nil {
-					flusher.Flush()
-				}
-				return
-			case "error":
-				var e struct {
-					Message string `json:"message"`
-				}
-				if err := json.Unmarshal(ev.Data, &e); err == nil {
-					c.SSEvent("error", html.EscapeString(e.Message))
-				}
-				if flusher != nil {
-					flusher.Flush()
-				}
-				return
-			}
-			if flusher != nil {
-				flusher.Flush()
-			}
-		}
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.Status(http.StatusOK)
+		_ = tmplsessions.StreamBubble(streamURL).Render(c.Request.Context(), c.Writer)
+		// OOB: immediately show the user's message in #thread before streaming begins.
+		_ = tmplsessions.PendingUserBubble(content).Render(c.Request.Context(), c.Writer)
 	}
 }

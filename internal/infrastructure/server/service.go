@@ -69,6 +69,10 @@ func (s *ServerService) PostInit(ctx context.Context) error {
 
 	s.public.GET("/health", api.Health())
 
+	s.engine.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/ui/sessions")
+	})
+
 	return nil
 }
 

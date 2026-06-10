@@ -205,9 +205,9 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 	return sb.String(), nil
 }
 
-// CommitStream implements PipelineCommitter. Runs the full pipeline turn and
-// returns a channel of WireEvents. The channel is closed when done or on error.
-func (s *PipelineService) CommitStream(ctx context.Context, sessionID, ref, content string) (<-chan WireEvent, error) {
+// CommitEvents implements PipelineCommitter. Returns typed PipelineEvents directly,
+// avoiding the WireEvent marshal/unmarshal round-trip needed by the SSE HTML bridge.
+func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, content string) (<-chan PipelineEvent, error) {
 	meta, err := s.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("resolve session: %w", err)
@@ -215,28 +215,14 @@ func (s *PipelineService) CommitStream(ctx context.Context, sessionID, ref, cont
 	if ref == "" {
 		ref = dag.HEAD
 	}
-
 	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
 	if err != nil {
 		return nil, err
 	}
-
-	raw := make(chan PipelineEvent, 32)
-	out := make(chan WireEvent, 32)
+	out := make(chan PipelineEvent, 32)
 	go func() {
-		if err := s.RunSessionPipeline(ctx, run.sess, raw); err != nil {
-			s.logger.Error("commit_stream pipeline error", "session", meta.ID, "error", err)
-		}
-	}()
-	go func() {
-		defer close(out)
-		for ev := range raw {
-			wire, err := ToWireEvent(ev)
-			if err != nil {
-				s.logger.Error("failed to convert pipeline event to wire", "error", err)
-				continue
-			}
-			out <- wire
+		if err := s.RunSessionPipeline(ctx, run.sess, out); err != nil {
+			s.logger.Error("commit_events pipeline error", "session", meta.ID, "error", err)
 		}
 	}()
 	return out, nil

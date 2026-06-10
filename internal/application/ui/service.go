@@ -43,6 +43,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions", sess.handleCreate())
 	g.GET("/sessions/:id", sess.handleDetail())
 	g.DELETE("/sessions/:id", sess.handleDelete())
+	g.GET("/sessions/:id/thread", sess.handleThread())
 	g.GET("/sessions/:id/node", sess.handleNodePanel())
 
 	refs := &refHandlers{
@@ -57,6 +58,13 @@ func (u *UIService) PostInit(_ context.Context) error {
 		pipeline: u.pipeline,
 	}
 	g.POST("/sessions/:id/commit", pipe.handleCommit())
+
+	stream := &streamHandlers{
+		sessions: u.sessions,
+		renderer: u.renderer,
+		pipeline: u.pipeline,
+	}
+	g.GET("/sessions/:id/stream", stream.handleStream())
 
 	dag := &dagHandlers{
 		sessions: u.sessions,
