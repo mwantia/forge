@@ -54,7 +54,7 @@ func Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) templ.Co
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto p-6\"><div class=\"flex items-center justify-between mb-4\"><h1 class=\"text-lg font-semibold\">Session DAG — ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto p-6 [scrollbar-gutter:stable]\"><div class=\"flex items-center justify-between mb-4\"><h1 class=\"text-lg font-semibold\">Session DAG — ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -12,7 +12,7 @@ import (
 templ Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) {
 	@layout.Base("DAG — " + meta.Name) {
 		@layout.Topbar(meta.Name, "", "")
-		<main class="flex-1 overflow-auto p-6">
+		<main class="flex-1 overflow-auto p-6 [scrollbar-gutter:stable]">
 			<div class="flex items-center justify-between mb-4">
 				<h1 class="text-lg font-semibold">Session DAG — { meta.Name }</h1>
 				<a href={ templ.SafeURL("/ui/sessions/" + meta.ID) } class="btn-ghost text-ui-code">← Back</a>
