@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#0b0c0f"/>
+  <!-- anvil body -->
+  <rect x="56" y="100" width="80" height="28" rx="4" fill="#e8a531"/>
+  <!-- anvil top (horn + face) -->
+  <path d="M44 100 L68 72 L148 72 L148 100 Z" fill="#e8a531"/>
+  <!-- anvil horn -->
+  <path d="M148 80 L172 90 L148 100 Z" fill="#c8891f"/>
+  <!-- anvil base -->
+  <rect x="64" y="128" width="64" height="12" rx="3" fill="#c8891f"/>
+</svg>

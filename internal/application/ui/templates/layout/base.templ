@@ -6,6 +6,8 @@ templ Base(title string) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<meta name="theme-color" content="#e8a531"/>
+			<link rel="manifest" href="/ui/assets/manifest.json"/>
 			<title>{ title } — Forge</title>
 			<link rel="stylesheet" href={ AssetURL("app.css") }/>
 			<script src={ AssetURL("htmx.min.js") } defer></script>
@@ -136,6 +138,11 @@ templ Base(title string) {
 					document.body.addEventListener('htmx:afterSwap', renderContent);
 					document.body.addEventListener('htmx:oobAfterSwap', renderContent);
 				});
+			</script>
+		<script>
+				if ('serviceWorker' in navigator) {
+					navigator.serviceWorker.register('/ui/assets/sw.js', { scope: '/ui/' });
+				}
 			</script>
 		</head>
 		<body hx-boost="true" class="bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden">

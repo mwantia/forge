@@ -76,8 +76,16 @@ func (u *UIService) PostInit(_ context.Context) error {
 	layout.SetAssetVersion(AssetVersion)
 	fileServer := http.FileServer(staticFS())
 	g.GET("/assets/*filepath", func(c *gin.Context) {
-		c.Header("Cache-Control", "public, max-age=31536000, immutable")
-		c.Request.URL.Path = c.Param("filepath")
+		fp := c.Param("filepath")
+		if fp == "/sw.js" {
+			c.Header("Service-Worker-Allowed", "/ui/")
+			c.Header("Cache-Control", "no-cache")
+		} else if fp == "/manifest.json" {
+			c.Header("Cache-Control", "no-cache")
+		} else {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		c.Request.URL.Path = fp
 		c.Request.URL.RawQuery = ""
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})

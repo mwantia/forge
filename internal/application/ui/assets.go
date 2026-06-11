@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-//go:embed assets/app.css assets/htmx.min.js assets/htmx-ext-sse.js assets/alpine.min.js assets/mermaid.min.js
+//go:embed assets/app.css assets/htmx.min.js assets/htmx-ext-sse.js assets/alpine.min.js assets/mermaid.min.js assets/manifest.json assets/icon.svg assets/sw.js
 var staticFiles embed.FS
 
 // AssetVersion is an 8-char content hash over all embedded assets, computed
