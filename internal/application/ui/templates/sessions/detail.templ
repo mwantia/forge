@@ -127,13 +127,12 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				</div>
 				<!-- Session actions -->
 				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
-					<button
-						class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
-						hx-delete={ "/ui/sessions/" + meta.ID }
-						hx-confirm={ "Delete session '" + meta.Name + "'?" }
-						hx-target="body"
-						hx-push-url="/ui/sessions"
-					>
+					<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60">
+						Archive
+					</button>
+					<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+						hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
+						hx-target="body" hx-push-url="/ui/sessions">
 						Delete
 					</button>
 				</div>
