@@ -4,6 +4,7 @@ import domsession "github.com/mwantia/forge/internal/domain/session"
 
 type (
 	SessionMetadata = domsession.SessionMetadata
+	SessionQuery    = domsession.SessionQuery
 	Message         = domsession.Message
 	MessageToolCall = domsession.MessageToolCall
 )

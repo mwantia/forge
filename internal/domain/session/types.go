@@ -6,6 +6,28 @@ import (
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 )
 
+// SessionQuery describes filters and pagination for listing sessions.
+// Nil pointer fields are treated as "no filter".
+type SessionQuery struct {
+	// ParentID restricts to sessions whose Parent == ParentID.
+	// Empty string = no parent filter (includes all sessions regardless of parent).
+	ParentID string
+
+	// Archived filters by archive status.
+	// nil = both; &true = archived only; &false = active only.
+	Archived *bool
+
+	// Search is case-insensitive and matched as a substring against Name and Title.
+	Search string
+
+	// Plugins restricts to sessions that declare all listed plugins.
+	// Sessions with an empty Plugins field are treated as "all plugins" and always match.
+	Plugins []string
+
+	Offset int
+	Limit  int
+}
+
 // SessionMetadata is the mutable descriptor for a session.
 type SessionMetadata struct {
 	ID          string    `json:"id"`

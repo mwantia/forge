@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,18 +31,34 @@ type compactResult struct {
 
 // handleListSessions godoc
 //
-//	@Description	Returns all sessions, optionally filtered by parent ID. Archived sessions are excluded by default.
+//	@Description	Returns sessions matching the given query. Accepts ?search=, ?archived=true|false, ?plugins=a,b, ?parent=, ?offset=, ?limit=.
 func (s *SessionService) handleListSessions() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-		parentID := c.Query("parent")
-		archived := c.Query("archived") == "true"
+
+		q := SessionQuery{
+			ParentID: c.Query("parent"),
+			Search:   c.Query("search"),
+			Offset:   offset,
+			Limit:    limit,
+		}
+		if a := c.Query("archived"); a != "" {
+			v := a == "true"
+			q.Archived = &v
+		}
+		if p := c.Query("plugins"); p != "" {
+			for _, part := range strings.Split(p, ",") {
+				if t := strings.TrimSpace(part); t != "" {
+					q.Plugins = append(q.Plugins, t)
+				}
+			}
+		}
 
 		s.mu.RLock()
 		defer s.mu.RUnlock()
 
-		sessions, err := s.store.ListParentSessions(c.Request.Context(), parentID, archived, offset, limit)
+		sessions, err := s.store.QuerySessions(c.Request.Context(), q)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

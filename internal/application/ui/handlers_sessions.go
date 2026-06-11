@@ -3,8 +3,10 @@ package ui
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	appsession "github.com/mwantia/forge/internal/application/session"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
 )
 
@@ -17,9 +19,25 @@ func (h *sessionHandlers) handleList() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-		archived := c.Query("archived") == "true"
 
-		sessions, err := h.sessions.ListParentSessions(c.Request.Context(), "", archived, offset, limit)
+		q := appsession.SessionQuery{
+			Search: c.Query("search"),
+			Offset: offset,
+			Limit:  limit,
+		}
+		if a := c.Query("archived"); a != "" {
+			v := a == "true"
+			q.Archived = &v
+		}
+		if p := c.Query("plugins"); p != "" {
+			for _, part := range strings.Split(p, ",") {
+				if t := strings.TrimSpace(part); t != "" {
+					q.Plugins = append(q.Plugins, t)
+				}
+			}
+		}
+
+		sessions, err := h.sessions.QuerySessions(c.Request.Context(), q)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "failed to list sessions: %v", err)
 			return
@@ -27,7 +45,7 @@ func (h *sessionHandlers) handleList() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.List(sessions, archived).Render(c.Request.Context(), c.Writer)
+		_ = tmplsessions.List(sessions).Render(c.Request.Context(), c.Writer)
 	}
 }
 

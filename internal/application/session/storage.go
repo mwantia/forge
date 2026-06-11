@@ -113,37 +113,107 @@ func (m *DagStore) DeleteSession(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *DagStore) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+// QuerySessions returns sessions matching q, sorted by UpdatedAt descending.
+func (m *DagStore) QuerySessions(ctx context.Context, q SessionQuery) ([]*SessionMetadata, error) {
 	entries, err := m.storage.ListEntry(ctx, "sessions/")
 	if err != nil {
 		return nil, err
 	}
 
-	sessions := make([]*SessionMetadata, 0)
+	searchLower := strings.ToLower(q.Search)
+	sessions := make([]*SessionMetadata, 0, len(entries))
+
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry, "/") {
 			continue
 		}
-
-		id := strings.TrimSuffix(entry, "/")
-		meta, err := m.LoadSession(ctx, id)
+		meta, err := m.LoadSession(ctx, strings.TrimSuffix(entry, "/"))
 		if err != nil {
 			continue
 		}
-
-		if parentID != "" && meta.Parent != parentID {
+		if q.ParentID != "" && meta.Parent != q.ParentID {
 			continue
 		}
-
-		if archived != (meta.ArchivedAt != nil) {
+		if q.Archived != nil && *q.Archived != (meta.ArchivedAt != nil) {
 			continue
 		}
-
+		if searchLower != "" {
+			if !strings.Contains(strings.ToLower(meta.Name), searchLower) &&
+				!strings.Contains(strings.ToLower(meta.Title), searchLower) {
+				continue
+			}
+		}
+		if len(q.Plugins) > 0 && len(meta.Plugins) > 0 {
+			if !pluginsMatch(meta.Plugins, q.Plugins) {
+				continue
+			}
+		}
 		sessions = append(sessions, meta)
 	}
 
 	sort.Slice(sessions, func(i, j int) bool {
-		return sessions[i].CreatedAt.After(sessions[j].CreatedAt)
+		return sessions[i].UpdatedAt.After(sessions[j].UpdatedAt)
+	})
+
+	if q.Offset > 0 {
+		if q.Offset >= len(sessions) {
+			return []*SessionMetadata{}, nil
+		}
+		sessions = sessions[q.Offset:]
+	}
+	if q.Limit > 0 && q.Limit < len(sessions) {
+		sessions = sessions[:q.Limit]
+	}
+	return sessions, nil
+}
+
+// pluginsMatch reports whether sessionPlugins contains every plugin in required.
+func pluginsMatch(sessionPlugins, required []string) bool {
+	have := make(map[string]struct{}, len(sessionPlugins))
+	for _, p := range sessionPlugins {
+		have[strings.ToLower(p)] = struct{}{}
+	}
+	for _, p := range required {
+		if _, ok := have[strings.ToLower(p)]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *DagStore) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+	return m.QuerySessions(ctx, SessionQuery{ParentID: parentID, Archived: &archived, Offset: offset, Limit: limit})
+}
+
+func (m *DagStore) ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error) {
+	return m.ListParentSessions(ctx, "", archived, offset, limit)
+}
+
+// ListAllSessions returns all top-level sessions (archived and active) sorted
+// by UpdatedAt descending.
+func (m *DagStore) ListAllSessions(ctx context.Context, offset, limit int) ([]*SessionMetadata, error) {
+	entries, err := m.storage.ListEntry(ctx, "sessions/")
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]*SessionMetadata, 0, len(entries))
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry, "/") {
+			continue
+		}
+		meta, err := m.LoadSession(ctx, strings.TrimSuffix(entry, "/"))
+		if err != nil {
+			continue
+		}
+		if meta.Parent != "" {
+			continue
+		}
+		sessions = append(sessions, meta)
+	}
+
+	sort.Slice(sessions, func(i, j int) bool {
+		return sessions[i].UpdatedAt.After(sessions[j].UpdatedAt)
 	})
 
 	if offset > 0 {
@@ -152,16 +222,10 @@ func (m *DagStore) ListParentSessions(ctx context.Context, parentID string, arch
 		}
 		sessions = sessions[offset:]
 	}
-
 	if limit > 0 && limit < len(sessions) {
 		sessions = sessions[:limit]
 	}
-
 	return sessions, nil
-}
-
-func (m *DagStore) ListSessions(ctx context.Context, archived bool, offset, limit int) ([]*SessionMetadata, error) {
-	return m.ListParentSessions(ctx, "", archived, offset, limit)
 }
 
 func (m *DagStore) FindSessionByName(ctx context.Context, name string) (*SessionMetadata, error) {

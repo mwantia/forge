@@ -13,6 +13,7 @@ import (
 type sessionReader interface {
 	domsession.SessionManager
 	ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*appsession.SessionMetadata, error)
+	QuerySessions(ctx context.Context, q appsession.SessionQuery) ([]*appsession.SessionMetadata, error)
 	CreateSession(ctx context.Context, model, name, title, description, parent, toolsVerbosity string, plugins []string) (*appsession.SessionMetadata, error)
 	DeleteSession(ctx context.Context, idOrName string) error
 }

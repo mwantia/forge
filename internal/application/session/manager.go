@@ -301,12 +301,17 @@ func (s *SessionService) CheckoutRef(ctx context.Context, sessionID, targetBranc
 	return s.store.refs.WriteSymRef(ctx, sessionID, dag.HEAD, targetBranch)
 }
 
+// QuerySessions returns sessions matching q, sorted by UpdatedAt descending.
+func (s *SessionService) QuerySessions(ctx context.Context, q SessionQuery) ([]*SessionMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.store.QuerySessions(ctx, q)
+}
+
 // ListParentSessions returns top-level sessions (parentID="") or children of
 // a given parent, optionally including archived sessions.
 func (s *SessionService) ListParentSessions(ctx context.Context, parentID string, archived bool, offset, limit int) ([]*SessionMetadata, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.store.ListParentSessions(ctx, parentID, archived, offset, limit)
+	return s.QuerySessions(ctx, SessionQuery{ParentID: parentID, Archived: &archived, Offset: offset, Limit: limit})
 }
 
 // CreateSession creates a new session and initialises its HEAD ref.
