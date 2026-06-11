@@ -7,12 +7,138 @@ templ Base(title string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } — Forge</title>
-			<link rel="stylesheet" href="/ui/assets/app.css"/>
-			<script src="/ui/assets/htmx.min.js" defer></script>
-			<script src="/ui/assets/htmx-ext-sse.js" defer></script>
-			<script src="/ui/assets/alpine.min.js" defer></script>
+			<link rel="stylesheet" href={ AssetURL("app.css") }/>
+			<script src={ AssetURL("htmx.min.js") } defer></script>
+			<script src={ AssetURL("htmx-ext-sse.js") } defer></script>
+			<script src={ AssetURL("alpine.min.js") } defer></script>
+			<script src={ AssetURL("mermaid.min.js") }></script>
+			<script>
+				mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: {
+					background:          '#0b0c0f',
+					primaryColor:        '#15181f',
+					primaryTextColor:    '#e6e7ea',
+					lineColor:           '#262a33',
+					edgeLabelBackground: '#111318',
+				}});
+
+				// ── Shared fullscreen overlay ────────────────────────────────────
+				function openFullscreen(preparedEl) {
+					var overlay = document.getElementById('fs-overlay');
+					if (!overlay) {
+						overlay = document.createElement('div');
+						overlay.id = 'fs-overlay';
+						overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(11,12,15,.92);align-items:center;justify-content:center;cursor:zoom-out';
+						overlay.addEventListener('click', closeFullscreen);
+
+						var inner = document.createElement('div');
+						inner.id = 'fs-inner';
+						inner.style.cssText = 'position:relative;width:88vw;height:82vh;overflow:auto;cursor:default;border-radius:8px;border:1px solid #262a33;background:#111318;padding:32px 16px 16px';
+						inner.addEventListener('click', function(e) { e.stopPropagation(); });
+
+						var closeBtn = document.createElement('button');
+						closeBtn.type = 'button';
+						closeBtn.title = 'Close';
+						closeBtn.style.cssText = 'position:absolute;top:8px;right:8px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:none;background:transparent;cursor:pointer;color:#565963;transition:color .1s;z-index:1';
+						closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+						closeBtn.addEventListener('mouseenter', function() { this.style.color = '#e6e7ea'; });
+						closeBtn.addEventListener('mouseleave', function() { this.style.color = '#565963'; });
+						closeBtn.addEventListener('click', closeFullscreen);
+
+						inner.appendChild(closeBtn);
+						overlay.appendChild(inner);
+						document.body.appendChild(overlay);
+						document.addEventListener('keydown', function(e) {
+							if (e.key === 'Escape') closeFullscreen();
+						});
+					}
+					var inner = document.getElementById('fs-inner');
+					var existing = inner.querySelector('.fs-content');
+					if (existing) existing.remove();
+					var wrap = document.createElement('div');
+					wrap.className = 'fs-content';
+					wrap.style.cssText = 'width:100%;height:100%';
+					wrap.appendChild(preparedEl);
+					inner.appendChild(wrap);
+					overlay.style.display = 'flex';
+					document.body.style.overflow = 'hidden';
+				}
+
+				function closeFullscreen() {
+					var overlay = document.getElementById('fs-overlay');
+					if (overlay) overlay.style.display = 'none';
+					document.body.style.overflow = '';
+				}
+
+				// ── Per-type fullscreen helpers ───────────────────────────────────
+				function fsExpandIcon() {
+					return '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+				}
+
+				function makeFullscreenBtn(onClickFn) {
+					var btn = document.createElement('button');
+					btn.type = 'button';
+					btn.title = 'Fullscreen';
+					btn.style.cssText = 'position:absolute;top:6px;right:6px;opacity:0;transition:opacity .15s,color .1s;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:none;background:transparent;cursor:pointer;color:#565963';
+					btn.innerHTML = fsExpandIcon();
+					btn.addEventListener('mouseenter', function() { this.style.color = '#b9bcc4'; });
+					btn.addEventListener('mouseleave', function() { this.style.color = '#565963'; });
+					btn.addEventListener('click', onClickFn);
+					return btn;
+				}
+
+				function wrapWithFullscreenBtn(target, onClickFn) {
+					var wrapper = document.createElement('div');
+					wrapper.style.cssText = 'position:relative;display:block;max-width:100%';
+					var btn = makeFullscreenBtn(onClickFn);
+					wrapper.addEventListener('mouseenter', function() { btn.style.opacity = '1'; });
+					wrapper.addEventListener('mouseleave', function() { btn.style.opacity = '0'; });
+					target.replaceWith(wrapper);
+					wrapper.appendChild(target);
+					wrapper.appendChild(btn);
+					return wrapper;
+				}
+
+				// ── Content rendering ─────────────────────────────────────────────
+				document.addEventListener('DOMContentLoaded', function() {
+					function renderContent() {
+						// Mermaid diagrams
+						document.querySelectorAll('pre > code.language-mermaid').forEach(function(el) {
+							var pre = document.createElement('pre');
+							pre.className = 'mermaid';
+							pre.textContent = el.textContent;
+							el.closest('pre').replaceWith(pre);
+							wrapWithFullscreenBtn(pre, function() {
+								var svg = pre.parentElement.querySelector('svg');
+								if (!svg) return;
+								var clone = svg.cloneNode(true);
+								clone.removeAttribute('width');
+								clone.removeAttribute('height');
+								clone.style.cssText = 'display:block;width:100%;height:100%';
+								openFullscreen(clone);
+							});
+						});
+						mermaid.run();
+
+						// Code blocks (non-mermaid, not already wrapped)
+						document.querySelectorAll('pre:not([data-fs]) > code').forEach(function(el) {
+							var pre = el.closest('pre');
+							if (pre.parentElement && pre.parentElement.style.position === 'relative') return;
+							pre.setAttribute('data-fs', '1');
+							wrapWithFullscreenBtn(pre, function() {
+								var clone = pre.cloneNode(true);
+								clone.removeAttribute('data-fs');
+								clone.style.cssText = 'margin:0;width:100%;min-height:100%;white-space:pre;overflow-x:auto;font-size:13px;line-height:1.55;color:#b9bcc4;font-family:monospace';
+								openFullscreen(clone);
+							});
+						});
+					}
+					renderContent();
+					document.body.addEventListener('htmx:afterSwap', renderContent);
+					document.body.addEventListener('htmx:oobAfterSwap', renderContent);
+				});
+			</script>
 		</head>
-		<body class="bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden">
+		<body hx-boost="true" class="bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden">
 			{ children... }
 		</body>
 	</html>

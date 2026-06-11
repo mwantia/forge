@@ -18,12 +18,7 @@ templ Panel(sessionID string, refs map[string]string) {
 			hx-swap="innerHTML"
 			class="flex gap-1"
 		>
-			<input
-				type="hidden"
-				name="hash"
-				hx-get={ "/ui/sessions/" + sessionID + "/refs/_head_hash" }
-				hx-trigger="load"
-			/>
+			<input type="hidden" name="hash" value={ refs["HEAD"] }/>
 			<input
 				type="text"
 				name="name"

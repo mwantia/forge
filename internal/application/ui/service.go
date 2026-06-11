@@ -11,6 +11,7 @@ import (
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
 
 type UIService struct {
@@ -72,7 +73,14 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.GET("/sessions/:id/dag", dag.handleFull())
 	g.GET("/sessions/:id/dag/mini", dag.handleMini())
 
-	g.StaticFS("/assets", staticFS())
+	layout.SetAssetVersion(AssetVersion)
+	fileServer := http.FileServer(staticFS())
+	g.GET("/assets/*filepath", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		c.Request.URL.Path = c.Param("filepath")
+		c.Request.URL.RawQuery = ""
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	})
 
 	u.logger.Debug("Initialized ui service...")
 
