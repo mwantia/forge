@@ -44,6 +44,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions", sess.handleCreate())
 	g.GET("/sessions/:id", sess.handleDetail())
 	g.DELETE("/sessions/:id", sess.handleDelete())
+	g.POST("/sessions/:id/archive", sess.handleArchive())
 	g.GET("/sessions/:id/thread", sess.handleThread())
 	g.GET("/sessions/:id/node", sess.handleNodePanel())
 

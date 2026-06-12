@@ -89,6 +89,15 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				:style="sidebar ? 'width:280px' : 'width:0'"
 				class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
 			>
+				<!-- Session info footer -->
+				<div class="px-3 py-3 border-b border-line-soft space-y-1 shrink-0">
+					if meta.Title != "" {
+						<div class="text-accent text-ui-ctrl font-medium truncate" title={ meta.Title }>{ meta.Title }</div>
+					}
+					if meta.Description != "" {
+						<div class="text-ui-meta text-ink-3 line-clamp-4" title={ meta.Description }>{ meta.Description }</div>
+					}
+				</div>
 				<!-- Mini DAG header -->
 				<div class="flex items-center justify-between px-3 py-2 border-b border-line-soft">
 					<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
@@ -103,7 +112,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
 					hx-trigger="load"
 					hx-swap="innerHTML"
-					class="shrink-0 border-b border-line-soft overflow-hidden max-h-[200px]"
+					class="shrink-0 border-b border-line-soft overflow-y-auto max-h-[240px]"
 				>
 					<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
 				</div>
@@ -117,24 +126,27 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				>
 					<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
 				</div>
-				<!-- Session info footer -->
-				<div class="px-3 py-3 border-t border-line-soft space-y-1 shrink-0">
-					<div class="font-mono text-ui-meta text-ink-4">{ meta.Model }</div>
-					if meta.Description != "" {
-						<div class="text-ui-meta text-ink-3 truncate" title={ meta.Description }>{ meta.Description }</div>
-					}
-					<div class="text-ui-meta text-ink-4">Updated { relativeTime(meta.UpdatedAt) }</div>
-				</div>
 				<!-- Session actions -->
 				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
-					<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60">
-						Archive
-					</button>
-					<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
-						hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
-						hx-target="body" hx-push-url="/ui/sessions">
-						Delete
-					</button>
+					if meta.ArchivedAt == nil {
+						<button class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
+							hx-post={ "/ui/sessions/" + meta.ID + "/archive" }
+							hx-confirm={ "Archive session '" + meta.Name + "'? It will become read-only." }
+							hx-target="body" hx-push-url={ "/ui/sessions/" + meta.ID }>
+							Archive
+						</button>
+					} else {
+						<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Archived</span>
+					}
+					if meta.ArchivedAt != nil {
+						<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+							hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
+							hx-target="body" hx-push-url="/ui/sessions">
+							Delete
+						</button>
+					} else {
+						<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Delete</span>
+					}
 				</div>
 			</aside>
 			<!-- MAIN AREA: single scroll container; composer is sticky bottom -->

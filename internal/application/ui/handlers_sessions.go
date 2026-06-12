@@ -188,6 +188,27 @@ func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
 	}
 }
 
+func (h *sessionHandlers) handleArchive() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found: %v", err)
+			return
+		}
+
+		if _, err := h.sessions.ArchiveSession(ctx, meta.ID, "HEAD", ""); err != nil {
+			c.String(http.StatusInternalServerError, "archive failed: %v", err)
+			return
+		}
+
+		c.Header("HX-Redirect", "/ui/sessions/"+meta.ID)
+		c.Status(http.StatusOK)
+	}
+}
+
 // resolveActiveRef returns the best display branch name from the refs map.
 func resolveActiveRef(refs map[string]string, requested string) string {
 	if requested != "" && requested != "HEAD" {

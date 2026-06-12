@@ -16,6 +16,7 @@ type sessionReader interface {
 	QuerySessions(ctx context.Context, q appsession.SessionQuery) ([]*appsession.SessionMetadata, error)
 	CreateSession(ctx context.Context, model, name, title, description, parent, toolsVerbosity string, plugins []string) (*appsession.SessionMetadata, error)
 	DeleteSession(ctx context.Context, idOrName string) error
+	ArchiveSession(ctx context.Context, sessionID, refName, name string) (*appsession.ArchiveResult, error)
 }
 
 // pipelineCommitter aliases the pipeline package interface to avoid re-declaring it.
