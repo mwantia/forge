@@ -53,26 +53,14 @@ func (s *SessionService) PostInit(ctx context.Context) error {
 
 	s.store = NewDagStore(s.storage)
 
-	metadata := domtool.NamespaceMetadata{
-		Description: "Built-in session bookkeeping: title/description, sub-session creation, message history.",
-		Builtin:     true,
-		System: `
-Built-in session tools manage the conversation's own metadata and any sub-sessions you spawn. Update title/description when the topic crystallises so the user can navigate session lists.
-Read message history only when context truly requires it — the active conversation is already in your context window.
-`,
-	}
-	if err := s.tools.RegisterNamespaceMetadata(ServiceNamespace, metadata); err != nil {
-		return fmt.Errorf("failed to register namespace metadata for %q: %w", ServiceNamespace, err)
-	}
-
 	for _, definition := range ToolsDefinitions {
 		captured := definition
 		exec := func(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
 			req.Tool = captured.Name
 			return s.ExecuteTool(ctx, req)
 		}
-		if err := s.tools.RegisterTool(ServiceNamespace, definition, exec); err != nil {
-			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, ServiceNamespace, err)
+		if err := s.tools.RegisterTool("builtin", definition, exec); err != nil {
+			return fmt.Errorf("failed to register tool %q under builtin namespace: %w", definition.Name, err)
 		}
 	}
 
@@ -100,6 +88,8 @@ Read message history only when context truly requires it — the active conversa
 		group.POST("/:session_id/refs/:ref/revert", s.handleRevertRef())
 		// /v1/sessions/:session_id/messages/:msg_id/diff?to=<hash_b>
 		group.GET("/:session_id/messages/:msg_id/diff", s.handleMessageDiff())
+		// /v1/sessions/:session_id/plugins/:name
+		group.PATCH("/:session_id/plugins/:name", s.handleUpdatePlugin())
 		// /v1/sessions/:session_id/archive|clone
 		group.POST("/:session_id/archive", s.handleArchiveSession())
 		group.POST("/:session_id/clone", s.handleCloneSession())

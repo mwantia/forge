@@ -13,14 +13,13 @@ import (
 )
 
 type createSessionRequest struct {
-	Model          string   `json:"model"           binding:"required"`
-	Name           string   `json:"name"`
-	Title          string   `json:"title"`
-	Description    string   `json:"description"`
-	Parent         string   `json:"parent"`
-	ToolsVerbosity string   `json:"tools_verbosity"`
-	Plugins        []string `json:"plugins"`
-	Template       string   `json:"template"`
+	Model       string   `json:"model"           binding:"required"`
+	Name        string   `json:"name"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Parent      string   `json:"parent"`
+	Plugins     []string `json:"plugins"`
+	Template    string   `json:"template"`
 }
 
 type compactResult struct {
@@ -94,16 +93,15 @@ func (s *SessionService) handleCreateSession() gin.HandlerFunc {
 
 		now := time.Now()
 		meta := &SessionMetadata{
-			ID:             DeriveSessionID(name, now.UnixNano(), req.Parent),
-			Name:           name,
-			Title:          req.Title,
-			Description:    req.Description,
-			Parent:         req.Parent,
-			Model:          req.Model,
-			ToolsVerbosity: req.ToolsVerbosity,
-			Plugins:        req.Plugins,
-			CreatedAt:      now,
-			UpdatedAt:      now,
+			ID:          DeriveSessionID(name, now.UnixNano(), req.Parent),
+			Name:        name,
+			Title:       req.Title,
+			Description: req.Description,
+			Parent:      req.Parent,
+			Model:       req.Model,
+			Plugins:     PluginConfigsFromNames(req.Plugins),
+			CreatedAt:   now,
+			UpdatedAt:   now,
 		}
 
 		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
@@ -323,6 +321,98 @@ func (s *SessionService) handleDeleteSession() gin.HandlerFunc {
 		}
 		SessionsTotal.WithLabelValues("delete").Inc()
 		c.Status(http.StatusNoContent)
+	}
+}
+
+type updatePluginRequest struct {
+	Enabled  *bool `json:"enabled"`
+	Verbose  *bool `json:"verbose"`
+	Disabled *bool `json:"disabled"`
+}
+
+// handleUpdatePlugin godoc
+//
+//	@Description	Patches a single plugin's activation state (enabled/verbose/disabled) within a session.
+func (s *SessionService) handleUpdatePlugin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pluginName := strings.ToLower(strings.TrimSpace(c.Param("name")))
+		if pluginName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "plugin name is required"})
+			return
+		}
+
+		var req updatePluginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		meta, err := s.resolveSessionLocked(c.Request.Context(), c.Param("session_id"))
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		if meta.ArchivedAt != nil {
+			c.JSON(http.StatusConflict, gin.H{"error": ErrSessionArchived.Error()})
+			return
+		}
+
+		found := false
+		for i, p := range meta.Plugins {
+			if strings.ToLower(p.Name) == pluginName {
+				if req.Enabled != nil {
+					meta.Plugins[i].Enabled = *req.Enabled
+					if *req.Enabled {
+						meta.Plugins[i].Disabled = false
+					}
+				}
+
+				if req.Disabled != nil {
+					meta.Plugins[i].Disabled = *req.Disabled
+					if *req.Disabled {
+						meta.Plugins[i].Enabled = false
+					}
+				}
+
+				if req.Verbose != nil {
+					meta.Plugins[i].Verbose = *req.Verbose
+				}
+
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg := PluginConfig{Name: pluginName}
+			if req.Enabled != nil {
+				cfg.Enabled = *req.Enabled
+			}
+
+			if req.Disabled != nil {
+				cfg.Disabled = *req.Disabled
+				if cfg.Disabled {
+					cfg.Enabled = false
+				}
+			}
+
+			if req.Verbose != nil {
+				cfg.Verbose = *req.Verbose
+			}
+
+			meta.Plugins = append(meta.Plugins, cfg)
+		}
+
+		meta.UpdatedAt = time.Now()
+		if err := s.store.SaveSession(c.Request.Context(), meta); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		
+		c.JSON(http.StatusOK, meta)
 	}
 }
 

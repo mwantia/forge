@@ -315,7 +315,7 @@ func (s *SessionService) ListParentSessions(ctx context.Context, parentID string
 }
 
 // CreateSession creates a new session and initialises its HEAD ref.
-func (s *SessionService) CreateSession(ctx context.Context, model, name, title, description, parent, toolsVerbosity string, plugins []string) (*SessionMetadata, error) {
+func (s *SessionService) CreateSession(ctx context.Context, model, name, title, description, parent string, plugins []PluginConfig) (*SessionMetadata, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if name == "" {
@@ -326,16 +326,15 @@ func (s *SessionService) CreateSession(ctx context.Context, model, name, title, 
 	}
 	now := time.Now()
 	meta := &SessionMetadata{
-		ID:             DeriveSessionID(name, now.UnixNano(), parent),
-		Name:           name,
-		Title:          title,
-		Description:    description,
-		Parent:         parent,
-		Model:          model,
-		ToolsVerbosity: toolsVerbosity,
-		Plugins:        plugins,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:          DeriveSessionID(name, now.UnixNano(), parent),
+		Name:        name,
+		Title:       title,
+		Description: description,
+		Parent:      parent,
+		Model:       model,
+		Plugins:     plugins,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		return nil, fmt.Errorf("save session: %w", err)

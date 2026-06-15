@@ -167,11 +167,11 @@ func (m *DagStore) QuerySessions(ctx context.Context, q SessionQuery) ([]*Sessio
 	return sessions, nil
 }
 
-// pluginsMatch reports whether sessionPlugins contains every plugin in required.
-func pluginsMatch(sessionPlugins, required []string) bool {
+// pluginsMatch reports whether sessionPlugins contains every plugin name in required.
+func pluginsMatch(sessionPlugins []PluginConfig, required []string) bool {
 	have := make(map[string]struct{}, len(sessionPlugins))
 	for _, p := range sessionPlugins {
-		have[strings.ToLower(p)] = struct{}{}
+		have[strings.ToLower(p.Name)] = struct{}{}
 	}
 	for _, p := range required {
 		if _, ok := have[strings.ToLower(p)]; !ok {

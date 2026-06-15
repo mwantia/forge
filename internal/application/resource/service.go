@@ -64,22 +64,14 @@ func (s *ResourceService) PostInit(ctx context.Context) error {
 		s.logger.Debug("Resolved resource embed model", "alias", s.config.EmbedModel, "provider", p, "model", m)
 	}
 
-	const namespace = "resource"
-	if err := s.tools.RegisterNamespaceMetadata(namespace, domtool.NamespaceMetadata{
-		Description: "Built-in long-term resource store: persist and semantically retrieve context across sessions.",
-		Builtin:     true,
-		System:      `Built-in resources persist context across turns and sessions, indexed for semantic retrieval. Store facts the user wants remembered (preferences, project context, recurring constraints) — not transient turn details. Retrieve before answering when the question references prior work that may not be in the current message history. Path defaults to the caller session (/sessions/<id>); use /global for agent-wide facts or any explicit path to share across sessions.`,
-	}); err != nil {
-		return fmt.Errorf("failed to register namespace metadata for %q: %w", namespace, err)
-	}
 	for _, definition := range ToolsDefinitions {
 		capturedDef := definition
 		exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
 			req.Tool = capturedDef.Name
 			return s.ExecuteTool(ctx, req)
 		}
-		if err := s.tools.RegisterTool(namespace, definition, exec); err != nil {
-			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, namespace, err)
+		if err := s.tools.RegisterTool("builtin", definition, exec); err != nil {
+			return fmt.Errorf("failed to register tool %q under builtin namespace: %w", definition.Name, err)
 		}
 	}
 

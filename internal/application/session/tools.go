@@ -13,56 +13,44 @@ import (
 func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
 	args := request.Args.AsMap()
 	switch request.Tool {
-	case "update_session_title":
-		return s.execUpdateSessionField(ctx, args, "title")
+	case "update_session":
+		return s.execUpdateSession(ctx, args)
 
-	case "update_session_description":
-		return s.execUpdateSessionField(ctx, args, "description")
-
-	case "read_session":
-		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
-		if err != nil {
-			return nil, err
-		}
-		s.mu.RLock()
-		meta, err := s.store.LoadSession(ctx, sessionID)
-		s.mu.RUnlock()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load session: %w", err)
-		}
-
-		return &plugins.ExecuteResponse{
-			Result: meta,
-		}, nil
-
-	case "list_sub_sessions":
+	case "query_sessions":
 		parent, ok := ArgString(args, "parent")
 		if !ok {
 			parent = CallerSessionID(ctx)
 		}
 		offset := ArgInt(args, "offset", 0)
 		limit := ArgInt(args, "limit", 20)
-		s.mu.RLock()
-		sessions, err := s.store.ListParentSessions(ctx, parent, false, offset, limit)
-		s.mu.RUnlock()
-		if err != nil {
-			return nil, fmt.Errorf("failed to list sub-sessions: %w", err)
+
+		// archived param: absent = active only; true = archived; false = active
+		archived := false
+		if v, ok := args["archived"]; ok {
+			if b, ok := v.(bool); ok {
+				archived = b
+			}
 		}
 
-		return &plugins.ExecuteResponse{
-			Result: sessions,
-		}, nil
+		s.mu.RLock()
+		sessions, err := s.store.ListParentSessions(ctx, parent, archived, offset, limit)
+		s.mu.RUnlock()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list sessions: %w", err)
+		}
+		return &plugins.ExecuteResponse{Result: sessions}, nil
 
 	case "create_session":
 		return s.execCreateSession(ctx, args)
 
-	case "list_message_history":
+	case "query_messages":
 		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 		if err != nil {
 			return nil, err
 		}
 		offset := ArgInt(args, "offset", 0)
 		limit := ArgInt(args, "limit", 50)
+
 		s.mu.RLock()
 		msgs, err := s.store.ListMessages(ctx, sessionID, offset, limit)
 		s.mu.RUnlock()
@@ -70,9 +58,29 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 			return nil, fmt.Errorf("failed to list messages: %w", err)
 		}
 
-		return &plugins.ExecuteResponse{
-			Result: msgs,
-		}, nil
+		// Post-fetch filtering.
+		role, hasRoleFilter := ArgString(args, "role")
+		hasToolCallsFilter, filterToolCalls := args["has_tool_calls"]
+		wantToolCalls, _ := hasToolCallsFilter.(bool)
+
+		if hasRoleFilter || filterToolCalls {
+			filtered := msgs[:0:0]
+			for _, m := range msgs {
+				if hasRoleFilter && !strings.EqualFold(m.Role, role) {
+					continue
+				}
+
+				if filterToolCalls && wantToolCalls != (len(m.ToolCalls) > 0) {
+					continue
+				}
+
+				filtered = append(filtered, m)
+			}
+
+			msgs = filtered
+		}
+
+		return &plugins.ExecuteResponse{Result: msgs}, nil
 
 	case "archive_session":
 		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
@@ -86,50 +94,32 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		}
 		return &plugins.ExecuteResponse{Result: res}, nil
 
-	case "clone_archived_session":
+	case "clone_session":
 		sourceID, ok := ArgString(args, "source_id")
 		if !ok {
-			return nil, fmt.Errorf("missing argument %q", "source_id")
+			sourceID = CallerSessionID(ctx)
 		}
+
+		if sourceID == "" {
+			return nil, fmt.Errorf("missing argument %q and no caller session available", "source_id")
+		}
+
 		name, _ := ArgString(args, "name")
 		clone, err := s.CloneSession(ctx, sourceID, name)
 		if err != nil {
 			return nil, err
 		}
+		
 		return &plugins.ExecuteResponse{Result: clone}, nil
-
-	case "read_message":
-		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
-		if err != nil {
-			return nil, err
-		}
-		msgID, ok := ArgString(args, "message_id")
-		if !ok {
-			return nil, fmt.Errorf("invalid Argument defined for %q", "message_id")
-		}
-		s.mu.RLock()
-		msg, err := s.store.LoadMessage(ctx, sessionID, msgID)
-		s.mu.RUnlock()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load message: %w", err)
-		}
-
-		return &plugins.ExecuteResponse{
-			Result: msg,
-		}, nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", request.Tool, request.CallID)
 }
 
-func (s *SessionService) execUpdateSessionField(ctx context.Context, Args map[string]any, field string) (*plugins.ExecuteResponse, error) {
-	sessionID, err := ResolveSessionArg(ctx, Args, "session_id")
+func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]any) (*plugins.ExecuteResponse, error) {
+	sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 	if err != nil {
 		return nil, err
-	}
-	value, ok := ArgString(Args, field)
-	if !ok {
-		return nil, fmt.Errorf("invalid Argument defined for %q", field)
 	}
 
 	s.mu.Lock()
@@ -140,47 +130,52 @@ func (s *SessionService) execUpdateSessionField(ctx context.Context, Args map[st
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
 
-	switch field {
-	case "title":
-		meta.Title = value
-	case "description":
-		meta.Description = value
+	updated := false
+	if title, ok := ArgString(args, "title"); ok {
+		meta.Title = title
+		updated = true
 	}
-	meta.UpdatedAt = time.Now()
 
+	if desc, ok := ArgString(args, "description"); ok {
+		meta.Description = desc
+		updated = true
+	}
+
+	if !updated {
+		return &plugins.ExecuteResponse{Result: "no fields provided"}, nil
+	}
+
+	meta.UpdatedAt = time.Now()
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		return nil, err
 	}
-	return &plugins.ExecuteResponse{
-		Result: fmt.Sprintf("session %s set to %q", field, value),
-	}, nil
+
+	return &plugins.ExecuteResponse{Result: "session metadata updated"}, nil
 }
 
-func (s *SessionService) execCreateSession(ctx context.Context, Args map[string]any) (*plugins.ExecuteResponse, error) {
-	parentSession := CallerSessionID(ctx)
+func (s *SessionService) execCreateSession(ctx context.Context, args map[string]any) (*plugins.ExecuteResponse, error) {
+	callerID := CallerSessionID(ctx)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var model, title, description, parent string
-	var allowedPlugins []string
-	if parentSession != "" {
-		if p, err := s.store.LoadSession(ctx, parent); err == nil {
-			parent = p.Model
+	// Inherit model from caller session; agent may override via "model" arg.
+	var model string
+	if callerID != "" {
+		if caller, err := s.store.LoadSession(ctx, callerID); err == nil {
+			model = caller.Model
 		}
 	}
-	if str, ok := ArgString(Args, "model"); ok {
+	if str, ok := ArgString(args, "model"); ok && strings.TrimSpace(str) != "" {
 		model = strings.TrimSpace(str)
-	} else {
-		model = strings.TrimSpace(parent)
 	}
 	if model == "" {
-		return nil, fmt.Errorf("missing Argument for %q and no caller session model available", "model")
+		return nil, fmt.Errorf("missing argument %q and no caller session model available", "model")
 	}
 
-	title, _ = ArgString(Args, "title")
-	description, _ = ArgString(Args, "description")
-	allowedPlugins, _ = ArgStringSlice(Args, "plugins")
+	title, _ := ArgString(args, "title")
+	description, _ := ArgString(args, "description")
+	pluginNames, _ := ArgStringSlice(args, "plugins")
 
 	now := time.Now()
 	meta := &SessionMetadata{
@@ -188,17 +183,16 @@ func (s *SessionService) execCreateSession(ctx context.Context, Args map[string]
 		Name:        infratemplate.GenerateUniqueName(),
 		Title:       title,
 		Description: description,
-		Parent:      parent,
+		Parent:      callerID,
 		Model:       model,
-		Plugins:     allowedPlugins,
+		Plugins:     PluginConfigsFromNames(pluginNames),
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
+	
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		return nil, fmt.Errorf("failed to create sub-session: %w", err)
 	}
 
-	return &plugins.ExecuteResponse{
-		Result: meta,
-	}, nil
+	return &plugins.ExecuteResponse{Result: meta}, nil
 }
