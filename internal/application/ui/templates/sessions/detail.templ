@@ -1,74 +1,17 @@
 package tmplsessions
 
 import (
-	"bytes"
-	"encoding/json"
-	"strings"
-	"time"
-
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
 
-// PendingUserBubble is returned alongside StreamBubble as an OOB beforeend swap into
-// #thread. Shows the user's message immediately before the LLM response starts streaming.
-// Replaced by the full thread OOB swap when "done" fires.
-templ PendingUserBubble(content string) {
-	<div id="thread" hx-swap-oob="beforeend">
-		<div class="max-w-[720px] mx-auto mt-3">
-			<div class="flex gap-3 items-start justify-end">
-				<div class="flex flex-col gap-1 items-end max-w-[640px]">
-					<div class="bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap">{ content }</div>
-				</div>
-				<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
-			</div>
-		</div>
-	</div>
-}
-
-// StreamBubble is swapped into #stream-area (innerHTML) by POST /ui/sessions/:id/commit.
-// The inner div opens an SSE connection immediately. Goldmark-rendered HTML blocks arrive
-// as "chunk" events (beforeend). The "done" event removes this div (outerHTML → empty)
-// and OOB-swaps all sidebar panels in one payload.
-templ StreamBubble(streamURL string) {
-	<div
-		id="stream-active"
-		hx-ext="sse"
-		sse-connect={ streamURL }
-		sse-swap="done"
-		hx-swap="outerHTML"
-	>
-		<div class="max-w-[720px] mx-auto flex gap-3 items-start">
-			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-			<div
-				id="stream-content"
-				sse-swap="chunk"
-				hx-swap="beforeend"
-				class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]"
-			>
-				<span class="text-ink-4 text-ui-meta animate-pulse">···</span>
-			</div>
-		</div>
-	</div>
-}
-
 templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs map[string]string, activeRef string) {
 	@layout.Base(meta.Name) {
-		<div
-			x-data="{ sidebar: window.innerWidth >= 768, nodePanel: window.innerWidth >= 1200 }"
-			@resize.window="sidebar = window.innerWidth >= 768; nodePanel = window.innerWidth >= 1200"
-			class="flex flex-col flex-1 overflow-hidden"
-		>
-		<!-- Topbar with sidebar toggle -->
+		<div x-data="{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290 }" @resize.window="sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290" class="flex flex-col flex-1 overflow-hidden">
+		<!-- Topbar -->
 		<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
 			<div class="flex items-center gap-3">
-				<button
-					@click="sidebar = !sidebar"
-					class="w-6 h-6 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2"
-					:title="sidebar ? 'Collapse sidebar' : 'Expand sidebar'"
-				>
+				<button @click="sidebar = !sidebar" class="w-6 h-6 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2" :title="sidebar ? 'Collapse sidebar' : 'Expand sidebar'">
 					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
 					</svg>
@@ -83,13 +26,13 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 		</header>
 		<!-- Content -->
 		<div class="flex flex-1 overflow-hidden">
-			<!-- LEFT SIDEBAR -->
+			<!-- LEFT PANEL: title/description + session info card + plugins + actions -->
 			<aside
 				style="transition:width .15s ease"
 				:style="sidebar ? 'width:280px' : 'width:0'"
 				class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
 			>
-				<!-- Session info footer -->
+				<!-- Title and description -->
 				<div class="px-3 py-3 border-b border-line-soft space-y-1 shrink-0">
 					if meta.Title != "" {
 						<div class="text-accent text-ui-ctrl font-medium truncate" title={ meta.Title }>{ meta.Title }</div>
@@ -98,35 +41,18 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 						<div class="text-ui-meta text-ink-3 line-clamp-4" title={ meta.Description }>{ meta.Description }</div>
 					}
 				</div>
-				<!-- Mini DAG header -->
-				<div class="flex items-center justify-between px-3 py-2 border-b border-line-soft">
-					<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
-					<a
-						href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
-						class="text-ui-meta text-ink-3 hover:text-ink transition-colors"
-					>expand →</a>
-				</div>
-				<!-- Mini DAG thumbnail (HTMX-loaded) -->
+				<!-- Session info card + plugins (HTMX-loaded from /node).
+				     NodePanel response also OOB-updates #siblings-section and #path-section. -->
 				<div
-					id="mini-dag"
-					hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
-					hx-trigger="load"
-					hx-swap="innerHTML"
-					class="shrink-0 border-b border-line-soft overflow-y-auto max-h-[240px]"
-				>
-					<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
-				</div>
-				<!-- Refs panel (HTMX-swappable) -->
-				<div
-					id="refs-panel"
-					hx-get={ "/ui/sessions/" + meta.ID + "/refs" }
-					hx-trigger="load"
-					hx-swap="innerHTML"
+					id="session-info-card"
 					class="flex-1 overflow-y-auto"
+					hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
+					hx-trigger="load"
+					hx-swap="innerHTML"
 				>
-					<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
+					<div class="px-3 py-3 text-ink-4 text-ui-meta animate-pulse">Loading…</div>
 				</div>
-				<!-- Session actions -->
+				<!-- Archive / Delete -->
 				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
 					if meta.ArchivedAt == nil {
 						<button class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
@@ -149,7 +75,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					}
 				</div>
 			</aside>
-			<!-- MAIN AREA: single scroll container; composer is sticky bottom -->
+			<!-- MAIN AREA -->
 			<div
 				id="session-main"
 				class="flex-1 overflow-y-auto min-w-0"
@@ -157,22 +83,13 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				@forge:streaming-start.document="streaming = true; draft = ''"
 				@forge:streaming-end.document="streaming = false"
 			>
-				<!-- Wrapper fills at least the full viewport height so composer
-				    stays pinned to the bottom even with few messages -->
 				<div class="min-h-full flex flex-col">
-					<!-- Message thread — OOB-swapped after commit done -->
-					<div
-						id="thread"
-						class="flex-1 px-6 pt-4 pb-2"
-					>
+					<div id="thread" class="flex-1 px-6 pt-4 pb-2">
 						@Thread(messages, meta.ArchivedAt != nil)
 					</div>
-					<!-- Stream area: empty until POST /commit swaps in StreamBubble -->
 					<div id="stream-area" class="px-6 pb-2"></div>
-					<!-- Composer: sticky to bottom of the scroll container -->
 					if meta.ArchivedAt == nil {
 						<div class="sticky bottom-0">
-							<!-- Gradient fade above composer -->
 							<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
 							<div class="bg-bg px-4 pb-3">
 								<div class="max-w-[720px] mx-auto">
@@ -211,23 +128,51 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					}
 				</div>
 			</div>
-			<!-- RIGHT SIDEBAR: Node panel -->
+			<!-- RIGHT PANEL: siblings + session DAG + refs + path -->
 			<aside
-				id="node-panel"
 				style="transition:width .15s ease"
 				:style="nodePanel ? 'width:280px' : 'width:0'"
 				class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0"
-				hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
-				hx-trigger="load"
-				hx-swap="innerHTML"
 			>
-				<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
+				<!-- Siblings (OOB-populated from /node response) -->
+				<div id="siblings-section" class="border-b border-line-soft shrink-0">
+					<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
+				</div>
+				<!-- Session DAG (moved from left panel) -->
+				<div class="flex items-center justify-between px-3 py-1.5 border-b border-line-soft shrink-0">
+					<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
+					<a
+						href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
+						class="text-ui-meta text-ink-3 hover:text-ink transition-colors"
+					>expand →</a>
+				</div>
+				<div
+					id="mini-dag"
+					hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+					class="shrink-0 border-b border-line-soft overflow-y-auto max-h-[200px]"
+				>
+					<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
+				</div>
+				<!-- Refs panel (moved from left panel) -->
+				<div
+					id="refs-panel"
+					hx-get={ "/ui/sessions/" + meta.ID + "/refs" }
+					hx-trigger="load"
+					hx-swap="innerHTML"
+					class="border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0"
+				>
+					<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
+				</div>
+				<!-- Path (OOB-populated from /node response, fills remaining space) -->
+				<div id="path-section" class="flex-1 min-h-0 overflow-hidden">
+					<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
+				</div>
 			</aside>
 		</div>
 		<script>
 			(function() {
-				// Bridge HTMX SSE lifecycle → Alpine custom events for streaming state.
-				// Also stops the chunk MutationObserver registered below.
 				function onStreamEnd() {
 					stopObserving();
 					document.dispatchEvent(new CustomEvent('forge:streaming-end'));
@@ -235,14 +180,11 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				document.body.addEventListener('htmx:sseClose', onStreamEnd);
 				document.body.addEventListener('htmx:sseError', onStreamEnd);
 
-				// Auto-scroll session-main to bottom when chat content updates.
 				function scrollToBottom() {
 					const main = document.getElementById('session-main');
 					if (main) main.scrollTop = main.scrollHeight;
 				}
 
-				// For SSE chunks: MutationObserver on #stream-content fires synchronously
-				// on every DOM mutation, bypassing HTMX's event system entirely.
 				let chunkObserver = null;
 				function observeStreamContent() {
 					const el = document.getElementById('stream-content');
@@ -254,344 +196,16 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					if (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }
 				}
 
-				// Set up chunk observer when streaming bubble lands in #stream-area.
 				document.body.addEventListener('htmx:afterSwap', function(e) {
 					const id = e.detail.target?.id;
 					if (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }
 					else if (id === 'thread') { scrollToBottom(); }
 				});
-				// OOB swaps: pending user bubble + done panel updates.
 				document.body.addEventListener('htmx:oobAfterSwap', function(e) {
 					if (e.detail.target?.id === 'thread') scrollToBottom();
 				});
 			})();
 		</script>
-		</div> <!-- /x-data wrapper -->
-	}
-}
-
-// Thread renders the message list — returned as a partial by /ui/sessions/:id/thread.
-templ Thread(messages []*RenderedMessage, archived bool) {
-	<div class="max-w-[720px] mx-auto space-y-3">
-		for _, rm := range messages {
-			@MessageBubble(rm)
-		}
-		if archived {
-			<div class="text-center text-ink-4 text-ui-code py-4 border-t border-line-soft">Session archived — read-only</div>
-		}
-	</div>
-}
-
-// MessageBubble dispatches to the appropriate component based on role.
-templ MessageBubble(rm *RenderedMessage) {
-	if rm.Role == "system" {
-		@SystemBubble(rm)
-	} else if rm.Role == "tool" {
-		@ToolResultBubble(rm)
-	} else if rm.Role == "user" {
-		<!-- User message: right-aligned -->
-		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start justify-end">
-			<div class="flex flex-col gap-1 items-end max-w-[640px]">
-				<div class="relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink">
-					<button
-						type="button"
-						@click="navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-						class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-black/20"
-						title="Copy"
-					>
-						<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-						<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-					</button>
-					<span x-show="!raw" class="whitespace-pre-wrap">{ rm.Rendered }</span>
-					<span x-show="raw" x-cloak class="font-mono text-ui-code whitespace-pre-wrap">{ rm.Content }</span>
-				</div>
-				<div class="flex items-center gap-2">
-					<button
-						@click="raw = !raw"
-						class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
-						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
-						title="Toggle raw/rendered"
-					>{ "{}" }</button>
-					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) }</div>
-				</div>
-			</div>
-			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
-		</div>
-	} else {
-		<!-- Assistant message: left-aligned -->
-		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start">
-			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-			<div class="flex flex-col gap-1 max-w-[640px]">
-				if rm.Rendered != "" || rm.Content != "" {
-					<div class="relative group bg-bg-2 border border-line rounded-md px-3 py-2">
-						<button
-							type="button"
-							@click="navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-							class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-bg-1"
-							title="Copy"
-						>
-							<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2v1"/></svg>
-							<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-						</button>
-						<div x-show="!raw" class="prose">
-							@templ.Raw(renderMarkdown(rm.Rendered))
-						</div>
-						<pre x-show="raw" x-cloak class="text-ink-3 text-ui-code whitespace-pre-wrap font-mono leading-relaxed m-0">{ rm.Content }</pre>
-					</div>
-				}
-				for _, tc := range rm.ToolCalls {
-					@ToolCallRow(tc)
-				}
-				<div class="flex items-center gap-2">
-					<button
-						@click="raw = !raw"
-						class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
-						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
-						title="Toggle raw/rendered"
-					>{ "{}" }</button>
-					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) }</div>
-				</div>
-			</div>
 		</div>
 	}
-}
-
-// SystemBubble renders the session system message collapsed by default.
-// Shows rendered output; toggle to raw to inspect template source.
-templ SystemBubble(rm *RenderedMessage) {
-	<div x-data={ systemBubbleData(rm) } class="flex flex-col gap-1">
-		<div class="rounded border border-line bg-bg-1 overflow-hidden">
-			<button
-				type="button"
-				@click="open = !open"
-				class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-bg-2 transition-colors"
-			>
-				<span
-					class="text-ui-dot text-ink-4 shrink-0 select-none"
-					:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
-				>▶</span>
-				<span class="text-ui-label text-ink-4 uppercase tracking-wide font-semibold shrink-0">system</span>
-				<span class="flex-1"></span>
-				<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
-			</button>
-			<div
-				class="relative border-t border-line-soft overflow-hidden"
-				style="max-height:0"
-				:style="open ? 'max-height:32rem;overflow-y:auto' : 'max-height:0;overflow:hidden'"
-			>
-				<pre x-show="!raw" class="px-3 py-2 text-ink-3 text-ui-sys whitespace-pre-wrap font-mono leading-relaxed">{ rm.Rendered }</pre>
-				<pre x-show="raw" x-cloak class="px-3 py-2 text-ink-4 text-ui-sys whitespace-pre-wrap font-mono leading-relaxed">{ rm.Content }</pre>
-			</div>
-		</div>
-		<div class="flex items-center gap-2">
-			<button
-				type="button"
-				@click="raw = !raw"
-				class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
-				:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
-				title="Toggle raw/rendered"
-			>{ "{}" }</button>
-			<button
-				type="button"
-				@click="navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-				class="w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
-				title="Copy"
-			>
-				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-			</button>
-			<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) }</div>
-		</div>
-	</div>
-}
-
-// ToolResultBubble renders a role=tool message as a collapsed, muted component.
-// If content is empty it renders as a flat non-interactive row.
-templ ToolResultBubble(rm *RenderedMessage) {
-	<div class="flex gap-3 items-start pl-10">
-		if rm.Content != "" {
-			<div x-data="{ open: false }" class="max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden">
-				<button
-					type="button"
-					@click="open = !open"
-					class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
-				>
-					<span
-						class="text-ui-dot text-ink-4 shrink-0 select-none"
-						:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
-					>▶</span>
-					<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
-					<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
-					if toolCallIsError(rm) {
-						<span class="text-rem text-ui-label shrink-0">err</span>
-					}
-					<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
-				</button>
-				<div
-					class="relative border-t border-line-soft overflow-hidden"
-					style="max-height:3.5rem;overflow:hidden"
-					:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
-				>
-					<pre class="px-2 py-1.5 text-ink-4 text-ui-args whitespace-pre-wrap overflow-x-auto">{ prettifyJSON(rm.Content) }</pre>
-					<div
-						x-show="!open"
-						class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
-						style="background:linear-gradient(to bottom,transparent,rgb(17,19,24))"
-					></div>
-				</div>
-			</div>
-		} else {
-			<div class="max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
-				<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
-				<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
-				if toolCallIsError(rm) {
-					<span class="text-rem text-ui-label shrink-0">err</span>
-				}
-			</div>
-		}
-	</div>
-}
-
-// ToolCallRow renders a tool call request on an assistant message.
-// If arguments are present it's collapsible; otherwise a flat non-interactive row.
-templ ToolCallRow(tc appsession.MessageToolCall) {
-	if len(tc.Arguments) > 0 {
-		<div x-data="{ open: false }" class="rounded border border-line-soft bg-bg-1 font-mono overflow-hidden">
-			<button
-				type="button"
-				@click="open = !open"
-				class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
-			>
-				<span
-					class="text-ui-dot text-ink-4 shrink-0 select-none"
-					:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
-				>▶</span>
-				<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">call</span>
-				<span class="text-ui-meta text-ink-3 flex-1 truncate">{ tc.Name }</span>
-				if tc.IsError {
-					<span class="text-rem text-ui-label shrink-0">err</span>
-				}
-				<span class="text-ink-4 text-ui-label shrink-0" x-show="!open">···</span>
-			</button>
-			<div
-				class="relative border-t border-line-soft overflow-hidden"
-				style="max-height:3.5rem;overflow:hidden"
-				:style="open ? 'max-height:20rem;overflow-y:auto' : 'max-height:3.5rem;overflow:hidden'"
-			>
-				<pre class="px-2 py-1.5 text-ink-4 text-ui-args whitespace-pre-wrap overflow-x-auto">{ formatArgs(tc.Arguments) }</pre>
-				<div
-					x-show="!open"
-					class="absolute inset-x-0 bottom-0 h-6 pointer-events-none"
-					style="background:linear-gradient(to bottom,transparent,rgb(17,19,24))"
-				></div>
-			</div>
-		</div>
-	} else {
-		<div class="flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
-			<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">call</span>
-			<span class="text-ui-meta text-ink-3 flex-1 truncate">{ tc.Name }</span>
-			if tc.IsError {
-				<span class="text-rem text-ui-label shrink-0">err</span>
-			}
-		</div>
-	}
-}
-
-func toolCallName(rm *RenderedMessage) string {
-	if len(rm.ToolCalls) > 0 {
-		return rm.ToolCalls[0].Name
-	}
-	return "unknown"
-}
-
-func toolCallIsError(rm *RenderedMessage) bool {
-	return len(rm.ToolCalls) > 0 && rm.ToolCalls[0].IsError
-}
-
-// bubbleData returns a JSON-safe Alpine x-data string carrying both raw and
-// rendered content as JS string literals. Using json.Marshal guarantees correct
-// escaping of newlines, quotes, and Unicode regardless of message content.
-func bubbleData(rm *RenderedMessage) string {
-	raw, _ := json.Marshal(rm.Content)
-	rendered, _ := json.Marshal(rm.Rendered)
-	return "{ raw: false, copied: false, rawContent: " + string(raw) + ", renderedContent: " + string(rendered) + " }"
-}
-
-// systemBubbleData is like bubbleData but also includes the open state for
-// the collapsible system message card.
-func systemBubbleData(rm *RenderedMessage) string {
-	raw, _ := json.Marshal(rm.Content)
-	rendered, _ := json.Marshal(rm.Rendered)
-	return "{ open: false, raw: false, copied: false, rawContent: " + string(raw) + ", renderedContent: " + string(rendered) + " }"
-}
-
-func formatArgs(args map[string]any) string {
-	b, err := json.MarshalIndent(args, "", "  ")
-	if err != nil {
-		return "{}"
-	}
-	return string(b)
-}
-
-var mdParser = goldmark.New(
-	goldmark.WithExtensions(
-		extension.Table,
-		extension.Strikethrough,
-		extension.TaskList,
-	),
-)
-
-func renderMarkdown(src string) string {
-	if src == "" {
-		return ""
-	}
-	var buf bytes.Buffer
-	if err := mdParser.Convert([]byte(src), &buf); err != nil {
-		return src
-	}
-	return buf.String()
-}
-
-func prettifyJSON(s string) string {
-	s = strings.TrimSpace(s)
-	if len(s) == 0 || (s[0] != '{' && s[0] != '[') {
-		return s
-	}
-	var v any
-	if err := json.Unmarshal([]byte(s), &v); err != nil {
-		return s
-	}
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return s
-	}
-	return string(b)
-}
-
-func roleInitial(role string) string {
-	if len(role) == 0 {
-		return "?"
-	}
-	return strings.ToUpper(role[:1])
-}
-
-func fmtCreatedAt(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format("Jan 2 15:04")
-}
-
-func shortHash(hash string) string {
-	if len(hash) > 7 {
-		return hash[:7]
-	}
-	return hash
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "…"
 }

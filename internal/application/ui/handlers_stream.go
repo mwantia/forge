@@ -13,14 +13,15 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
+	appsession "github.com/mwantia/forge/internal/application/session"
 	uidag "github.com/mwantia/forge/internal/application/ui/templates/dag"
 	tmplrefs "github.com/mwantia/forge/internal/application/ui/templates/refs"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
-	domsession "github.com/mwantia/forge/internal/domain/session"
 )
 
 type streamHandlers struct {
 	sessions sessionReader
+	tools    namespaceLister
 	renderer pipelineRenderer
 	pipeline pipelineCommitter
 }
@@ -177,9 +178,13 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 	// Refs panel
 	sb.WriteString(oobWrap("refs-panel", renderComponent(ctx, tmplrefs.Panel(sessionID, refs))))
 
-	// Node panel
-	siblingCount := countSiblings(ctx, h.sessions, sessionID, activeRef, msgs, refs)
-	sb.WriteString(oobWrap("node-panel", renderComponent(ctx, tmplsessions.NodePanel(sessionID, meta, msgs, activeRef, siblingCount))))
+	// Left panel: session info card + plugins
+	allPlugins := pluginNamespacesFrom(h.tools)
+	sb.WriteString(oobWrap("session-info-card", renderComponent(ctx, tmplsessions.SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil))))
+	// Right panel: sub-sessions + path (separate OOB to avoid nesting)
+	subSessions, _ := h.sessions.QuerySessions(ctx, appsession.SessionQuery{ParentID: sessionID})
+	sb.WriteString(oobWrap("siblings-section", renderComponent(ctx, tmplsessions.SubSessionsSection(subSessions))))
+	sb.WriteString(oobWrap("path-section", renderComponent(ctx, tmplsessions.PathSection(msgs))))
 
 	// Mini DAG
 	dagMsgs, _ := h.sessions.ListMessages(ctx, sessionID, 0, 200)
@@ -189,23 +194,3 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 	return sb.String()
 }
 
-func countSiblings(ctx context.Context, sessions sessionReader, sessionID, activeRef string, messages []*domsession.Message, refs map[string]string) int {
-	if len(messages) == 0 {
-		return 0
-	}
-	headTip := messages[len(messages)-1]
-	count := 0
-	for name, refHash := range refs {
-		if name == "HEAD" || name == activeRef || refHash == headTip.Hash {
-			continue
-		}
-		obj, err := sessions.GetMessageObj(ctx, refHash)
-		if err != nil {
-			continue
-		}
-		if obj.ParentHash == headTip.ParentHash {
-			count++
-		}
-	}
-	return count
-}

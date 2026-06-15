@@ -1,12 +1,11 @@
-const CACHE = 'forge-ui-v1';
-const SHELL = ['/ui/', '/ui/sessions'];
+const CACHE = 'forge-ui-__ASSET_VERSION__';
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
+  // Purge any caches from previous SW versions.
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
@@ -17,9 +16,24 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Pass through API calls and non-GET requests
-  if (e.request.method !== 'GET' || url.pathname.startsWith('/v1/')) return;
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  if (e.request.method !== 'GET') return;
+
+  // Versioned static assets already carry Cache-Control: immutable from the
+  // server — cache-first here so they survive offline and load instantly.
+  if (url.pathname.startsWith('/ui/assets/')) {
+    e.respondWith(
+      caches.match(e.request).then(cached =>
+        cached ||
+        fetch(e.request).then(res => {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return res;
+        })
+      )
+    );
+    return;
+  }
+
+  // All other requests (HTML pages, HTMX partials, API calls) must always hit
+  // the network — never serve stale HTML from the cache.
 });

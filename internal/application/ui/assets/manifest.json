@@ -5,14 +5,29 @@
   "start_url": "/ui/sessions",
   "scope": "/ui/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0b0c0f",
   "theme_color": "#e8a531",
+  "categories": ["productivity", "developer"],
   "icons": [
     {
       "src": "/ui/assets/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/ui/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sessions",
+      "url": "/ui/sessions",
+      "description": "View all sessions"
     }
   ]
 }

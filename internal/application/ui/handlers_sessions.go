@@ -12,6 +12,7 @@ import (
 
 type sessionHandlers struct {
 	sessions sessionReader
+	tools    namespaceLister
 	renderer pipelineRenderer
 }
 
@@ -60,7 +61,7 @@ func (h *sessionHandlers) handleCreate() gin.HandlerFunc {
 			return
 		}
 
-		meta, err := h.sessions.CreateSession(c.Request.Context(), model, name, title, "", "", "", nil)
+		meta, err := h.sessions.CreateSession(c.Request.Context(), model, name, title, "", "", nil)
 		if err != nil {
 			c.String(http.StatusConflict, "create failed: %v", err)
 			return
@@ -163,28 +164,11 @@ func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
 		activeRef := resolveActiveRef(refs, ref)
 
 		messages, _ := h.sessions.ListMessagesFromRef(ctx, id, activeRef, 0, 0)
-
-		// Count sibling nodes: other ref tips that share the same parent as HEAD tip.
-		siblingCount := 0
-		if len(messages) > 0 {
-			headTip := messages[len(messages)-1]
-			for name, refHash := range refs {
-				if name == "HEAD" || name == activeRef || refHash == headTip.Hash {
-					continue
-				}
-				obj, err := h.sessions.GetMessageObj(ctx, refHash)
-				if err != nil {
-					continue
-				}
-				if obj.ParentHash == headTip.ParentHash {
-					siblingCount++
-				}
-			}
-		}
+		subSessions, _ := h.sessions.QuerySessions(ctx, appsession.SessionQuery{ParentID: id})
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.NodePanel(id, meta, messages, activeRef, siblingCount).Render(ctx, c.Writer)
+		_ = tmplsessions.NodePanel(id, meta, messages, activeRef, subSessions, h.pluginNamespaces()).Render(ctx, c.Writer)
 	}
 }
 
@@ -207,6 +191,81 @@ func (h *sessionHandlers) handleArchive() gin.HandlerFunc {
 		c.Header("HX-Redirect", "/ui/sessions/"+meta.ID)
 		c.Status(http.StatusOK)
 	}
+}
+
+func (h *sessionHandlers) handlePluginToggle() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+		name := strings.ToLower(strings.TrimSpace(c.Param("name")))
+		action := c.PostForm("action")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found")
+			return
+		}
+		
+		if meta.ArchivedAt != nil {
+			c.String(http.StatusConflict, "archived")
+			return
+		}
+
+		found := false
+		for i, p := range meta.Plugins {
+			if strings.ToLower(p.Name) == name {
+				switch action {
+				case "enable":
+					meta.Plugins[i].Enabled = true
+					meta.Plugins[i].Disabled = false
+				
+				case "disable":
+					meta.Plugins[i].Disabled = true
+					meta.Plugins[i].Enabled = false
+				
+				case "reset":
+					meta.Plugins[i].Enabled = false
+					meta.Plugins[i].Disabled = false
+				
+				case "verbose_on":
+					meta.Plugins[i].Verbose = true
+				
+				case "verbose_off":
+					meta.Plugins[i].Verbose = false
+				}
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			switch action {
+			case "enable":
+				meta.Plugins = append(meta.Plugins, appsession.PluginConfig{
+					Name: name, 
+					Enabled: true,
+				})
+			
+			case "disable":
+				meta.Plugins = append(meta.Plugins, appsession.PluginConfig{
+					Name: name, 
+					Disabled: true,
+				})
+			}
+		}
+
+		_ = h.sessions.SaveSession(ctx, meta)
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		
+		_ = tmplsessions.PluginList(id, h.pluginNamespaces(), meta.Plugins, true).Render(ctx, c.Writer)
+	}
+}
+
+// pluginNamespaces returns the names of all non-builtin registered namespaces.
+func (h *sessionHandlers) pluginNamespaces() []string {
+	return pluginNamespacesFrom(h.tools)
 }
 
 // resolveActiveRef returns the best display branch name from the refs map.

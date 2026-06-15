@@ -10,6 +10,7 @@ import (
 	approot "github.com/mwantia/forge/internal/application"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
+	domtool "github.com/mwantia/forge/internal/domain/tool"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
@@ -17,10 +18,11 @@ import (
 type UIService struct {
 	approot.UnimplementedService
 
-	router   infraserver.HttpRouter         `fabric:"inject"`
-	sessions *appsession.SessionService     `fabric:"inject"`
-	pipeline apppipeline.PipelineCommitter  `fabric:"inject"`
-	renderer apppipeline.PipelineRenderer   `fabric:"inject"`
+	router   infraserver.HttpRouter        `fabric:"inject"`
+	sessions *appsession.SessionService    `fabric:"inject"`
+	tools    domtool.ToolsRegistar         `fabric:"inject"`
+	pipeline apppipeline.PipelineCommitter `fabric:"inject"`
+	renderer apppipeline.PipelineRenderer  `fabric:"inject"`
 
 	logger hclog.Logger `fabric:"logger=ui"`
 }
@@ -38,6 +40,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 
 	sess := &sessionHandlers{
 		sessions: u.sessions,
+		tools:    u.tools,
 		renderer: u.renderer,
 	}
 	g.GET("/sessions", sess.handleList())
@@ -47,6 +50,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions/:id/archive", sess.handleArchive())
 	g.GET("/sessions/:id/thread", sess.handleThread())
 	g.GET("/sessions/:id/node", sess.handleNodePanel())
+	g.PATCH("/sessions/:id/plugins/:name", sess.handlePluginToggle())
 
 	refs := &refHandlers{
 		sessions: u.sessions,
@@ -63,6 +67,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 
 	stream := &streamHandlers{
 		sessions: u.sessions,
+		tools:    u.tools,
 		renderer: u.renderer,
 		pipeline: u.pipeline,
 	}
@@ -75,23 +80,33 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.GET("/sessions/:id/dag/mini", dag.handleMini())
 
 	layout.SetAssetVersion(AssetVersion)
+
+	serviceWorker := serviceWorkerJSWithVersion()
 	fileServer := http.FileServer(staticFS())
+
 	g.GET("/assets/*filepath", func(c *gin.Context) {
-		fp := c.Param("filepath")
-		if fp == "/sw.js" {
+		filepath := c.Param("filepath")
+
+		switch filepath {
+		case "/sw.js":
 			c.Header("Service-Worker-Allowed", "/ui/")
 			c.Header("Cache-Control", "no-cache")
-		} else if fp == "/manifest.json" {
+			c.Data(http.StatusOK, "application/javascript; charset=utf-8", serviceWorker)
+		
+		case "/manifest.json":
 			c.Header("Cache-Control", "no-cache")
-		} else {
+			c.Request.URL.Path = filepath
+			c.Request.URL.RawQuery = ""
+			fileServer.ServeHTTP(c.Writer, c.Request)
+		
+		default:
 			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+			c.Request.URL.Path = filepath
+			c.Request.URL.RawQuery = ""
+			fileServer.ServeHTTP(c.Writer, c.Request)
 		}
-		c.Request.URL.Path = fp
-		c.Request.URL.RawQuery = ""
-		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 
-	u.logger.Debug("Initialized ui service...")
-
+	u.logger.Debug("Initialized ui service")
 	return nil
 }

@@ -18,23 +18,17 @@ templ List(sessions []*appsession.SessionMetadata) {
 					<div>
 						<h1 class="text-ui-h1 font-semibold tracking-tight">Sessions</h1>
 						<p class="text-ink-3 text-ui-ctrl mt-1">
-							Content-addressed Merkle DAG. Branch from any message, fork on edit.
+							List of all active sessions based on the defined query.
 						</p>
 					</div>
-					<button
-						class="btn-accent"
-						hx-get="/ui/sessions/new"
-						hx-target="body"
-						hx-push-url="true"
-					>
-						New session
-					</button>
+					<button class="btn-accent" hx-get="/ui/sessions/new" hx-target="body" hx-push-url="true">New</button>
 				</div>
 				<div
 					x-data="{
 						search: '',
 						showActive: true,
 						showArchived: true,
+						showSiblings: false,
 						pluginFilter: '',
 						matches(el) {
 							const s = this.search.toLowerCase();
@@ -42,6 +36,7 @@ templ List(sessions []*appsession.SessionMetadata) {
 							if (s && !el.dataset.name.includes(s) && !el.dataset.title.includes(s)) return false;
 							if (el.dataset.archived === 'true' && !this.showArchived) return false;
 							if (el.dataset.archived !== 'true' && !this.showActive) return false;
+							if (el.dataset.sibling === 'true' && !this.showSiblings) return false;
 							if (pf && !el.dataset.plugins.includes(pf)) return false;
 							return true;
 						}
@@ -72,6 +67,10 @@ templ List(sessions []*appsession.SessionMetadata) {
 							<input type="checkbox" x-model="showArchived" class="accent-accent"/>
 							Archived
 						</label>
+						<label class="flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none">
+							<input type="checkbox" x-model="showSiblings" class="accent-accent"/>
+							Siblings
+						</label>
 					</div>
 					if len(sessions) == 0 {
 						<div class="flex flex-col items-center justify-center py-20 gap-2 text-center">
@@ -87,7 +86,8 @@ templ List(sessions []*appsession.SessionMetadata) {
 									data-name={ strings.ToLower(s.Name) }
 									data-title={ strings.ToLower(s.Title) }
 									data-archived={ sessionArchived(s) }
-									data-plugins={ strings.ToLower(strings.Join(s.Plugins, " ")) }
+									data-sibling={ sessionHasParent(s) }
+									data-plugins={ strings.ToLower(pluginNames(s.Plugins, " ")) }
 									class="group flex flex-col gap-3 p-4 rounded-lg border border-line hover:border-line-strong hover:bg-bg-1 transition-colors"
 								>
 									<div class="flex items-start justify-between gap-4">
@@ -97,9 +97,14 @@ templ List(sessions []*appsession.SessionMetadata) {
 											</span>
 											<span class="font-mono text-ui-meta text-ink-4 truncate">{ s.ID }</span>
 										</div>
-										if s.ArchivedAt != nil {
-											<span class="ref-pill shrink-0 mt-0.5">archived</span>
-										}
+										<div class="flex items-center gap-1.5 shrink-0 mt-0.5">
+											if s.Parent != "" {
+												<span class="font-mono text-[10px] text-ink-4 border border-line-soft rounded px-1.5 py-0.5" title={ "cloned from " + s.Parent }>⎇ { s.Parent[:8] }</span>
+											}
+											if s.ArchivedAt != nil {
+												<span class="ref-pill">archived</span>
+											}
+										</div>
 									</div>
 									if s.Title != "" {
 										<p class="text-accent text-ui-ctrl font-medium">{ s.Title }</p>
@@ -107,14 +112,12 @@ templ List(sessions []*appsession.SessionMetadata) {
 									if s.Description != "" {
 										<p class="text-ink-3 text-ui-ctrl line-clamp-2 leading-relaxed">{ s.Description }</p>
 									}
-									<div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-ui-meta text-ink-4 pt-1 border-t border-line-soft">
+									<div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-ui-meta text-ink-4 pt-2 border-t border-line-soft">
 										<span class="font-mono text-ink-3">{ s.Model }</span>
 										<span>·</span>
-										if len(s.Plugins) == 0 {
-											<span class="italic">all plugins</span>
-										} else {
+										if len(s.Plugins) > 0 {
 											for _, p := range s.Plugins {
-												<span class="ref-pill">{ p }</span>
+												<span class="ref-pill">{ p.Name }</span>
 											}
 										}
 										<span class="ml-auto">{ "updated " + relativeTime(s.UpdatedAt) }</span>
@@ -133,6 +136,13 @@ templ List(sessions []*appsession.SessionMetadata) {
 
 func sessionArchived(s *appsession.SessionMetadata) string {
 	if s.ArchivedAt != nil {
+		return "true"
+	}
+	return "false"
+}
+
+func sessionHasParent(s *appsession.SessionMetadata) string {
+	if s.Parent != "" {
 		return "true"
 	}
 	return "false"

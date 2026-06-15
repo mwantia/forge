@@ -1,0 +1,116 @@
+package tmplsessions
+
+import (
+	"strings"
+
+	appsession "github.com/mwantia/forge/internal/application/session"
+)
+
+// PluginList renders a table-style plugin management list for all registered
+// non-builtin namespaces. Exported for HTMX fragment swaps from the PATCH handler.
+templ PluginList(sessionID string, allPlugins []string, configs []appsession.PluginConfig, canEdit bool) {
+	<div id={ "plugin-list-" + sessionID } class="mx-3 mb-3 rounded border border-line-soft overflow-hidden shrink-0">
+		if len(allPlugins) == 0 {
+			<div class="px-3 py-2 text-ink-4 text-ui-meta italic">No plugins loaded</div>
+		} else {
+			for i, name := range allPlugins {
+				@pluginRow(sessionID, name, pluginConfigFor(name, configs), canEdit, i == len(allPlugins)-1)
+			}
+		}
+	</div>
+}
+
+templ pluginRow(sessionID string, name string, cfg appsession.PluginConfig, canEdit bool, isLast bool) {
+	<div
+		class={ pluginRowClass(isLast) }
+		style="display:grid;grid-template-columns:1fr 2rem 2rem"
+	>
+		<!-- Name + state indicator -->
+		<div class="flex items-center gap-2 px-2.5 py-2 min-w-0">
+			<span class={ "text-[8px] shrink-0 leading-none", pluginDotClass(cfg) }>●</span>
+			<span class={ "font-mono text-ui-label truncate flex-1 min-w-0", pluginNameClass(cfg) } title={ name }>{ name }</span>
+			if cfg.Verbose {
+				<span class="text-ink-4 text-[9px] shrink-0" title="verbose">v</span>
+			}
+		</div>
+		<!-- Enable / Reset column -->
+		<div class="border-l border-line-soft flex items-center justify-center">
+			if canEdit {
+				if cfg.Disabled {
+					<button
+						class="w-full h-full flex items-center justify-center text-ink-3 hover:text-ok transition-colors text-sm"
+						hx-patch={ "/ui/sessions/" + sessionID + "/plugins/" + name }
+						hx-vals={ `{"action":"reset"}` }
+						hx-target={ "#plugin-list-" + sessionID }
+						hx-swap="outerHTML"
+						title="Reset (un-disable)"
+					>↺</button>
+				} else if cfg.Enabled {
+					<span class="w-full h-full flex items-center justify-center text-ink-4 opacity-25 text-base leading-none select-none cursor-default">+</span>
+				} else {
+					<button
+						class="w-full h-full flex items-center justify-center text-ink-3 hover:text-ok transition-colors text-base leading-none"
+						hx-patch={ "/ui/sessions/" + sessionID + "/plugins/" + name }
+						hx-vals={ `{"action":"enable"}` }
+						hx-target={ "#plugin-list-" + sessionID }
+						hx-swap="outerHTML"
+						title="Enable plugin"
+					>+</button>
+				}
+			}
+		</div>
+		<!-- Disable column -->
+		<div class="border-l border-line-soft flex items-center justify-center">
+			if canEdit {
+				if cfg.Disabled {
+					<span class="w-full h-full flex items-center justify-center text-ink-4 opacity-25 text-sm select-none cursor-default">×</span>
+				} else {
+					<button
+						class="w-full h-full flex items-center justify-center text-ink-3 hover:text-rem transition-colors text-sm"
+						hx-patch={ "/ui/sessions/" + sessionID + "/plugins/" + name }
+						hx-vals={ `{"action":"disable"}` }
+						hx-target={ "#plugin-list-" + sessionID }
+						hx-swap="outerHTML"
+						title="Disable plugin"
+					>×</button>
+				}
+			}
+		</div>
+	</div>
+}
+
+func pluginConfigFor(name string, configs []appsession.PluginConfig) appsession.PluginConfig {
+	for _, c := range configs {
+		if strings.EqualFold(c.Name, name) {
+			return c
+		}
+	}
+	return appsession.PluginConfig{Name: name}
+}
+
+func pluginRowClass(isLast bool) string {
+	if isLast {
+		return "flex"
+	}
+	return "flex border-b border-line-soft"
+}
+
+func pluginDotClass(cfg appsession.PluginConfig) string {
+	if cfg.Disabled {
+		return "text-rem"
+	}
+	if cfg.Enabled {
+		return "text-ok"
+	}
+	return "text-ink-4"
+}
+
+func pluginNameClass(cfg appsession.PluginConfig) string {
+	if cfg.Disabled {
+		return "text-rem"
+	}
+	if cfg.Enabled {
+		return "text-ok"
+	}
+	return "text-ink-3"
+}

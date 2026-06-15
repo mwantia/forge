@@ -1,128 +1,18 @@
 package tmplsessions
 
-import (
-	"encoding/json"
-	"strconv"
-	"strings"
-	"time"
+import appsession "github.com/mwantia/forge/internal/application/session"
 
-	appsession "github.com/mwantia/forge/internal/application/session"
-)
-
-templ NodePanel(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, siblingCount int) {
-	<!-- NODE header -->
-	<div class="px-3 pt-3 pb-1 flex items-center gap-2 shrink-0">
-		<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1">Node</span>
-		<span class="ref-pill">{ activeRef }</span>
+// NodePanel is the response for GET /ui/sessions/:id/node.
+//
+// Primary content updates #session-info-card (left panel, innerHTML swap).
+// OOB divs update #siblings-section and #path-section in the right panel.
+// renderDoneOOB renders the three components separately to avoid nested OOB.
+templ NodePanel(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) {
+	@SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil)
+	<div id="siblings-section" hx-swap-oob="innerHTML">
+		@SubSessionsSection(subSessions)
 	</div>
-	<!-- Session info card -->
-	<div class="mx-3 mt-1 mb-2 rounded border border-line-soft bg-bg-2 text-ui-meta shrink-0">
-		<div x-data={ sidData(meta.ID) } class="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-line-soft">
-			<span class="font-mono text-ink-4 flex-1 min-w-0 truncate" title={ meta.ID }>{ abbreviateID(meta.ID) }</span>
-			<button
-				type="button"
-				@click="navigator.clipboard.writeText(sid).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-				class="shrink-0 w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
-				title="Copy session ID"
-			>
-				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-			</button>
-		</div>
-		<div class="py-1">
-			if meta.Parent != "" {
-				@metaRow("parent", abbreviateID(meta.Parent))
-			}
-			@metaRow("created", relativeTime(meta.CreatedAt))
-			@metaRow("updated", relativeTime(meta.UpdatedAt))
-			if meta.Usage != nil {
-				@metaRow("tokens", strconv.Itoa(meta.Usage.InputTokens)+" in / "+strconv.Itoa(meta.Usage.OutputTokens)+" out")
-			}
-			@metaRow("model", meta.Model)
-			if len(meta.Plugins) > 0 {
-				@metaRow("plugins", strings.Join(meta.Plugins, ", "))
-			} else {
-				@metaRow("plugins", "all")
-			}
-		</div>
+	<div id="path-section" hx-swap-oob="innerHTML">
+		@PathSection(messages)
 	</div>
-	<!-- SIBLINGS section -->
-	<div class="px-3 py-1.5 flex items-center gap-2 border-t border-line-soft shrink-0">
-		<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1">Siblings</span>
-		<span class="text-ui-label text-ink-4 font-mono">{ strconv.Itoa(siblingCount) }</span>
-	</div>
-	if siblingCount == 0 {
-		<div class="px-3 pb-2 text-ui-meta text-ink-4 leading-relaxed shrink-0">
-			No alternative continuations from this node yet.<br/>
-			Edit any past message to fork a new branch.
-		</div>
-	}
-	<!-- PATH section -->
-	<div class="px-3 py-1.5 flex items-center gap-2 border-t border-line-soft shrink-0">
-		<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1">Path</span>
-	</div>
-	<div class="flex-1 overflow-y-auto px-2 py-0.5 space-y-0.5">
-		for _, msg := range messages {
-			@PathNode(msg)
-		}
-		if len(messages) == 0 {
-			<div class="px-1 py-2 text-ui-meta text-ink-4">Empty</div>
-		}
-	</div>
-	<!-- QUICK section -->
-	<div class="px-3 py-1.5 flex items-center border-t border-line-soft shrink-0">
-		<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Quick</span>
-	</div>
-	<div class="px-2 py-2 space-y-1.5 shrink-0">
-		if meta.ArchivedAt != nil {
-			<div class="text-ui-meta text-ink-4 text-center">Archived { nodeFmtDate(*meta.ArchivedAt) }</div>
-		}
-	</div>
-}
-
-templ metaRow(label, value string) {
-	<div class="flex items-baseline gap-2 px-2.5 py-1">
-		<span class="text-ink-4 shrink-0 w-12 text-ui-label">{ label }</span>
-		<span class="text-ink-2 font-mono truncate flex-1 min-w-0 text-ui-label" title={ value }>{ value }</span>
-	</div>
-}
-
-templ PathNode(msg *appsession.Message) {
-	<div
-		class="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-bg-2 cursor-default"
-	>
-		<span class={ "shrink-0 text-ui-dot", pathRoleColor(msg.Role) }>●</span>
-		<span class="text-ui-label text-ink-4 w-[50px] shrink-0 truncate">{ msg.Role }</span>
-		<span class="font-mono text-ui-label text-ink-4 truncate flex-1 min-w-0">{ shortHash(msg.Hash) }</span>
-	</div>
-}
-
-func pathRoleColor(role string) string {
-	switch role {
-	case "user":
-		return "text-accent"
-	case "assistant":
-		return "text-ok"
-	case "tool":
-		return "text-ink-3"
-	default:
-		return "text-ink-4"
-	}
-}
-
-func abbreviateID(id string) string {
-	if len(id) > 14 {
-		return id[:8]
-	}
-
-	return id
-}
-
-func nodeFmtDate(t time.Time) string {
-	return t.Format("Jan 2, 2006")
-}
-
-func sidData(id string) string {
-	b, _ := json.Marshal(id)
-	return "{ copied: false, sid: " + string(b) + " }"
 }

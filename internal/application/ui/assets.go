@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"embed"
 	"fmt"
@@ -30,6 +31,13 @@ func init() {
 		return nil
 	})
 	AssetVersion = fmt.Sprintf("%x", h.Sum(nil))[:8]
+}
+
+// serviceWorkerJSWithVersion returns sw.js with the __ASSET_VERSION__ placeholder replaced
+// by the computed content hash so the cache name changes automatically on deploy.
+func serviceWorkerJSWithVersion() []byte {
+	data, _ := staticFiles.ReadFile("assets/sw.js")
+	return bytes.ReplaceAll(data, []byte("__ASSET_VERSION__"), []byte(AssetVersion))
 }
 
 // staticFS returns the embedded assets as an http.FileSystem rooted at "assets/".

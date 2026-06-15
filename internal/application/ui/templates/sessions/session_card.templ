@@ -1,0 +1,67 @@
+package tmplsessions
+
+import (
+	"encoding/json"
+	"strconv"
+	"time"
+
+	appsession "github.com/mwantia/forge/internal/application/session"
+)
+
+// SessionInfoCard renders session metadata rows and the plugin management table.
+// Primary content of #session-info-card in the left panel; also embedded in
+// NodePanel for the initial HTMX GET response.
+templ SessionInfoCard(sessionID string, meta *appsession.SessionMetadata, allPlugins []string, canEdit bool) {
+	<div class="mx-3 mt-2 rounded border border-line-soft bg-bg-2 text-ui-meta shrink-0">
+		<div x-data={ sidData(meta.ID) } class="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-line-soft">
+			<span class="font-mono text-ink-4 flex-1 min-w-0 truncate" title={ meta.ID }>{ abbreviateID(meta.ID) }</span>
+			<button
+				type="button"
+				@click="navigator.clipboard.writeText(sid).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
+				class="shrink-0 w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
+				title="Copy session ID"
+			>
+				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			</button>
+		</div>
+		<div class="py-1">
+			if meta.Parent != "" {
+				@metaRow("parent", abbreviateID(meta.Parent))
+			}
+			@metaRow("created", relativeTime(meta.CreatedAt))
+			@metaRow("updated", relativeTime(meta.UpdatedAt))
+			if meta.Usage != nil {
+				@metaRow("tokens", strconv.Itoa(meta.Usage.InputTokens)+" in / "+strconv.Itoa(meta.Usage.OutputTokens)+" out")
+			}
+			@metaRow("model", meta.Model)
+		</div>
+	</div>
+	<div class="px-3 pt-3 pb-1.5 flex items-center gap-2 shrink-0">
+		<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1">Plugins</span>
+	</div>
+	@PluginList(sessionID, allPlugins, meta.Plugins, canEdit)
+}
+
+templ metaRow(label, value string) {
+	<div class="flex items-baseline gap-2 px-2.5 py-1">
+		<span class="text-ink-4 shrink-0 w-12 text-ui-label">{ label }</span>
+		<span class="text-ink-2 font-mono truncate flex-1 min-w-0 text-ui-label" title={ value }>{ value }</span>
+	</div>
+}
+
+func sidData(id string) string {
+	b, _ := json.Marshal(id)
+	return "{ copied: false, sid: " + string(b) + " }"
+}
+
+func abbreviateID(id string) string {
+	if len(id) > 14 {
+		return id[:8]
+	}
+	return id
+}
+
+func nodeFmtDate(t time.Time) string {
+	return t.Format("Jan 2, 2006")
+}
