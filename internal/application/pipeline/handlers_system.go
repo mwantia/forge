@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	appsession "github.com/mwantia/forge/internal/application/session"
 )
 
 type systemResetRequest struct {
-	ToolsVerbosity string   `json:"tools_verbosity"`
-	Plugins        []string `json:"plugins"`
+	Plugins []string `json:"plugins"`
 }
 
 // handleResetSystemSnapshot godoc
 //
-//	@Description	Updates session-level pipeline settings (tools_verbosity, plugins filter). Returns the currently active session metadata.
+//	@Description	Updates the session plugin filter. Replaces the active plugin list; pass an empty array to switch to all-plugins mode. Returns the updated session metadata.
 func (s *PipelineService) handleResetSystemSnapshot() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -28,11 +28,8 @@ func (s *PipelineService) handleResetSystemSnapshot() gin.HandlerFunc {
 			return
 		}
 
-		if req.ToolsVerbosity != "" {
-			meta.ToolsVerbosity = req.ToolsVerbosity
-		}
 		if len(req.Plugins) > 0 {
-			meta.Plugins = req.Plugins
+			meta.Plugins = appsession.PluginConfigsFromNames(req.Plugins)
 		}
 		meta.UpdatedAt = time.Now()
 

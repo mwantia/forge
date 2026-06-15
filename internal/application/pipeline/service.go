@@ -21,7 +21,7 @@ import (
 
 const (
 	DefaultMaxToolIterations = 25
-	ServiceNamespace         = "pipeline"
+	ServiceNamespace         = "pipeline" // used for HTTP route prefix only
 )
 
 type PipelineService struct {
@@ -63,23 +63,14 @@ func (s *PipelineService) PostInit(ctx context.Context) error {
 		s.config.MaxToolIterations = DefaultMaxToolIterations
 	}
 
-	metadata := domtool.NamespaceMetadata{
-		Description: "Pipeline dispatch tools for driving sub-sessions synchronously.",
-		Builtin:     true,
-		System:      `Use pipeline tools to send a message to a sub-session and collect its full response before continuing. Each call is a complete nested LLM run — use sparingly and frame messages tightly to minimise token cost.`,
-	}
-	if err := s.tools.RegisterNamespaceMetadata(ServiceNamespace, metadata); err != nil {
-		return fmt.Errorf("failed to register namespace metadata for %q: %w", ServiceNamespace, err)
-	}
-
 	for _, definition := range ToolsDefinitions {
 		captured := definition
 		exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
 			req.Tool = captured.Name
 			return s.ExecuteTool(ctx, req)
 		}
-		if err := s.tools.RegisterTool(ServiceNamespace, definition, exec); err != nil {
-			return fmt.Errorf("failed to register tool %q for namespace %q: %w", definition.Name, ServiceNamespace, err)
+		if err := s.tools.RegisterTool("builtin", definition, exec); err != nil {
+			return fmt.Errorf("failed to register tool %q under builtin namespace: %w", definition.Name, err)
 		}
 	}
 

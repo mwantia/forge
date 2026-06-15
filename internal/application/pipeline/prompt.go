@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	appsession "github.com/mwantia/forge/internal/application/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
 
@@ -12,30 +13,70 @@ import (
 // system-prompt render as {{ .tools }}. Plugin System() calls are made once
 // per turn; failures are silently skipped so a misbehaving plugin never
 // breaks the prompt.
-func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar) map[string]any {
+//
+// Scoped mode (non-empty plugins list): only listed, non-disabled namespaces
+// are included; all are immediately activated. All-plugins mode (empty list):
+// every non-disabled namespace is included, but tool schemas are withheld
+// until the agent calls builtin__plugin_activate.
+func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins []appsession.PluginConfig) map[string]any {
+	pluginMap := make(map[string]appsession.PluginConfig, len(plugins))
+	for _, p := range plugins {
+		pluginMap[strings.ToLower(p.Name)] = p
+	}
+	scoped := len(plugins) > 0
+
 	namespaces := make(map[string]any)
 
 	for _, ns := range registar.ListNamespaces() {
+		cfg, hasCfg := pluginMap[strings.ToLower(ns.Namespace)]
+
+		if !ns.Builtin {
+			if scoped {
+				// Scoped: skip if not listed or explicitly disabled.
+				if !hasCfg || cfg.Disabled {
+					continue
+				}
+			} else {
+				// All-plugins: skip only if explicitly disabled.
+				if hasCfg && cfg.Disabled {
+					continue
+				}
+			}
+		}
+
+		// Verbose flag from per-plugin config; builtin and scoped-mode plugins
+		// default to compact (false) unless the config says otherwise.
+		verbose := hasCfg && cfg.Verbose
+
 		system := ns.System
 		if ns.Plugin != nil {
-			if s, err := ns.Plugin.System(ctx); err == nil {
+			if s, err := ns.Plugin.System(ctx, verbose); err == nil {
 				system = s
 			}
 		}
 
-		defs := make([]any, 0, len(ns.Tools))
-		for _, t := range ns.Tools {
-			defs = append(defs, map[string]any{
-				"name":        t.Name,
-				"description": t.Description,
-				"annotations": map[string]any{
-					"system":                t.Annotations.System,
-					"read_only":             t.Annotations.ReadOnly,
-					"idempotent":            t.Annotations.Idempotent,
-					"destructive":           t.Annotations.Destructive,
-					"requires_confirmation": t.Annotations.RequiresConfirmation,
-				},
-			})
+		// Tool schemas are shown when the namespace is activated:
+		//   - always for builtins
+		//   - always in scoped mode (all listed plugins start activated)
+		//   - in all-plugins mode only after plugin_activate sets Enabled=true
+		activated := ns.Builtin || scoped || (hasCfg && cfg.Enabled)
+
+		var defs []any
+		if activated {
+			defs = make([]any, 0, len(ns.Tools))
+			for _, t := range ns.Tools {
+				defs = append(defs, map[string]any{
+					"name":        t.Name,
+					"description": t.Description,
+					"annotations": map[string]any{
+						"system":                t.Annotations.System,
+						"read_only":             t.Annotations.ReadOnly,
+						"idempotent":            t.Annotations.Idempotent,
+						"destructive":           t.Annotations.Destructive,
+						"requires_confirmation": t.Annotations.RequiresConfirmation,
+					},
+				})
+			}
 		}
 
 		namespaces[ns.Namespace] = map[string]any{
@@ -44,6 +85,7 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar) map[str
 			"description": ns.Description,
 			"system":      system,
 			"builtin":     ns.Builtin,
+			"activated":   activated,
 			"definitions": defs,
 		}
 	}
@@ -52,15 +94,17 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar) map[str
 }
 
 // filterToolCallsByPlugins removes tool calls whose namespace is not in the
-// allowed set. When allowedNamespaces is empty all calls pass through.
-// Builtin namespaces always bypass the filter.
-func filterToolCallsByPlugins(calls []sdkplugins.ToolCall, builtinNamespaces map[string]struct{}, allowedPlugins []string) []sdkplugins.ToolCall {
-	if len(allowedPlugins) == 0 {
+// allowed set. When plugins is empty all calls pass through (all-plugins mode).
+// Builtin namespaces always bypass the filter. Disabled plugins are excluded.
+func filterToolCallsByPlugins(calls []sdkplugins.ToolCall, builtinNamespaces map[string]struct{}, plugins []appsession.PluginConfig) []sdkplugins.ToolCall {
+	if len(plugins) == 0 {
 		return calls
 	}
-	allowed := make(map[string]struct{}, len(allowedPlugins))
-	for _, p := range allowedPlugins {
-		allowed[strings.ToLower(p)] = struct{}{}
+	allowed := make(map[string]struct{}, len(plugins))
+	for _, p := range plugins {
+		if !p.Disabled {
+			allowed[strings.ToLower(p.Name)] = struct{}{}
+		}
 	}
 	out := calls[:0:0]
 	for _, tc := range calls {

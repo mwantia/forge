@@ -42,7 +42,7 @@ var _ PipelineRenderer = (*PipelineService)(nil)
 func (s *PipelineService) buildScopedTemplate(ctx context.Context, meta *appsession.SessionMetadata) (*infratemplate.Template, error) {
 	return s.tmpl.Clone(
 		appsession.SessionVars(meta),
-		infratemplate.WithAnyValue("tools", buildToolsData(ctx, s.tools)),
+		infratemplate.WithAnyValue("tools", buildToolsData(ctx, s.tools, meta.Plugins)),
 		infratemplate.WithAnyValue("model", buildModelData(ctx, s.provider, s.splitModelName, meta.Model)),
 	)
 }
