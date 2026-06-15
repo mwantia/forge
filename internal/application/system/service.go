@@ -7,6 +7,7 @@ import (
 	"github.com/mwantia/fabric/v2/pkg/container"
 	approot "github.com/mwantia/forge/internal/application"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
+	domsession "github.com/mwantia/forge/internal/domain/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
 	infrastorage "github.com/mwantia/forge/internal/infrastructure/storage"
@@ -15,11 +16,12 @@ import (
 type SystemService struct {
 	approot.UnimplementedService
 
-	router  infraserver.HttpRouter      `fabric:"inject"`
-	storage infrastorage.StorageBackend `fabric:"inject"`
-	plugins domplugin.PluginsRegistry   `fabric:"inject"`
-	tools   domtool.ToolsRegistar       `fabric:"inject"`
-	logger  hclog.Logger                `fabric:"logger=system"`
+	router   infraserver.HttpRouter        `fabric:"inject"`
+	storage  infrastorage.StorageBackend   `fabric:"inject"`
+	plugins  domplugin.PluginsRegistry     `fabric:"inject"`
+	tools    domtool.ToolsRegistar         `fabric:"inject"`
+	sessions domsession.SessionManager     `fabric:"inject"`
+	logger   hclog.Logger                  `fabric:"logger=system"`
 }
 
 func init() {

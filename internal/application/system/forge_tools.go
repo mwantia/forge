@@ -2,63 +2,54 @@ package system
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	domsession "github.com/mwantia/forge/internal/domain/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
 
 var startTime = time.Now()
 
 func (s *SystemService) registerForgeTools() error {
-	if err := s.tools.RegisterNamespaceMetadata("forge", domtool.NamespaceMetadata{
+	// SystemService is the sole owner of the "builtin" namespace metadata.
+	// All other services (pipeline, resource, session) register tools under
+	// "builtin" without re-registering metadata.
+	if err := s.tools.RegisterNamespaceMetadata("builtin", domtool.NamespaceMetadata{
 		Builtin:     true,
-		Description: "Built-in forge agent tools for system introspection.",
-		System: `Call forge__system_status when the user asks why something is not working or what is available.
-Call forge__plugin_health for a targeted check on a specific plugin after system_status shows a degraded entry.
-Call forge__agent_info for capability questions ("can you send emails?", "which models are available?").
-Do NOT call system_status on every turn. Parse the response and surface each degraded or unhealthy plugin's Action field verbatim as the remediation step.`,
+		Description: "Built-in tools for session management, resource memory, pipeline dispatch, and system introspection.",
+		System: `Use session tools to manage metadata, spawn sub-sessions, and inspect message history.
+Use resource tools to persist and retrieve context across turns and sessions.
+Use pipeline tools to drive sub-sessions synchronously.
+Use system tools for health checks and capability introspection.`,
 	}); err != nil {
-		return fmt.Errorf("failed to register forge namespace metadata: %w", err)
+		return fmt.Errorf("failed to register builtin namespace metadata: %w", err)
 	}
 
-	if err := s.tools.RegisterTool("forge", sdkplugins.ToolDefinition{
+	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
 		Name:        "system_status",
-		Description: "Check the live health of all forge plugins and providers. Use when the user asks why something isn't working or wants to know what is available.",
+		Description: "Check the live health of forge plugins and providers. Pass an optional plugin name for a targeted check; omit for a full overview.",
 		Annotations: sdkplugins.ToolAnnotations{
 			ReadOnly: true,
 			CostHint: sdkplugins.ToolCostCheap,
+			System: `Call when the user asks why something isn't working or what is available.
+Do NOT call on every turn. Parse the response and surface each degraded plugin's Action field verbatim as the remediation step.
+Pass "name" for a targeted check after the full status reveals a degraded entry.`,
 		},
 		Parameters: sdkplugins.ToolParameters{
-			Type:       "object",
-			Properties: map[string]sdkplugins.ToolProperty{},
-		},
-	}, s.execSystemStatus); err != nil {
-		return fmt.Errorf("failed to register forge__system_status: %w", err)
-	}
-
-	if err := s.tools.RegisterTool("forge", sdkplugins.ToolDefinition{
-		Name:        "plugin_health",
-		Description: "Check the live health of a single named plugin. Use when system_status shows a degraded plugin and a targeted check is needed.",
-		Annotations: sdkplugins.ToolAnnotations{
-			ReadOnly: true,
-			CostHint: sdkplugins.ToolCostCheap,
-		},
-		Parameters: sdkplugins.ToolParameters{
-			Type:     "object",
-			Required: []string{"name"},
+			Type: "object",
 			Properties: map[string]sdkplugins.ToolProperty{
-				"name": {Type: "string", Description: "Plugin name as listed by system_status."},
+				"name": {Type: "string", Description: "Optional plugin name for a targeted health check. Omit to check all plugins."},
 			},
 		},
-	}, s.execPluginHealth); err != nil {
-		return fmt.Errorf("failed to register forge__plugin_health: %w", err)
+	}, s.execSystemStatus); err != nil {
+		return fmt.Errorf("failed to register builtin__system_status: %w", err)
 	}
 
-	if err := s.tools.RegisterTool("forge", sdkplugins.ToolDefinition{
+	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
 		Name:        "agent_info",
 		Description: "Return static forge agent metadata: uptime, loaded plugins, and runtime. Use for capability questions without triggering health checks.",
 		Annotations: sdkplugins.ToolAnnotations{
@@ -70,45 +61,59 @@ Do NOT call system_status on every turn. Parse the response and surface each deg
 			Properties: map[string]sdkplugins.ToolProperty{},
 		},
 	}, s.execAgentInfo); err != nil {
-		return fmt.Errorf("failed to register forge__agent_info: %w", err)
+		return fmt.Errorf("failed to register builtin__agent_info: %w", err)
+	}
+
+	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
+		Name:        "plugin_activate",
+		Description: "Load the full tool definitions and system instructions for a plugin namespace.",
+		Annotations: sdkplugins.ToolAnnotations{
+			ReadOnly:   true,
+			Idempotent: true,
+			CostHint:   sdkplugins.ToolCostCheap,
+			System: `Call when the user's request matches a plugin described in the system prompt but whose tools
+are not yet available. The compact summary shown per plugin is enough to decide whether to activate it.
+Do not attempt to activate a plugin the user has explicitly disabled — surface intent instead.`,
+		},
+		Parameters: sdkplugins.ToolParameters{
+			Type:     "object",
+			Required: []string{"name"},
+			Properties: map[string]sdkplugins.ToolProperty{
+				"name":    {Type: "string", Description: "Plugin namespace to activate (e.g. \"searxng\", \"consul\")."},
+				"verbose": {Type: "boolean", Description: "When true, request the full operational system prompt. Defaults to false."},
+			},
+		},
+	}, s.execPluginActivate); err != nil {
+		return fmt.Errorf("failed to register builtin__plugin_activate: %w", err)
 	}
 
 	return nil
 }
 
-func (s *SystemService) execSystemStatus(ctx context.Context, _ sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	entries, worst := fanOutHealth(ctx, s.plugins.ListDrivers())
+	// Targeted check when name is provided (replaces the former plugin_health tool).
+	if name := req.Args.Get("name").StringOr(""); name != "" {
+		driver, ok := s.plugins.GetDriver(name)
+		if !ok {
+			return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": fmt.Sprintf("plugin %q not found", name)}, IsError: true}, nil
+		}
+		h, _ := driver.Driver.GetPluginHealth(ctx)
 
-	out := map[string]any{
+		return &sdkplugins.ExecuteResponse{
+			Result: toHealthEntry(name, driver.Capabilities, h),
+		}, nil
+	}
+
+	// Full fan-out over all drivers.
+	entries, worst := fanOutHealth(ctx, s.plugins.ListDrivers())
+	return &sdkplugins.ExecuteResponse{Result: map[string]any{
 		"status":  worst,
 		"plugins": entries,
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
-	}
-	b, _ := json.Marshal(out)
-	return &sdkplugins.ExecuteResponse{Result: string(b)}, nil
-}
-
-func (s *SystemService) execPluginHealth(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
-	name := req.Args.Get("name").StringOr("")
-	if name == "" {
-		return &sdkplugins.ExecuteResponse{Result: `{"error":"name is required"}`, IsError: true}, nil
-	}
-
-	driver, ok := s.plugins.GetDriver(name)
-	if !ok {
-		return &sdkplugins.ExecuteResponse{Result: fmt.Sprintf(`{"error":"plugin %q not found"}`, name), IsError: true}, nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	h, _ := driver.Driver.GetPluginHealth(ctx)
-	entry := toHealthEntry(name, driver.Capabilities, h)
-	b, _ := json.Marshal(entry)
-	return &sdkplugins.ExecuteResponse{Result: string(b)}, nil
+	}}, nil
 }
 
 func (s *SystemService) execAgentInfo(_ context.Context, _ sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
@@ -118,11 +123,88 @@ func (s *SystemService) execAgentInfo(_ context.Context, _ sdkplugins.ExecuteReq
 		names = append(names, d.Info.Name)
 	}
 
-	out := map[string]any{
+	return &sdkplugins.ExecuteResponse{Result: map[string]any{
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
 		"go":      runtime.Version(),
 		"plugins": names,
+	}}, nil
+}
+
+func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+	name := strings.ToLower(req.Args.Get("name").StringOr(""))
+	if name == "" {
+		return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": "name is required"}, IsError: true}, nil
 	}
-	b, _ := json.Marshal(out)
-	return &sdkplugins.ExecuteResponse{Result: string(b)}, nil
+	verbose := req.Args.Get("verbose").BoolOr(false)
+
+	// Find the namespace in the registar.
+	var target *domtool.NamespaceInfo
+	for _, ns := range s.tools.ListNamespaces() {
+		if strings.ToLower(ns.Namespace) == name {
+			ns := ns
+			target = &ns
+			break
+		}
+	}
+	if target == nil {
+		return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": fmt.Sprintf("plugin namespace %q not found", name)}, IsError: true}, nil
+	}
+
+	// Load session and update its plugin config.
+	sessionID := domsession.CallerSessionID(ctx)
+	if sessionID != "" {
+		meta, err := s.sessions.LoadSession(ctx, sessionID)
+		if err == nil {
+			// Find or create the PluginConfig entry for this namespace.
+			found := false
+			for i, p := range meta.Plugins {
+				if strings.ToLower(p.Name) == name {
+					if p.Disabled {
+						// User hard-disabled — emit elevation request instead of enabling.
+						return &sdkplugins.ExecuteResponse{Result: map[string]any{
+							"elevation_required": true,
+							"plugin":             name,
+							"message":            fmt.Sprintf("Plugin %q is disabled by the user. Request user approval via builtin__plugin_activate to re-enable.", name),
+						}}, nil
+					}
+					meta.Plugins[i].Enabled = true
+					if verbose {
+						meta.Plugins[i].Verbose = true
+					}
+					found = true
+					break
+				}
+			}
+			if !found {
+				meta.Plugins = append(meta.Plugins, domsession.PluginConfig{
+					Name:    name,
+					Enabled: true,
+					Verbose: verbose,
+				})
+			}
+			_ = s.sessions.SaveSession(ctx, meta)
+		}
+	}
+
+	// Return the plugin's system prompt + compact tool index.
+	systemPrompt := ""
+	if target.Plugin != nil {
+		if s, err := target.Plugin.System(ctx, verbose); err == nil {
+			systemPrompt = s
+		}
+	} else {
+		systemPrompt = target.System
+	}
+
+	tools := make([]string, 0, len(target.Tools))
+	for _, t := range target.Tools {
+		tools = append(tools, t.Name)
+	}
+
+	return &sdkplugins.ExecuteResponse{Result: map[string]any{
+		"plugin":  name,
+		"system":  systemPrompt,
+		"tools":   tools,
+		"message": fmt.Sprintf("Plugin %q activated. Full tool schemas will be available on the next turn.", name),
+	}}, nil
 }

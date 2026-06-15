@@ -106,7 +106,9 @@ func (a *Agent) Serve(once bool, ctx context.Context) error {
 
 	globalTimeout, err := time.ParseDuration(a.config.ShutdownTimeout)
 	if err != nil {
-		a.logger.Warn("Invalid duration defined for 'shutdown_timeout': %v", err)
+		if a.config.ShutdownTimeout != "" {
+			a.logger.Warn("Invalid duration for 'shutdown_timeout', using default 30s", "value", a.config.ShutdownTimeout, "error", err)
+		}
 		globalTimeout = 30 * time.Second
 	}
 
