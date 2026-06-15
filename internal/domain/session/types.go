@@ -28,6 +28,15 @@ type SessionQuery struct {
 	Limit  int
 }
 
+// PluginConfig describes a plugin's activation state within a session.
+// When SessionMetadata.Plugins is empty, all plugins are active (all-plugins mode).
+type PluginConfig struct {
+	Name     string `json:"name"`
+	Enabled  bool   `json:"enabled"`  // agent called plugin_activate; tools visible
+	Verbose  bool   `json:"verbose"`  // full System() prose shown in system prompt
+	Disabled bool   `json:"disabled"` // user hard-disabled; agent cannot re-enable
+}
+
 // SessionMetadata is the mutable descriptor for a session.
 type SessionMetadata struct {
 	ID          string    `json:"id"`
@@ -45,11 +54,9 @@ type SessionMetadata struct {
 	ArchivePath       string     `json:"archive_path,omitempty"`
 	// Usage aggregates provider-reported token consumption across all turns.
 	Usage *sdkplugins.TokenUsage `json:"usage,omitempty"`
-	// ToolsVerbosity controls how much plugin/tool guidance appears in the
-	// assembled system prompt: "full" (default), "basic", or "none".
-	ToolsVerbosity string `json:"tools_verbosity,omitempty"`
-	// Plugins restricts which plugin namespaces are active for this session.
-	Plugins []string `json:"plugins,omitempty"`
+	// Plugins restricts which plugin namespaces are active for this session and
+	// their per-plugin activation state. Empty list means all plugins are active.
+	Plugins []PluginConfig `json:"plugins,omitempty"`
 	// TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline commits.
 	TotalDurationMs int64 `json:"total_duration_ms,omitempty"`
 }

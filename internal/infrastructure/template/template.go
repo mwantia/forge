@@ -74,7 +74,7 @@ func (t *Template) Clone(opts ...TemplateOption) (*Template, error) {
 // For human-authored body text and system prompts, prefer RenderBody (Go
 // text/template {{ }} syntax) which never conflicts with HCL escaping rules.
 func (t *Template) RenderConfig(text string) (string, error) {
-	if text == "" {
+	if text == "" || (!strings.Contains(text, "${") && !strings.Contains(text, "%{")) {
 		return text, nil
 	}
 

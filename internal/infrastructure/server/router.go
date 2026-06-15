@@ -19,5 +19,15 @@ func (s *ServerService) AuthGroup(relativePath string) *gin.RouterGroup {
 }
 
 func (s *ServerService) UIGroup(relativePath string) *gin.RouterGroup {
-	return s.engine.Group(relativePath, s.authMiddleware())
+	return s.engine.Group(relativePath, s.authMiddleware(), noCacheMiddleware())
+}
+
+// noCacheMiddleware prevents browsers and proxies from caching HTML/HTMX responses.
+// Static assets under /ui/assets/ are served with their own immutable headers
+// and bypass this middleware because UIService registers them after this group.
+func noCacheMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		c.Next()
+	}
 }

@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	gotemplate "text/template"
 
 	"github.com/zclconf/go-cty/cty"
@@ -83,7 +84,7 @@ func (t *Template) GoData() (map[string]any, error) {
 // Unlike RenderConfig, this syntax never conflicts with HCL ${...} escaping
 // rules, making it suitable for human-authored body text and system prompts.
 func (t *Template) RenderBody(text string) (string, error) {
-	if text == "" {
+	if text == "" || !strings.Contains(text, "{{") {
 		return text, nil
 	}
 
