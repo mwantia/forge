@@ -41,17 +41,17 @@ export const theme = {
     },
     fontSize: {
       // Legacy alias kept for any stale references.
-      '2xs':     ['10px', '14px'],
+      '2xs':     ['11px', '15px'],
       // Forge UI scale — use these instead of arbitrary text-[Npx] values.
-      'ui-dot':  ['12px',   { lineHeight: '12px' }], // collapse arrows ▶
-      'ui-label':['11px',   { lineHeight: '15px' }], // section caps, badge letters, meta keys
-      'ui-args': ['10.5px', { lineHeight: '15px' }], // JSON / args pre blocks
-      'ui-meta': ['11px',   { lineHeight: '16px' }], // sidebar body, hashes, loading text
-      'ui-sys':  ['11.5px', { lineHeight: '17px' }], // system-message pre content
-      'ui-code': ['12px',   { lineHeight: '16px' }], // inputs, inline code, raw toggle
-      'ui-ctrl': ['13px',   { lineHeight: '18px' }], // buttons, action controls
-      'ui-body': ['13.5px', { lineHeight: '20px' }], // message content, textarea
-      'ui-h1':   ['22px',   { lineHeight: '28px' }], // page title
+      'ui-dot':  ['13px',   { lineHeight: '13px' }], // collapse arrows ▶
+      'ui-label':['12px',   { lineHeight: '16px' }], // section caps, badge letters, meta keys
+      'ui-args': ['12px', { lineHeight: '16px' }], // JSON / args pre blocks
+      'ui-meta': ['12px',   { lineHeight: '17px' }], // sidebar body, hashes, loading text
+      'ui-sys':  ['13px', { lineHeight: '18px' }], // system-message pre content
+      'ui-code': ['13px',   { lineHeight: '17px' }], // inputs, inline code, raw toggle
+      'ui-ctrl': ['14px',   { lineHeight: '19px' }], // buttons, action controls
+      'ui-body': ['15px', { lineHeight: '21px' }], // message content, textarea
+      'ui-h1':   ['23px',   { lineHeight: '29px' }], // page title
     },
   },
 };
