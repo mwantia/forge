@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
@@ -33,6 +34,13 @@ func init() {
 
 func (u *UIService) PostInit(_ context.Context) error {
 	g := u.router.UIGroup("/ui")
+
+	g.Use(func(c *gin.Context) {
+		if !strings.HasPrefix(c.Request.URL.Path, "/ui/assets/") {
+			c.Header("Cache-Control", "no-store")
+		}
+		c.Next()
+	})
 
 	g.GET("", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/ui/sessions")
