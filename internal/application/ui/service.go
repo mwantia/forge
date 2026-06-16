@@ -11,6 +11,7 @@ import (
 	approot "github.com/mwantia/forge/internal/application"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
@@ -19,11 +20,12 @@ import (
 type UIService struct {
 	approot.UnimplementedService
 
-	router   infraserver.HttpRouter        `fabric:"inject"`
-	sessions *appsession.SessionService    `fabric:"inject"`
-	tools    domtool.ToolsRegistar         `fabric:"inject"`
-	pipeline apppipeline.PipelineCommitter `fabric:"inject"`
-	renderer apppipeline.PipelineRenderer  `fabric:"inject"`
+	router    infraserver.HttpRouter         `fabric:"inject"`
+	sessions  *appsession.SessionService     `fabric:"inject"`
+	tools     domtool.ToolsRegistar          `fabric:"inject"`
+	providers domprovider.ProviderRegistar   `fabric:"inject"`
+	pipeline  apppipeline.PipelineCommitter  `fabric:"inject"`
+	renderer  apppipeline.PipelineRenderer   `fabric:"inject"`
 
 	logger hclog.Logger `fabric:"logger=ui"`
 }
@@ -47,12 +49,14 @@ func (u *UIService) PostInit(_ context.Context) error {
 	})
 
 	sess := &sessionHandlers{
-		sessions: u.sessions,
-		tools:    u.tools,
-		renderer: u.renderer,
+		sessions:  u.sessions,
+		tools:     u.tools,
+		renderer:  u.renderer,
+		providers: u.providers,
 	}
 	g.GET("/sessions", sess.handleList())
 	g.POST("/sessions", sess.handleCreate())
+	g.GET("/sessions/new", sess.handleNew())
 	g.GET("/sessions/:id", sess.handleDetail())
 	g.DELETE("/sessions/:id", sess.handleDelete())
 	g.POST("/sessions/:id/archive", sess.handleArchive())

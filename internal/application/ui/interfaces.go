@@ -6,6 +6,7 @@ import (
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domsession "github.com/mwantia/forge/internal/domain/session"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
 
@@ -29,6 +30,11 @@ type pluginNamespace struct {
 // namespaceLister is the narrow surface UIService needs from ToolsRegistar.
 type namespaceLister interface {
 	ListNamespaces() []domtool.NamespaceInfo
+}
+
+// modelLister is the narrow surface UIService needs from ProviderRegistar.
+type modelLister interface {
+	ListModelsByType(ctx context.Context, kind string) ([]*domprovider.ProviderModelTemplate, error)
 }
 
 // pipelineCommitter aliases the pipeline package interface to avoid re-declaring it.

@@ -1,0 +1,95 @@
+package tmplsessions
+
+import (
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
+)
+
+templ New(models []*domprovider.ProviderModelTemplate, availablePlugins []string) {
+	@layout.Base("New Session") {
+		@layout.Topbar("", "", "")
+		<main class="flex-1 overflow-auto [scrollbar-gutter:stable]">
+			<div class="max-w-xl mx-auto px-6 py-10">
+				<div class="mb-8">
+					<a href="/ui/sessions" class="text-ink-4 hover:text-ink text-ui-ctrl transition-colors">← Sessions</a>
+					<h1 class="text-ui-h1 font-semibold tracking-tight mt-3">New Session</h1>
+					<p class="text-ink-3 text-ui-ctrl mt-1">Configure a new chat session.</p>
+				</div>
+				<form
+					hx-post="/ui/sessions"
+					hx-target="body"
+					class="flex flex-col gap-5"
+				>
+					<!-- Model -->
+					<div class="flex flex-col gap-1.5">
+						<label for="model" class="text-ui-ctrl text-ink-2 font-medium">Model <span class="text-rem">*</span></label>
+						if len(models) > 0 {
+							<select
+								id="model"
+								name="model"
+								required
+								class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors"
+							>
+								for _, m := range models {
+									<option value={ "forge/" + m.Name }>{ m.Name }</option>
+								}
+							</select>
+						} else {
+							<input
+								id="model"
+								name="model"
+								type="text"
+								required
+								placeholder="e.g. forge/assistant or ollama/llama3.2"
+								class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors"
+							/>
+							<p class="text-ui-meta text-ink-4">No model aliases configured — enter a model reference manually.</p>
+						}
+					</div>
+					<!-- Name -->
+					<div class="flex flex-col gap-1.5">
+						<label for="name" class="text-ui-ctrl text-ink-2 font-medium">
+							Name <span class="text-ink-4 font-normal">(optional)</span>
+						</label>
+						<input
+							id="name"
+							name="name"
+							type="text"
+							placeholder="e.g. my-project"
+							class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors"
+						/>
+						<p class="text-ui-meta text-ink-4">Short identifier for the session. Auto-generated if left blank.</p>
+					</div>
+					<!-- Title -->
+					<div class="flex flex-col gap-1.5">
+						<label for="title" class="text-ui-ctrl text-ink-2 font-medium">
+							Title <span class="text-ink-4 font-normal">(optional)</span>
+						</label>
+						<input
+							id="title"
+							name="title"
+							type="text"
+							placeholder="e.g. Debugging the auth middleware"
+							class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors"
+						/>
+					</div>
+					<!-- Plugins -->
+					if len(availablePlugins) > 0 {
+						<div class="flex flex-col gap-1.5">
+							<label class="text-ui-ctrl text-ink-2 font-medium">
+								Plugins <span class="text-ink-4 font-normal">(optional)</span>
+							</label>
+							@PluginPicker(availablePlugins)
+							<p class="text-ui-meta text-ink-4">Enable specific plugins for this session.</p>
+						</div>
+					}
+					<!-- Actions -->
+					<div class="flex items-center justify-end gap-3 pt-2">
+						<a href="/ui/sessions" class="btn-ghost">Cancel</a>
+						<button type="submit" class="btn-accent">Create Session</button>
+					</div>
+				</form>
+			</div>
+		</main>
+	}
+}

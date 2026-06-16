@@ -28,7 +28,7 @@ templ pluginRow(sessionID string, name string, cfg appsession.PluginConfig, canE
 		<!-- Name + state indicator -->
 		<div class="flex items-center gap-2 px-2.5 py-2 min-w-0">
 			<span class={ "text-[8px] shrink-0 leading-none", pluginDotClass(cfg) }>●</span>
-			<span class={ "font-mono text-ui-label truncate flex-1 min-w-0", pluginNameClass(cfg) } title={ name }>{ name }</span>
+			<span class={ "font-mono text-ui-label truncate flex-1 min-w-0", pluginNameClass(cfg) } title={ name + " (latest)"} >{ name }</span>
 			if cfg.Verbose {
 				<span class="text-ink-4 text-[9px] shrink-0" title="verbose">v</span>
 			}

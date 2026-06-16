@@ -163,9 +163,9 @@ func pluginRow(sessionID string, name string, cfg appsession.PluginConfig, canEd
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(name + " (latest)")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/plugins.templ`, Line: 31, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/plugins.templ`, Line: 31, Col: 117}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
@@ -178,7 +178,7 @@ func pluginRow(sessionID string, name string, cfg appsession.PluginConfig, canEd
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/plugins.templ`, Line: 31, Col: 112}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/plugins.templ`, Line: 31, Col: 126}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {

@@ -8,12 +8,14 @@ import (
 	"github.com/gin-gonic/gin"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
 
 type sessionHandlers struct {
-	sessions sessionReader
-	tools    namespaceLister
-	renderer pipelineRenderer
+	sessions  sessionReader
+	tools     namespaceLister
+	renderer  pipelineRenderer
+	providers modelLister
 }
 
 func (h *sessionHandlers) handleList() gin.HandlerFunc {
@@ -50,6 +52,19 @@ func (h *sessionHandlers) handleList() gin.HandlerFunc {
 	}
 }
 
+func (h *sessionHandlers) handleNew() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var models []*domprovider.ProviderModelTemplate
+		if h.providers != nil {
+			models, _ = h.providers.ListModelsByType(c.Request.Context(), domprovider.ModelTypeChat)
+		}
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		_ = tmplsessions.New(models, h.pluginNamespaces()).Render(c.Request.Context(), c.Writer)
+	}
+}
+
 func (h *sessionHandlers) handleCreate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		model := c.PostForm("model")
@@ -61,7 +76,14 @@ func (h *sessionHandlers) handleCreate() gin.HandlerFunc {
 			return
 		}
 
-		meta, err := h.sessions.CreateSession(c.Request.Context(), model, name, title, "", "", nil)
+		var pluginConfigs []appsession.PluginConfig
+		for _, pname := range c.PostFormArray("plugins") {
+			if pname = strings.TrimSpace(pname); pname != "" {
+				pluginConfigs = append(pluginConfigs, appsession.PluginConfig{Name: pname, Enabled: true})
+			}
+		}
+
+		meta, err := h.sessions.CreateSession(c.Request.Context(), model, name, title, "", "", pluginConfigs)
 		if err != nil {
 			c.String(http.StatusConflict, "create failed: %v", err)
 			return
