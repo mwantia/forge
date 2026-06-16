@@ -10,7 +10,7 @@ import appsession "github.com/mwantia/forge/internal/application/session"
 templ NodePanel(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) {
 	@SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil)
 	<div id="siblings-section" hx-swap-oob="innerHTML">
-		@SubSessionsSection(subSessions)
+		@SiblingsSection(subSessions)
 	</div>
 	<div id="path-section" hx-swap-oob="innerHTML">
 		@PathSection(messages)

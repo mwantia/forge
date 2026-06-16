@@ -16,7 +16,7 @@ import (
 
 // SubSessionsSection renders the list of sessions cloned from this one.
 // OOB-swapped into #siblings-section by NodePanel responses.
-func SubSessionsSection(subs []*appsession.SessionMetadata) templ.Component {
+func SiblingsSection(subs []*appsession.SessionMetadata) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -37,7 +37,7 @@ func SubSessionsSection(subs []*appsession.SessionMetadata) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"px-3 py-1.5 flex items-center gap-2\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1\">Sub-sessions</span> <span class=\"text-ui-label text-ink-4 font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"px-3 py-1.5 flex items-center gap-2\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1\">Siblings</span> <span class=\"text-ui-label text-ink-4 font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

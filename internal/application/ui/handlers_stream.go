@@ -10,13 +10,13 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	uidag "github.com/mwantia/forge/internal/application/ui/templates/dag"
 	tmplrefs "github.com/mwantia/forge/internal/application/ui/templates/refs"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 type streamHandlers struct {
@@ -181,9 +181,9 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 	// Left panel: session info card + plugins
 	allPlugins := pluginNamespacesFrom(h.tools)
 	sb.WriteString(oobWrap("session-info-card", renderComponent(ctx, tmplsessions.SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil))))
-	// Right panel: sub-sessions + path (separate OOB to avoid nesting)
+	// Right panel: siblings + path (separate OOB to avoid nesting)
 	subSessions, _ := h.sessions.QuerySessions(ctx, appsession.SessionQuery{ParentID: sessionID})
-	sb.WriteString(oobWrap("siblings-section", renderComponent(ctx, tmplsessions.SubSessionsSection(subSessions))))
+	sb.WriteString(oobWrap("siblings-section", renderComponent(ctx, tmplsessions.SiblingsSection(subSessions))))
 	sb.WriteString(oobWrap("path-section", renderComponent(ctx, tmplsessions.PathSection(msgs))))
 
 	// Mini DAG
@@ -193,4 +193,3 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 
 	return sb.String()
 }
-
