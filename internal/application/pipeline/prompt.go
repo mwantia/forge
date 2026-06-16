@@ -14,16 +14,14 @@ import (
 // per turn; failures are silently skipped so a misbehaving plugin never
 // breaks the prompt.
 //
-// Scoped mode (non-empty plugins list): only listed, non-disabled namespaces
-// are included; all are immediately activated. All-plugins mode (empty list):
-// every non-disabled namespace is included, but tool schemas are withheld
-// until the agent calls builtin__plugin_activate.
+// All non-builtin namespaces are included unless the user hard-disabled them.
+// Tool schemas are withheld until the agent calls builtin__plugin_activate,
+// which sets Enabled=true in the session metadata for that namespace.
 func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins []appsession.PluginConfig) map[string]any {
 	pluginMap := make(map[string]appsession.PluginConfig, len(plugins))
 	for _, p := range plugins {
 		pluginMap[strings.ToLower(p.Name)] = p
 	}
-	scoped := len(plugins) > 0
 
 	namespaces := make(map[string]any)
 
@@ -31,21 +29,12 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins
 		cfg, hasCfg := pluginMap[strings.ToLower(ns.Namespace)]
 
 		if !ns.Builtin {
-			if scoped {
-				// Scoped: skip if not listed or explicitly disabled.
-				if !hasCfg || cfg.Disabled {
-					continue
-				}
-			} else {
-				// All-plugins: skip only if explicitly disabled.
-				if hasCfg && cfg.Disabled {
-					continue
-				}
+			// Skip only if the user hard-disabled this plugin.
+			if hasCfg && cfg.Disabled {
+				continue
 			}
 		}
 
-		// Verbose flag from per-plugin config; builtin and scoped-mode plugins
-		// default to compact (false) unless the config says otherwise.
 		verbose := hasCfg && cfg.Verbose
 
 		system := ns.System
@@ -55,11 +44,10 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins
 			}
 		}
 
-		// Tool schemas are shown when the namespace is activated:
-		//   - always for builtins
-		//   - always in scoped mode (all listed plugins start activated)
-		//   - in all-plugins mode only after plugin_activate sets Enabled=true
-		activated := ns.Builtin || scoped || (hasCfg && cfg.Enabled)
+		// Tool schemas are shown only for builtins and explicitly enabled plugins.
+		// All others appear as a description-only entry; the agent calls
+		// builtin__plugin_activate to request full schemas on the next turn.
+		activated := ns.Builtin || (hasCfg && cfg.Enabled)
 
 		var defs []any
 		if activated {
@@ -93,16 +81,13 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins
 	return map[string]any{"namespaces": namespaces}
 }
 
-// filterToolCallsByPlugins removes tool calls whose namespace is not in the
-// allowed set. When plugins is empty all calls pass through (all-plugins mode).
-// Builtin namespaces always bypass the filter. Disabled plugins are excluded.
+// filterToolCallsByPlugins removes tool calls whose namespace is not enabled.
+// Builtin namespaces always bypass the filter. Only plugins with Enabled=true
+// (and Disabled=false) are allowed through.
 func filterToolCallsByPlugins(calls []sdkplugins.ToolCall, builtinNamespaces map[string]struct{}, plugins []appsession.PluginConfig) []sdkplugins.ToolCall {
-	if len(plugins) == 0 {
-		return calls
-	}
 	allowed := make(map[string]struct{}, len(plugins))
 	for _, p := range plugins {
-		if !p.Disabled {
+		if p.Enabled && !p.Disabled {
 			allowed[strings.ToLower(p.Name)] = struct{}{}
 		}
 	}
