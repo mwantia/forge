@@ -151,7 +151,7 @@ func PathSection(messages []*appsession.Message) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div x-data=\"{ hideTools: false }\" class=\"flex flex-col h-full\"><div class=\"px-3 py-1.5 flex items-center gap-2 border-b border-line-soft shrink-0\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1\">Path</span> <label class=\"flex items-center gap-1.5 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"hideTools\" class=\"w-3 h-3 accent-accent\"> <span class=\"text-[10px] text-ink-4\">hide tools</span></label></div><div class=\"flex-1 overflow-y-auto px-2 py-2 space-y-0.5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div x-data=\"{ hideTools: true }\" class=\"flex flex-col h-full\"><div class=\"px-3 py-1.5 flex items-center gap-2 border-b border-line-soft shrink-0\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1\">Path</span> <label class=\"flex items-center gap-1.5 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"hideTools\" class=\"w-3 h-3 accent-accent\"> <span class=\"text-[10px] text-ink-4\">hide tools</span></label></div><div class=\"flex-1 overflow-y-auto px-2 py-2 space-y-0.5\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

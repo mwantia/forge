@@ -39,7 +39,7 @@ templ SubSessionsSection(subs []*appsession.SessionMetadata) {
 // PathSection renders the message path list with an Alpine toggle to hide tool-call rows.
 // OOB-swapped into #path-section by NodePanel responses.
 templ PathSection(messages []*appsession.Message) {
-	<div x-data="{ hideTools: false }" class="flex flex-col h-full">
+	<div x-data="{ hideTools: true }" class="flex flex-col h-full">
 		<div class="px-3 py-1.5 flex items-center gap-2 border-b border-line-soft shrink-0">
 			<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold flex-1">Path</span>
 			<label class="flex items-center gap-1.5 cursor-pointer select-none">
