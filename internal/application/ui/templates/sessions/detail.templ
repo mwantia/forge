@@ -23,11 +23,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					<span class="ref-pill shrink-0">{ activeRef }</span>
 				}
 			</div>
-			<button
-				@click="wideMode = !wideMode; document.documentElement.classList.toggle('forge-wide', wideMode); localStorage.setItem('forge:wide', wideMode ? '1' : '0')"
-				:title="wideMode ? 'Switch to fixed width' : 'Switch to full width'"
-				class="w-6 h-6 shrink-0 hidden md:flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2"
-			>
+			<button @click="wideMode = !wideMode; document.documentElement.classList.toggle('forge-wide', wideMode); localStorage.setItem('forge:wide', wideMode ? '1' : '0')" :title="wideMode ? 'Switch to fixed width' : 'Switch to full width'" class="w-6 h-6 shrink-0 hidden md:flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2">
 				<svg x-show="!wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
 				</svg>
@@ -35,6 +31,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
 				</svg>
 			</button>
+			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 ml-2 font-semibold">U</div>
 		</header>
 		<!-- Content -->
 		<div class="flex flex-1 overflow-hidden">
