@@ -42,7 +42,7 @@ func PendingUserBubble(content string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"thread\" hx-swap-oob=\"beforeend\"><div :class=\"$store.layout.wideMode ? 'mt-3' : 'max-w-[720px] mx-auto mt-3'\"><div class=\"flex gap-3 items-start justify-end\"><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'\"><div class=\"bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"thread\" hx-swap-oob=\"beforeend\"><div class=\"forge-thread-wrap mt-3\"><div class=\"flex gap-3 items-start justify-end\"><div class=\"forge-bubble-user flex flex-col gap-1 items-end\"><div class=\"bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,7 +99,7 @@ func StreamBubble(streamURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"done\" hx-swap=\"outerHTML\"><div :class=\"$store.layout.wideMode ? 'flex gap-3 items-start' : 'max-w-[720px] mx-auto flex gap-3 items-start'\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div id=\"stream-content\" sse-swap=\"chunk\" hx-swap=\"beforeend\" :class=\"$store.layout.wideMode ? 'bg-bg-2 border border-line rounded-md px-3 py-2 prose w-fit max-w-full min-w-[2rem] min-h-[2rem]' : 'bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]'\"><span class=\"text-ink-4 text-ui-meta animate-pulse\">···</span></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"done\" hx-swap=\"outerHTML\"><div class=\"forge-thread-wrap flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div id=\"stream-content\" sse-swap=\"chunk\" hx-swap=\"beforeend\" class=\"forge-bubble-stream bg-bg-2 border border-line rounded-md px-3 py-2 prose min-w-[2rem] min-h-[2rem]\"><span class=\"text-ink-4 text-ui-meta animate-pulse\">···</span></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -130,7 +130,7 @@ func Thread(messages []*RenderedMessage, archived bool) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div :class=\"$store.layout.wideMode ? 'space-y-3' : 'max-w-[720px] mx-auto space-y-3'\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"forge-thread-wrap space-y-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -200,7 +200,7 @@ func MessageBubble(rm *RenderedMessage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"flex gap-3 items-start justify-end\"><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'\"><div class=\"relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink\"><button type=\"button\" @click=\"navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })\" class=\"absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-black/20\" title=\"Copy\"><svg x-show=\"!copied\" xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"2\" width=\"13\" height=\"13\" rx=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg> <svg x-show=\"copied\" x-cloak xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></button> <span x-show=\"!raw\" class=\"whitespace-pre-wrap\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"flex gap-3 items-start justify-end\"><div class=\"forge-bubble-user flex flex-col gap-1 items-end\"><div class=\"relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink\"><button type=\"button\" @click=\"navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })\" class=\"absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-black/20\" title=\"Copy\"><svg x-show=\"!copied\" xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"2\" width=\"13\" height=\"13\" rx=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg> <svg x-show=\"copied\" x-cloak xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></button> <span x-show=\"!raw\" class=\"whitespace-pre-wrap\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -283,7 +283,7 @@ func MessageBubble(rm *RenderedMessage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" class=\"flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-start' : 'flex flex-col gap-1 max-w-[640px]'\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" class=\"flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div class=\"forge-bubble-asst flex flex-col gap-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -501,7 +501,7 @@ func ToolResultBubble(rm *RenderedMessage) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if rm.Content != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div x-data=\"{ open: false }\" :class=\"$store.layout.wideMode ? 'w-fit max-w-full rounded border border-line-soft bg-bg-1 font-mono overflow-hidden' : 'max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden'\"><button type=\"button\" @click=\"open = !open\" class=\"w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors\"><span class=\"text-ui-dot text-ink-4 shrink-0 select-none\" :style=\"open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'\">▶</span> <span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div x-data=\"{ open: false }\" class=\"forge-bubble-tool rounded border border-line-soft bg-bg-1 font-mono overflow-hidden\"><button type=\"button\" @click=\"open = !open\" class=\"w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors\"><span class=\"text-ui-dot text-ink-4 shrink-0 select-none\" :style=\"open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'\">▶</span> <span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -542,7 +542,7 @@ func ToolResultBubble(rm *RenderedMessage) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div :class=\"$store.layout.wideMode ? 'w-fit max-w-full flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono' : 'max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono'\"><span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div class=\"forge-bubble-tool flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono\"><span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

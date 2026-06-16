@@ -7,7 +7,7 @@ import (
 
 templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs map[string]string, activeRef string) {
 	@layout.Base(meta.Name) {
-		<div x-data="{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290 }" @resize.window="sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290" class="flex flex-col flex-1 overflow-hidden">
+		<div x-data="{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290, wideMode: document.documentElement.classList.contains('forge-wide') }" @resize.window="sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }" class="flex flex-col flex-1 overflow-hidden">
 		<!-- Topbar -->
 		<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
 			<div class="flex items-center gap-3 min-w-0 flex-1">
@@ -24,14 +24,14 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				}
 			</div>
 			<button
-				@click="$store.layout.wideMode = !$store.layout.wideMode; localStorage.setItem('forge:wide', $store.layout.wideMode ? '1' : '0')"
-				:title="$store.layout.wideMode ? 'Switch to fixed width' : 'Switch to full width'"
+				@click="wideMode = !wideMode; document.documentElement.classList.toggle('forge-wide', wideMode); localStorage.setItem('forge:wide', wideMode ? '1' : '0')"
+				:title="wideMode ? 'Switch to fixed width' : 'Switch to full width'"
 				class="w-6 h-6 shrink-0 hidden md:flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2"
 			>
-				<svg x-show="!$store.layout.wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg x-show="!wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
 				</svg>
-				<svg x-show="$store.layout.wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg x-show="wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
 				</svg>
 			</button>
@@ -104,7 +104,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 						<div class="sticky bottom-0">
 							<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
 							<div class="bg-bg px-4 pb-3">
-								<div :class="$store.layout.wideMode ? '' : 'max-w-[720px] mx-auto'">
+								<div class="forge-thread-wrap">
 									<form
 										id="composer-form"
 										hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
@@ -183,11 +183,6 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 				</div>
 			</aside>
 		</div>
-		<script>
-			document.addEventListener('alpine:init', function() {
-				Alpine.store('layout', { wideMode: window.innerWidth >= 768 && localStorage.getItem('forge:wide') === '1' });
-			});
-		</script>
 		<script>
 			(function() {
 				function onStreamEnd() {

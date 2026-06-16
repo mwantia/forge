@@ -114,3 +114,21 @@
     &:hover { border-color: #343844; color: #e6e7ea; }
   }
 }
+
+/* ── Wide-mode — html.forge-wide removes fixed-width caps on chat content ── */
+.forge-thread-wrap { max-width: 720px; margin-left: auto; margin-right: auto; }
+html.forge-wide .forge-thread-wrap { max-width: none; margin-left: 0; margin-right: 0; }
+
+.forge-bubble-user { max-width: 640px; }
+html.forge-wide .forge-bubble-user { max-width: none; }
+
+/* flex-col wrapper for assistant content; items-start prevents child stretch in wide mode */
+.forge-bubble-asst { max-width: 640px; }
+html.forge-wide .forge-bubble-asst { max-width: none; align-items: flex-start; }
+
+/* direct flex-row items that should shrink to content in wide mode */
+.forge-bubble-stream { max-width: 640px; }
+html.forge-wide .forge-bubble-stream { max-width: 100%; width: fit-content; }
+
+.forge-bubble-tool { max-width: 640px; }
+html.forge-wide .forge-bubble-tool { max-width: 100%; width: fit-content; }

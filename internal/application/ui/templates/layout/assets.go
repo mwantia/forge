@@ -1,5 +1,7 @@
 package layout
 
+import "fmt"
+
 // assetVersion is set once by UIService.PostInit via SetAssetVersion.
 var assetVersion string
 
@@ -9,11 +11,12 @@ func SetAssetVersion(v string) {
 	assetVersion = v
 }
 
-// AssetURL returns the versioned URL for a named static asset. The ?v= query
+// VersionedAssetUrl returns the versioned URL for a named static asset. The ?v= query
 // param changes on every deploy so browsers can cache responses indefinitely.
-func AssetURL(name string) string {
+func VersionedAssetUrl(assetName string) string {
 	if assetVersion == "" {
-		return "/ui/assets/" + name
+		return fmt.Sprintf("/ui/assets/%s", assetName)
 	}
-	return "/ui/assets/" + name + "?v=" + assetVersion
+
+	return fmt.Sprintf("/ui/assets/%s?v=%s", assetName, assetVersion)
 }

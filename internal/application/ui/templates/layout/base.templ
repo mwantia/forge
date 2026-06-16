@@ -13,11 +13,16 @@ templ Base(title string) {
 			<link rel="manifest" href="/ui/assets/manifest.json"/>
 			<title>{ title } — Forge</title>
 			<link rel="icon" href="/ui/assets/icon.svg" sizes="any" type="image/svg+xml"/>
-			<link rel="stylesheet" href={ AssetURL("app.css") }/>
-			<script src={ AssetURL("htmx.min.js") } defer></script>
-			<script src={ AssetURL("htmx-ext-sse.js") } defer></script>
-			<script src={ AssetURL("alpine.min.js") } defer></script>
-			<script src={ AssetURL("mermaid.min.js") }></script>
+			<link rel="stylesheet" href={ VersionedAssetUrl("app.css") }/>
+			<script>
+				if (localStorage.getItem('forge:wide') === '1' && window.innerWidth >= 768) {
+					document.documentElement.classList.add('forge-wide');
+				}
+			</script>
+			<script src={ VersionedAssetUrl("htmx.min.js") } defer></script>
+			<script src={ VersionedAssetUrl("htmx-ext-sse.js") } defer></script>
+			<script src={ VersionedAssetUrl("alpine.min.js") } defer></script>
+			<script src={ VersionedAssetUrl("mermaid.min.js") }></script>
 			<script>
 				mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: {
 					background:          '#0b0c0f',
