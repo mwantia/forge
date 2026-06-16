@@ -46,14 +46,14 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290 }\" @resize.window=\"sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290\" class=\"flex flex-col flex-1 overflow-hidden\"><!-- Topbar --><header class=\"flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0\"><div class=\"flex items-center gap-3\"><button @click=\"sidebar = !sidebar\" class=\"w-6 h-6 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2\" :title=\"sidebar ? 'Collapse sidebar' : 'Expand sidebar'\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M9 3v18\"></path></svg></button> <a href=\"/ui/sessions\" class=\"text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors\">forge</a> <span class=\"text-line-strong\">/</span> <span class=\"text-ink-2 text-sm font-medium\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290 }\" @resize.window=\"sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290\" class=\"flex flex-col flex-1 overflow-hidden\"><!-- Topbar --><header class=\"flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0\"><div class=\"flex items-center gap-3 min-w-0 flex-1\"><button @click=\"sidebar = !sidebar\" class=\"w-6 h-6 shrink-0 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2\" :title=\"sidebar ? 'Collapse sidebar' : 'Expand sidebar'\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M9 3v18\"></path></svg></button> <a href=\"/ui/sessions\" class=\"text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors shrink-0\">forge</a> <span class=\"text-line-strong shrink-0\">/</span> <span class=\"text-ink-2 text-sm font-medium truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(meta.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 21, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 21, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -64,14 +64,14 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				return templ_7745c5c3_Err
 			}
 			if activeRef != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span class=\"ref-pill\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<span class=\"ref-pill shrink-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(activeRef)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 23, Col: 39}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 23, Col: 48}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -82,7 +82,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></header><!-- Content --><div class=\"flex flex-1 overflow-hidden\"><!-- LEFT PANEL: title/description + session info card + plugins + actions --><aside style=\"transition:width .15s ease\" :style=\"sidebar ? 'width:280px' : 'width:0'\" class=\"bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0\"><!-- Title and description --><div class=\"px-3 py-3 border-b border-line-soft space-y-1 shrink-0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><button @click=\"$store.layout.wideMode = !$store.layout.wideMode; localStorage.setItem('forge:wide', $store.layout.wideMode ? '1' : '0')\" :title=\"$store.layout.wideMode ? 'Switch to fixed width' : 'Switch to full width'\" class=\"w-6 h-6 shrink-0 hidden md:flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2\"><svg x-show=\"!$store.layout.wideMode\" xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"15 3 21 3 21 9\"></polyline><polyline points=\"9 21 3 21 3 15\"></polyline><line x1=\"21\" y1=\"3\" x2=\"14\" y2=\"10\"></line><line x1=\"3\" y1=\"21\" x2=\"10\" y2=\"14\"></line></svg> <svg x-show=\"$store.layout.wideMode\" xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"4 14 10 14 10 20\"></polyline><polyline points=\"20 10 14 10 14 4\"></polyline><line x1=\"10\" y1=\"14\" x2=\"3\" y2=\"21\"></line><line x1=\"21\" y1=\"3\" x2=\"14\" y2=\"10\"></line></svg></button></header><!-- Content --><div class=\"flex flex-1 overflow-hidden\"><!-- LEFT PANEL: title/description + session info card + plugins + actions --><aside style=\"transition:width .15s ease\" :style=\"sidebar ? 'width:280px' : 'width:0'\" class=\"bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0\"><!-- Title and description --><div class=\"px-3 py-3 border-b border-line-soft space-y-1 shrink-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -94,7 +94,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(meta.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 38, Col: 83}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 50, Col: 83}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 				if templ_7745c5c3_Err != nil {
@@ -107,7 +107,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(meta.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 38, Col: 98}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 50, Col: 98}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -126,7 +126,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(meta.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 41, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 53, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 				if templ_7745c5c3_Err != nil {
@@ -139,7 +139,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(meta.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 41, Col: 101}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 53, Col: 101}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -157,7 +157,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/node?ref=" + activeRef)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 49, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 61, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 			if templ_7745c5c3_Err != nil {
@@ -175,7 +175,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/archive")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 59, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 71, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 				if templ_7745c5c3_Err != nil {
@@ -188,7 +188,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("Archive session '" + meta.Name + "'? It will become read-only.")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 60, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 72, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 				if templ_7745c5c3_Err != nil {
@@ -201,7 +201,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 61, Col: 63}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 73, Col: 63}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 				if templ_7745c5c3_Err != nil {
@@ -225,7 +225,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 69, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 81, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 				if templ_7745c5c3_Err != nil {
@@ -238,7 +238,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue("Delete session '" + meta.Name + "'?")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 69, Col: 97}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 81, Col: 97}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 				if templ_7745c5c3_Err != nil {
@@ -267,14 +267,14 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				return templ_7745c5c3_Err
 			}
 			if meta.ArchivedAt == nil {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"sticky bottom-0\"><div class=\"h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none\"></div><div class=\"bg-bg px-4 pb-3\"><div class=\"max-w-[720px] mx-auto\"><form id=\"composer-form\" hx-post=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"sticky bottom-0\"><div class=\"h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none\"></div><div class=\"bg-bg px-4 pb-3\"><div :class=\"$store.layout.wideMode ? '' : 'max-w-[720px] mx-auto'\"><form id=\"composer-form\" hx-post=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/commit")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 98, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 110, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 				if templ_7745c5c3_Err != nil {
@@ -287,7 +287,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.ResolveAttributeValue(activeRef)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 103, Col: 59}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 115, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16)
 				if templ_7745c5c3_Err != nil {
@@ -305,7 +305,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 			var templ_7745c5c3_Var17 templ.SafeURL
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/ui/sessions/" + meta.ID + "/dag"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 145, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 157, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -318,7 +318,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/dag/mini")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 151, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 163, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -331,13 +331,13 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/refs")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 161, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 173, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0\"><div class=\"px-3 py-3 text-ink-3 text-ui-code\">Loading refs…</div></div><!-- Path (OOB-populated from /node response, fills remaining space) --><div id=\"path-section\" class=\"flex-1 min-h-0 overflow-hidden\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div></aside></div><script>\n\t\t\t(function() {\n\t\t\t\tfunction onStreamEnd() {\n\t\t\t\t\tstopObserving();\n\t\t\t\t\tdocument.dispatchEvent(new CustomEvent('forge:streaming-end'));\n\t\t\t\t}\n\t\t\t\tdocument.body.addEventListener('htmx:sseClose', onStreamEnd);\n\t\t\t\tdocument.body.addEventListener('htmx:sseError', onStreamEnd);\n\n\t\t\t\tfunction scrollToBottom() {\n\t\t\t\t\tconst main = document.getElementById('session-main');\n\t\t\t\t\tif (main) main.scrollTop = main.scrollHeight;\n\t\t\t\t}\n\n\t\t\t\tlet chunkObserver = null;\n\t\t\t\tfunction observeStreamContent() {\n\t\t\t\t\tconst el = document.getElementById('stream-content');\n\t\t\t\t\tif (!el || chunkObserver) return;\n\t\t\t\t\tchunkObserver = new MutationObserver(scrollToBottom);\n\t\t\t\t\tchunkObserver.observe(el, { childList: true, subtree: true });\n\t\t\t\t}\n\t\t\t\tfunction stopObserving() {\n\t\t\t\t\tif (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }\n\t\t\t\t}\n\n\t\t\t\tdocument.body.addEventListener('htmx:afterSwap', function(e) {\n\t\t\t\t\tconst id = e.detail.target?.id;\n\t\t\t\t\tif (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }\n\t\t\t\t\telse if (id === 'thread') { scrollToBottom(); }\n\t\t\t\t});\n\t\t\t\tdocument.body.addEventListener('htmx:oobAfterSwap', function(e) {\n\t\t\t\t\tif (e.detail.target?.id === 'thread') scrollToBottom();\n\t\t\t\t});\n\t\t\t})();\n\t\t</script></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0\"><div class=\"px-3 py-3 text-ink-3 text-ui-code\">Loading refs…</div></div><!-- Path (OOB-populated from /node response, fills remaining space) --><div id=\"path-section\" class=\"flex-1 min-h-0 overflow-hidden\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div></aside></div><script>\n\t\t\tdocument.addEventListener('alpine:init', function() {\n\t\t\t\tAlpine.store('layout', { wideMode: window.innerWidth >= 768 && localStorage.getItem('forge:wide') === '1' });\n\t\t\t});\n\t\t</script><script>\n\t\t\t(function() {\n\t\t\t\tfunction onStreamEnd() {\n\t\t\t\t\tstopObserving();\n\t\t\t\t\tdocument.dispatchEvent(new CustomEvent('forge:streaming-end'));\n\t\t\t\t}\n\t\t\t\tdocument.body.addEventListener('htmx:sseClose', onStreamEnd);\n\t\t\t\tdocument.body.addEventListener('htmx:sseError', onStreamEnd);\n\n\t\t\t\tfunction scrollToBottom() {\n\t\t\t\t\tconst main = document.getElementById('session-main');\n\t\t\t\t\tif (main) main.scrollTop = main.scrollHeight;\n\t\t\t\t}\n\n\t\t\t\tlet chunkObserver = null;\n\t\t\t\tfunction observeStreamContent() {\n\t\t\t\t\tconst el = document.getElementById('stream-content');\n\t\t\t\t\tif (!el || chunkObserver) return;\n\t\t\t\t\tchunkObserver = new MutationObserver(scrollToBottom);\n\t\t\t\t\tchunkObserver.observe(el, { childList: true, subtree: true });\n\t\t\t\t}\n\t\t\t\tfunction stopObserving() {\n\t\t\t\t\tif (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }\n\t\t\t\t}\n\n\t\t\t\tdocument.body.addEventListener('htmx:afterSwap', function(e) {\n\t\t\t\t\tconst id = e.detail.target?.id;\n\t\t\t\t\tif (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }\n\t\t\t\t\telse if (id === 'thread') { scrollToBottom(); }\n\t\t\t\t});\n\t\t\t\tdocument.body.addEventListener('htmx:oobAfterSwap', function(e) {\n\t\t\t\t\tif (e.detail.target?.id === 'thread') scrollToBottom();\n\t\t\t\t});\n\t\t\t})();\n\t\t</script></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

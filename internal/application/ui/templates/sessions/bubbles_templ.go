@@ -42,7 +42,7 @@ func PendingUserBubble(content string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"thread\" hx-swap-oob=\"beforeend\"><div class=\"max-w-[720px] mx-auto mt-3\"><div class=\"flex gap-3 items-start justify-end\"><div class=\"flex flex-col gap-1 items-end max-w-[640px]\"><div class=\"bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"thread\" hx-swap-oob=\"beforeend\"><div :class=\"$store.layout.wideMode ? 'mt-3' : 'max-w-[720px] mx-auto mt-3'\"><div class=\"flex gap-3 items-start justify-end\"><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'\"><div class=\"bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,7 +99,7 @@ func StreamBubble(streamURL string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"done\" hx-swap=\"outerHTML\"><div class=\"max-w-[720px] mx-auto flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div id=\"stream-content\" sse-swap=\"chunk\" hx-swap=\"beforeend\" class=\"bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]\"><span class=\"text-ink-4 text-ui-meta animate-pulse\">···</span></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" sse-swap=\"done\" hx-swap=\"outerHTML\"><div :class=\"$store.layout.wideMode ? 'flex gap-3 items-start' : 'max-w-[720px] mx-auto flex gap-3 items-start'\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div id=\"stream-content\" sse-swap=\"chunk\" hx-swap=\"beforeend\" :class=\"$store.layout.wideMode ? 'bg-bg-2 border border-line rounded-md px-3 py-2 prose w-fit max-w-full min-w-[2rem] min-h-[2rem]' : 'bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]'\"><span class=\"text-ink-4 text-ui-meta animate-pulse\">···</span></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -130,7 +130,7 @@ func Thread(messages []*RenderedMessage, archived bool) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"max-w-[720px] mx-auto space-y-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div :class=\"$store.layout.wideMode ? 'space-y-3' : 'max-w-[720px] mx-auto space-y-3'\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -200,7 +200,7 @@ func MessageBubble(rm *RenderedMessage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"flex gap-3 items-start justify-end\"><div class=\"flex flex-col gap-1 items-end max-w-[640px]\"><div class=\"relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink\"><button type=\"button\" @click=\"navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })\" class=\"absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-black/20\" title=\"Copy\"><svg x-show=\"!copied\" xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"2\" width=\"13\" height=\"13\" rx=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg> <svg x-show=\"copied\" x-cloak xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></button> <span x-show=\"!raw\" class=\"whitespace-pre-wrap\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" class=\"flex gap-3 items-start justify-end\"><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'\"><div class=\"relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink\"><button type=\"button\" @click=\"navigator.clipboard.writeText(raw ? rawContent : renderedContent).then(() => { copied = true; setTimeout(() => copied = false, 1500) })\" class=\"absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 hover:bg-black/20\" title=\"Copy\"><svg x-show=\"!copied\" xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"2\" width=\"13\" height=\"13\" rx=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg> <svg x-show=\"copied\" x-cloak xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></button> <span x-show=\"!raw\" class=\"whitespace-pre-wrap\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -283,7 +283,7 @@ func MessageBubble(rm *RenderedMessage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" class=\"flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div class=\"flex flex-col gap-1 max-w-[640px]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" class=\"flex gap-3 items-start\"><div class=\"w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold\">A</div><div :class=\"$store.layout.wideMode ? 'flex flex-col gap-1 items-start' : 'flex flex-col gap-1 max-w-[640px]'\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -496,19 +496,19 @@ func ToolResultBubble(rm *RenderedMessage) templ.Component {
 			templ_7745c5c3_Var25 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"flex gap-3 items-start pl-10\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"flex gap-3 items-start\" style=\"padding-left: 2.25rem\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if rm.Content != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div x-data=\"{ open: false }\" class=\"max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden\"><button type=\"button\" @click=\"open = !open\" class=\"w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors\"><span class=\"text-ui-dot text-ink-4 shrink-0 select-none\" :style=\"open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'\">▶</span> <span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div x-data=\"{ open: false }\" :class=\"$store.layout.wideMode ? 'w-fit max-w-full rounded border border-line-soft bg-bg-1 font-mono overflow-hidden' : 'max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden'\"><button type=\"button\" @click=\"open = !open\" class=\"w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors\"><span class=\"text-ui-dot text-ink-4 shrink-0 select-none\" :style=\"open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'\">▶</span> <span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(toolCallName(rm))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 188, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 181, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -531,7 +531,7 @@ func ToolResultBubble(rm *RenderedMessage) templ.Component {
 			var templ_7745c5c3_Var27 string
 			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(prettifyJSON(rm.Content))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 199, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 192, Col: 116}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 			if templ_7745c5c3_Err != nil {
@@ -542,14 +542,14 @@ func ToolResultBubble(rm *RenderedMessage) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div class=\"max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono\"><span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<div :class=\"$store.layout.wideMode ? 'w-fit max-w-full flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono' : 'max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono'\"><span class=\"text-ui-label text-ink-4 uppercase tracking-wide shrink-0\">result</span> <span class=\"text-ui-meta text-ink-3 flex-1 truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var28 string
 			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(toolCallName(rm))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 210, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 203, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 			if templ_7745c5c3_Err != nil {
@@ -607,7 +607,7 @@ func ToolCallRow(tc appsession.MessageToolCall) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(tc.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 232, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 225, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -630,7 +630,7 @@ func ToolCallRow(tc appsession.MessageToolCall) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(formatArgs(tc.Arguments))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 243, Col: 115}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 236, Col: 115}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -648,7 +648,7 @@ func ToolCallRow(tc appsession.MessageToolCall) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(tc.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 254, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/bubbles.templ`, Line: 247, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {

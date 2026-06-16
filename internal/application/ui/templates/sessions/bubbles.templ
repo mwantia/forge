@@ -15,9 +15,9 @@ import (
 // the composer submits. Replaced by the full thread OOB when "done" fires.
 templ PendingUserBubble(content string) {
 	<div id="thread" hx-swap-oob="beforeend">
-		<div class="max-w-[720px] mx-auto mt-3">
+		<div :class="$store.layout.wideMode ? 'mt-3' : 'max-w-[720px] mx-auto mt-3'">
 			<div class="flex gap-3 items-start justify-end">
-				<div class="flex flex-col gap-1 items-end max-w-[640px]">
+				<div :class="$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'">
 					<div class="bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink whitespace-pre-wrap">{ content }</div>
 				</div>
 				<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">U</div>
@@ -30,9 +30,9 @@ templ PendingUserBubble(content string) {
 // SSE "chunk" events append rendered Markdown blocks; "done" OOB-swaps all panels.
 templ StreamBubble(streamURL string) {
 	<div id="stream-active" hx-ext="sse" sse-connect={ streamURL } sse-swap="done" hx-swap="outerHTML">
-		<div class="max-w-[720px] mx-auto flex gap-3 items-start">
+		<div :class="$store.layout.wideMode ? 'flex gap-3 items-start' : 'max-w-[720px] mx-auto flex gap-3 items-start'">
 			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-			<div id="stream-content" sse-swap="chunk" hx-swap="beforeend" class="bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]">
+			<div id="stream-content" sse-swap="chunk" hx-swap="beforeend" :class="$store.layout.wideMode ? 'bg-bg-2 border border-line rounded-md px-3 py-2 prose w-fit max-w-full min-w-[2rem] min-h-[2rem]' : 'bg-bg-2 border border-line rounded-md px-3 py-2 prose max-w-[640px] min-w-[2rem] min-h-[2rem]'">
 				<span class="text-ink-4 text-ui-meta animate-pulse">···</span>
 			</div>
 		</div>
@@ -42,7 +42,7 @@ templ StreamBubble(streamURL string) {
 // Thread renders the full message list. Returned as a partial by /ui/sessions/:id/thread
 // and OOB-swapped after each pipeline commit completes.
 templ Thread(messages []*RenderedMessage, archived bool) {
-	<div class="max-w-[720px] mx-auto space-y-3">
+	<div :class="$store.layout.wideMode ? 'space-y-3' : 'max-w-[720px] mx-auto space-y-3'">
 		for _, rm := range messages {
 			@MessageBubble(rm)
 		}
@@ -60,7 +60,7 @@ templ MessageBubble(rm *RenderedMessage) {
 		@ToolResultBubble(rm)
 	} else if rm.Role == "user" {
 		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start justify-end">
-			<div class="flex flex-col gap-1 items-end max-w-[640px]">
+			<div :class="$store.layout.wideMode ? 'flex flex-col gap-1 items-end' : 'flex flex-col gap-1 items-end max-w-[640px]'">
 				<div class="relative group bg-accent/10 border border-accent/20 rounded-md px-3 py-2 text-ui-body leading-relaxed text-ink">
 					<button
 						type="button"
@@ -89,7 +89,7 @@ templ MessageBubble(rm *RenderedMessage) {
 	} else {
 		<div x-data={ bubbleData(rm) } class="flex gap-3 items-start">
 			<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">A</div>
-			<div class="flex flex-col gap-1 max-w-[640px]">
+			<div :class="$store.layout.wideMode ? 'flex flex-col gap-1 items-start' : 'flex flex-col gap-1 max-w-[640px]'">
 				if rm.Rendered != "" || rm.Content != "" {
 					<div class="relative group bg-bg-2 border border-line rounded-md px-3 py-2">
 						<button
@@ -172,18 +172,11 @@ templ SystemBubble(rm *RenderedMessage) {
 }
 
 templ ToolResultBubble(rm *RenderedMessage) {
-	<div class="flex gap-3 items-start pl-10">
+	<div class="flex gap-3 items-start" style="padding-left: 2.25rem">
 		if rm.Content != "" {
-			<div x-data="{ open: false }" class="max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden">
-				<button
-					type="button"
-					@click="open = !open"
-					class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors"
-				>
-					<span
-						class="text-ui-dot text-ink-4 shrink-0 select-none"
-						:style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'"
-					>▶</span>
+			<div x-data="{ open: false }" :class="$store.layout.wideMode ? 'w-fit max-w-full rounded border border-line-soft bg-bg-1 font-mono overflow-hidden' : 'max-w-[640px] rounded border border-line-soft bg-bg-1 font-mono overflow-hidden'">
+				<button type="button" @click="open = !open" class="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-bg-2 transition-colors">
+					<span class="text-ui-dot text-ink-4 shrink-0 select-none" :style="open ? 'display:inline-block;transform:rotate(90deg)' : 'display:inline-block'">▶</span>
 					<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
 					<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
 					if toolCallIsError(rm) {
@@ -205,7 +198,7 @@ templ ToolResultBubble(rm *RenderedMessage) {
 				</div>
 			</div>
 		} else {
-			<div class="max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono">
+			<div :class="$store.layout.wideMode ? 'w-fit max-w-full flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono' : 'max-w-[640px] flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono'">
 				<span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span>
 				<span class="text-ui-meta text-ink-3 flex-1 truncate">{ toolCallName(rm) }</span>
 				if toolCallIsError(rm) {
