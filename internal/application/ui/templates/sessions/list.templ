@@ -27,7 +27,7 @@ templ List(sessions []*appsession.SessionMetadata) {
 					x-data="{
 						search: '',
 						showActive: true,
-						showArchived: true,
+						showArchived: false,
 						showSiblings: false,
 						pluginFilter: '',
 						matches(el) {
@@ -115,10 +115,8 @@ templ List(sessions []*appsession.SessionMetadata) {
 									<div class="flex items-center flex-wrap gap-x-2 gap-y-1 text-ui-meta text-ink-4 pt-2 border-t border-line-soft">
 										<span class="font-mono text-ink-3">{ s.Model }</span>
 										<span>·</span>
-										if len(s.Plugins) > 0 {
-											for _, p := range s.Plugins {
-												<span class="ref-pill">{ p.Name }</span>
-											}
+										for _, p := range s.Plugins {
+											<span class={ pluginListPillClass(p) }>{ p.Name }</span>
 										}
 										<span class="ml-auto">{ "updated " + relativeTime(s.UpdatedAt) }</span>
 										<span>·</span>
@@ -132,6 +130,17 @@ templ List(sessions []*appsession.SessionMetadata) {
 			</div>
 		</main>
 	}
+}
+
+func pluginListPillClass(p appsession.PluginConfig) string {
+	const base = "font-mono text-[10px] border rounded px-1.5 py-0.5"
+	if p.Disabled {
+		return base + " text-rem border-rem/30"
+	}
+	if p.Enabled {
+		return base + " text-ok border-ok/30"
+	}
+	return base + " text-ink-4 border-line-soft"
 }
 
 func sessionArchived(s *appsession.SessionMetadata) string {
