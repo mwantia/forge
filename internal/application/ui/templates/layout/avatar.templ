@@ -1,0 +1,9 @@
+package layout
+
+templ Avatar(initial string, role string) {
+	if role == "user" {
+		<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">{ initial }</div>
+	} else {
+		<div class="w-6 h-6 rounded bg-ok/20 text-ok text-ui-label flex items-center justify-center shrink-0 mt-0.5 font-semibold">{ initial }</div>
+	}
+}

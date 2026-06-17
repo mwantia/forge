@@ -2,6 +2,13 @@ package uidag
 
 import "fmt"
 
+// MiniOOB wraps Mini for use in OOB multi-region SSE done responses.
+templ MiniOOB(nodes []Node, edges []Edge, sessionID string) {
+	<div id="mini-dag" hx-swap-oob="innerHTML">
+		@Mini(nodes, edges, sessionID)
+	</div>
+}
+
 templ Mini(nodes []Node, edges []Edge, sessionID string) {
 	<div class="px-2 pt-2 pb-1 overflow-hidden">
 		if len(nodes) == 0 {

@@ -146,25 +146,58 @@ templ Base(title string) {
 					renderContent();
 					document.body.addEventListener('htmx:afterSwap', renderContent);
 					document.body.addEventListener('htmx:oobAfterSwap', renderContent);
-				});
-			</script>
-		<script>
-				if ('serviceWorker' in navigator) {
-					navigator.serviceWorker.register('/ui/assets/sw.js', { scope: '/ui/' })
-						.then(function(reg) {
-							reg.addEventListener('updatefound', function() {
-								var sw = reg.installing;
-								sw.addEventListener('statechange', function() {
-									if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-										var b = document.createElement('div');
-										b.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;background:#15181f;border:1px solid #262a33;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#b9bcc4;box-shadow:0 4px 16px rgba(0,0,0,.5)';
-										b.innerHTML = '<span>Update available</span><button onclick="location.reload()" style="background:#e8a531;color:#0b0c0f;border:none;border-radius:4px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.6">Reload</button>';
-										document.body.appendChild(b);
-									}
+
+					// ── Streaming scroll + SSE lifecycle ─────────────────────────────
+					function onStreamEnd() {
+						stopObserving();
+						document.dispatchEvent(new CustomEvent('forge:streaming-end'));
+					}
+					document.body.addEventListener('htmx:sseClose', onStreamEnd);
+					document.body.addEventListener('htmx:sseError', onStreamEnd);
+
+					function scrollToBottom() {
+						var main = document.getElementById('session-main');
+						if (main) main.scrollTop = main.scrollHeight;
+					}
+
+					var chunkObserver = null;
+					function observeStreamContent() {
+						var el = document.getElementById('stream-content');
+						if (!el || chunkObserver) return;
+						chunkObserver = new MutationObserver(scrollToBottom);
+						chunkObserver.observe(el, { childList: true, subtree: true });
+					}
+					function stopObserving() {
+						if (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }
+					}
+
+					document.body.addEventListener('htmx:afterSwap', function(e) {
+						var id = e.detail.target && e.detail.target.id;
+						if (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }
+						else if (id === 'thread') { scrollToBottom(); }
+					});
+					document.body.addEventListener('htmx:oobAfterSwap', function(e) {
+						if (e.detail.target && e.detail.target.id === 'thread') scrollToBottom();
+					});
+
+					// ── Service worker ────────────────────────────────────────────────
+					if ('serviceWorker' in navigator) {
+						navigator.serviceWorker.register('/ui/assets/sw.js', { scope: '/ui/' })
+							.then(function(reg) {
+								reg.addEventListener('updatefound', function() {
+									var sw = reg.installing;
+									sw.addEventListener('statechange', function() {
+										if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+											var b = document.createElement('div');
+											b.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;background:#15181f;border:1px solid #262a33;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#b9bcc4;box-shadow:0 4px 16px rgba(0,0,0,.5)';
+											b.innerHTML = '<span>Update available</span><button onclick="location.reload()" style="background:#e8a531;color:#0b0c0f;border:none;border-radius:4px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer;line-height:1.6">Reload</button>';
+											document.body.appendChild(b);
+										}
+									});
 								});
 							});
-						});
-				}
+					}
+				});
 			</script>
 		</head>
 		<body hx-boost="true" class="bg-bg text-ink font-sans h-screen flex flex-col overflow-hidden">

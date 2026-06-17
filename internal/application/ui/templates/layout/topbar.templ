@@ -1,19 +1,67 @@
 package layout
 
-templ Topbar(sessionName string, branch string, sha string) {
+// TopbarSimple renders the minimal fixed header used on list, new, and non-session pages.
+templ TopbarSimple() {
 	<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
-		<div class="flex items-center gap-3">
-			<a href="/ui/sessions" class="text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors">forge</a>
-			if sessionName != "" {
-				<span class="text-line-strong">/</span>
-				<span class="text-ink-2 text-sm font-medium">{ sessionName }</span>
-			}
-			if branch != "" {
-				<span class="ref-pill">{ branch }</span>
-			}
-			if sha != "" {
-				<span class="font-mono text-ink-4 text-ui-code">{ sha }</span>
+		@topbarBrand()
+		@topbarRight()
+	</header>
+}
+
+// TopbarSession renders the session detail header.
+// displayName should be the title when set, falling back to the session name.
+// Panel toggles and wide mode live in the thread toolbar below, not here.
+templ TopbarSession(displayName string, activeRef string) {
+	<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
+		<div class="flex items-center gap-3 min-w-0 flex-1">
+			@topbarBrand()
+			<span class="text-line-strong shrink-0">/</span>
+			<span class="text-ink-2 text-sm font-medium truncate">{ displayName }</span>
+			if activeRef != "" {
+				<span class="ref-pill shrink-0">{ activeRef }</span>
 			}
 		</div>
+		@topbarRight()
 	</header>
+}
+
+// Topbar is used on the full DAG page.
+templ Topbar(sessionName string, branch string, sha string) {
+	<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
+		<div class="flex items-center gap-3 min-w-0 flex-1">
+			@topbarBrand()
+			if sessionName != "" {
+				<span class="text-line-strong shrink-0">/</span>
+				<span class="text-ink-2 text-sm font-medium truncate">{ sessionName }</span>
+			}
+			if branch != "" {
+				<span class="ref-pill shrink-0">{ branch }</span>
+			}
+			if sha != "" {
+				<span class="font-mono text-ink-4 text-ui-code shrink-0">{ sha }</span>
+			}
+		</div>
+		@topbarRight()
+	</header>
+}
+
+// topbarBrand renders the forge icon + "forge" text as a single navigation link.
+templ topbarBrand() {
+	<a href="/ui/sessions" class="flex items-center gap-1.5 shrink-0 group" title="forge">
+		<img src={ VersionedAssetUrl("icon.svg") } alt="forge" class="w-5 h-5 rounded-sm"/>
+		<span class="text-ink font-semibold text-sm tracking-tight group-hover:text-accent transition-colors">forge</span>
+	</a>
+}
+
+// topbarRight renders the permanent right section: vertical separator + user button.
+// The user button is a placeholder for future profile/settings navigation.
+templ topbarRight() {
+	<div class="flex items-center gap-2 shrink-0">
+		<div class="w-px h-5 bg-line-soft"></div>
+		<button
+			type="button"
+			title="User settings"
+			class="w-7 h-7 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 font-semibold hover:bg-accent/30 transition-colors"
+		>U</button>
+	</div>
 }

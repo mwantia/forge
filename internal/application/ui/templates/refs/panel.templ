@@ -2,6 +2,13 @@ package tmplrefs
 
 import "sort"
 
+// RefsPanelOOB wraps Panel for use in OOB multi-region SSE done responses.
+templ RefsPanelOOB(sessionID string, refs map[string]string) {
+	<div id="refs-panel" hx-swap-oob="innerHTML">
+		@Panel(sessionID, refs)
+	</div>
+}
+
 templ Panel(sessionID string, refs map[string]string) {
 	<div class="px-3 py-2 text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold border-b border-line-soft">
 		Refs

@@ -21,16 +21,34 @@ templ PluginList(sessionID string, allPlugins []string, configs []appsession.Plu
 }
 
 templ pluginRow(sessionID string, name string, cfg appsession.PluginConfig, canEdit bool, isLast bool) {
-	<div
-		class={ pluginRowClass(isLast) }
-		style="display:grid;grid-template-columns:1fr 2rem 2rem"
-	>
+	<div class={ pluginRowClass(isLast) + " grid grid-cols-[1fr_2rem_2rem_2rem]" }>
 		<!-- Name + state indicator -->
 		<div class="flex items-center gap-2 px-2.5 py-2 min-w-0">
 			<span class={ "text-[8px] shrink-0 leading-none", pluginDotClass(cfg) }>●</span>
-			<span class={ "font-mono text-ui-label truncate flex-1 min-w-0", pluginNameClass(cfg) } title={ name + " (latest)"} >{ name }</span>
-			if cfg.Verbose {
-				<span class="text-ink-4 text-[9px] shrink-0" title="verbose">v</span>
+			<span class={ "font-mono text-ui-label truncate flex-1 min-w-0", pluginNameClass(cfg) } title={ name + " (latest)" }>{ name }</span>
+		</div>
+		<!-- Verbose toggle column -->
+		<div class="border-l border-line-soft flex items-center justify-center">
+			if canEdit {
+				if cfg.Verbose {
+					<button
+						class="w-full h-full flex items-center justify-center text-accent text-ui-label transition-colors hover:text-ink-3"
+						hx-patch={ "/ui/sessions/" + sessionID + "/plugins/" + name }
+						hx-vals={ `{"action":"verbose_off"}` }
+						hx-target={ "#plugin-list-" + sessionID }
+						hx-swap="outerHTML"
+						title="Disable verbose"
+					>«</button>
+				} else {
+					<button
+						class="w-full h-full flex items-center justify-center text-ink-4 text-ui-label transition-colors hover:text-accent"
+						hx-patch={ "/ui/sessions/" + sessionID + "/plugins/" + name }
+						hx-vals={ `{"action":"verbose_on"}` }
+						hx-target={ "#plugin-list-" + sessionID }
+						hx-swap="outerHTML"
+						title="Enable verbose"
+					>»</button>
+				}
 			}
 		</div>
 		<!-- Enable / Reset column -->
@@ -90,9 +108,9 @@ func pluginConfigFor(name string, configs []appsession.PluginConfig) appsession.
 
 func pluginRowClass(isLast bool) string {
 	if isLast {
-		return "flex"
+		return ""
 	}
-	return "flex border-b border-line-soft"
+	return "border-b border-line-soft"
 }
 
 func pluginDotClass(cfg appsession.PluginConfig) string {

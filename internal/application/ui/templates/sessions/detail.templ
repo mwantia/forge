@@ -6,215 +6,202 @@ import (
 )
 
 templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs map[string]string, activeRef string) {
-	@layout.Base(meta.Name) {
-		<div x-data="{ sidebar: window.innerWidth >= 1010, nodePanel: window.innerWidth >= 1290, wideMode: document.documentElement.classList.contains('forge-wide') }" @resize.window="sidebar = window.innerWidth >= 1010; nodePanel = window.innerWidth >= 1290; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }" class="flex flex-col flex-1 overflow-hidden">
-		<!-- Topbar -->
-		<header class="flex items-center justify-between h-11 px-4 border-b border-line-soft bg-panel shrink-0">
-			<div class="flex items-center gap-3 min-w-0 flex-1">
-				<button @click="sidebar = !sidebar" class="w-6 h-6 shrink-0 flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2" :title="sidebar ? 'Collapse sidebar' : 'Expand sidebar'">
-					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
-					</svg>
-				</button>
-				<a href="/ui/sessions" class="text-ink font-semibold text-sm tracking-tight hover:text-accent transition-colors shrink-0">forge</a>
-				<span class="text-line-strong shrink-0">/</span>
-				<span class="text-ink-2 text-sm font-medium truncate">{ meta.Name }</span>
-				if activeRef != "" {
-					<span class="ref-pill shrink-0">{ activeRef }</span>
-				}
-			</div>
-			<button @click="wideMode = !wideMode; document.documentElement.classList.toggle('forge-wide', wideMode); localStorage.setItem('forge:wide', wideMode ? '1' : '0')" :title="wideMode ? 'Switch to fixed width' : 'Switch to full width'" class="w-6 h-6 shrink-0 hidden md:flex items-center justify-center text-ink-4 hover:text-ink transition-colors rounded hover:bg-bg-2">
-				<svg x-show="!wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-				</svg>
-				<svg x-show="wideMode" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-				</svg>
-			</button>
-			<div class="w-6 h-6 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 mt-0.5 ml-2 font-semibold">U</div>
-		</header>
-		<!-- Content -->
-		<div class="flex flex-1 overflow-hidden">
-			<!-- LEFT PANEL: title/description + session info card + plugins + actions -->
-			<aside
-				style="transition:width .15s ease"
-				:style="sidebar ? 'width:280px' : 'width:0'"
-				class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
-			>
-				<!-- Title and description -->
-				<div class="px-3 py-3 border-b border-line-soft space-y-1 shrink-0">
-					if meta.Title != "" {
-						<div class="text-accent text-ui-ctrl font-medium truncate" title={ meta.Title }>{ meta.Title }</div>
-					}
-					if meta.Description != "" {
-						<div class="text-ui-meta text-ink-3 line-clamp-4" title={ meta.Description }>{ meta.Description }</div>
-					}
-				</div>
-				<!-- Session info card + plugins (HTMX-loaded from /node).
-				     NodePanel response also OOB-updates #siblings-section and #path-section. -->
-				<div
-					id="session-info-card"
-					class="flex-1 overflow-y-auto"
-					hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
-					hx-trigger="load"
-					hx-swap="innerHTML"
+	@layout.Base(sessionDisplayName(meta)) {
+		<div x-data="{ sidebar: window.innerWidth >= 1010, rightPanel: window.innerWidth >= 1290, wideMode: document.documentElement.classList.contains('forge-wide') }" @resize.window="sidebar = window.innerWidth >= 1010; rightPanel = window.innerWidth >= 1290; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }" class="flex flex-col flex-1 overflow-hidden">
+			@layout.TopbarSession(sessionDisplayName(meta), activeRef)
+			<!-- Content -->
+			<div class="flex flex-1 overflow-hidden">
+				<!-- LEFT PANEL: title/description + session info card + plugins + actions -->
+				<aside
+					style="transition:width .15s ease"
+					:style="sidebar ? 'width:280px' : 'width:0'"
+					class="bg-bg-1 border-r border-line flex flex-col overflow-hidden shrink-0"
 				>
-					<div class="px-3 py-3 text-ink-4 text-ui-meta animate-pulse">Loading…</div>
-				</div>
-				<!-- Archive / Delete -->
-				<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
-					if meta.ArchivedAt == nil {
-						<button class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
-							hx-post={ "/ui/sessions/" + meta.ID + "/archive" }
-							hx-confirm={ "Archive session '" + meta.Name + "'? It will become read-only." }
-							hx-target="body" hx-push-url={ "/ui/sessions/" + meta.ID }>
-							Archive
-						</button>
-					} else {
-						<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Archived</span>
-					}
-					if meta.ArchivedAt != nil {
-						<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
-							hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
-							hx-target="body" hx-push-url="/ui/sessions">
-							Delete
-						</button>
-					} else {
-						<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Delete</span>
-					}
-				</div>
-			</aside>
-			<!-- MAIN AREA -->
-			<div
-				id="session-main"
-				class="flex-1 overflow-y-auto min-w-0"
-				x-data="{ draft: '', streaming: false }"
-				@forge:streaming-start.document="streaming = true; draft = ''"
-				@forge:streaming-end.document="streaming = false"
-			>
-				<div class="min-h-full flex flex-col">
-					<div id="thread" class="flex-1 px-6 pt-4 pb-2">
-						@Thread(messages, meta.ArchivedAt != nil)
+					<!-- Title and description -->
+					<div class="px-3 py-3 border-b border-line-soft space-y-1 shrink-0">
+						if meta.Title != "" {
+							<div class="text-accent text-ui-ctrl font-medium truncate" title={ meta.Title }>{ meta.Title }</div>
+						}
+						if meta.Description != "" {
+							<div class="text-ui-meta text-ink-3 line-clamp-4" title={ meta.Description }>{ meta.Description }</div>
+						}
 					</div>
-					<div id="stream-area" class="px-6 pb-2"></div>
-					if meta.ArchivedAt == nil {
-						<div class="sticky bottom-0">
-							<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
-							<div class="bg-bg px-4 pb-3">
-								<div class="forge-thread-wrap">
-									<form
-										id="composer-form"
-										hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
-										hx-target="#stream-area"
-										hx-swap="innerHTML"
-										hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
-									>
-										<input type="hidden" name="ref" value={ activeRef }/>
-										<textarea
-											id="composer-input"
-											name="content"
-											rows="3"
-											placeholder="Message… (⌘↵ or Ctrl↵ to commit)"
-											class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
-											x-model="draft"
-											@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
-											@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
-										></textarea>
-										<div class="flex justify-between items-center mt-2">
-											<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
-											<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
-											<button
-												id="composer-submit"
-												type="submit"
-												class="btn-accent text-ui-code"
-												:disabled="streaming || !draft.trim()"
-											>Commit</button>
-										</div>
-									</form>
-								</div>
+					<!-- Session info card + plugins (HTMX-loaded from /node).
+					     LeftPanelResponse also OOB-updates #siblings-section and #path-section. -->
+					<div
+						id="left-panel-content"
+						class="flex-1 overflow-y-auto"
+						hx-get={ "/ui/sessions/" + meta.ID + "/node?ref=" + activeRef }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+					>
+						<div class="px-3 py-3 text-ink-4 text-ui-meta animate-pulse">Loading…</div>
+					</div>
+					<!-- Archive / Delete -->
+					<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
+						if meta.ArchivedAt == nil {
+							<button class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
+								hx-post={ "/ui/sessions/" + meta.ID + "/archive" }
+								hx-confirm={ "Archive session '" + meta.Name + "'? It will become read-only." }
+								hx-target="body" hx-push-url={ "/ui/sessions/" + meta.ID }>
+								Archive
+							</button>
+						} else {
+							<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Archived</span>
+						}
+						if meta.ArchivedAt != nil {
+							<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+								hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
+								hx-target="body" hx-push-url="/ui/sessions">
+								Delete
+							</button>
+						} else {
+							<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Delete</span>
+						}
+					</div>
+				</aside>
+				<!-- MAIN AREA -->
+				<div class="flex flex-col flex-1 min-w-0 overflow-hidden">
+					<!-- Thread toolbar -->
+					<div class="flex flex-col shrink-0 px-2">
+						<!-- Button row: left-panel toggle | breadcrumb | layout controls -->
+						<div class="flex items-center gap-2 py-1">
+							<button
+								@click="sidebar = !sidebar"
+								:title="sidebar ? 'Collapse left panel' : 'Expand left panel'"
+								class="w-6 h-6 flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors shrink-0"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+								</svg>
+							</button>
+							<!-- breadcrumb placeholder -->
+							<div class="flex-1 min-w-0"></div>
+							<!-- layout controls -->
+							<div class="flex items-center gap-0.5 shrink-0">
+								<button
+									@click="wideMode = !wideMode; document.documentElement.classList.toggle('forge-wide', wideMode); localStorage.setItem('forge:wide', wideMode ? '1' : '0')"
+									:title="wideMode ? 'Switch to fixed width' : 'Switch to full width'"
+									class="w-6 h-6 hidden md:flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors"
+								>
+									<svg x-show="!wideMode" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+									</svg>
+									<svg x-show="wideMode" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+									</svg>
+								</button>
+								<button
+									@click="rightPanel = !rightPanel"
+									:title="rightPanel ? 'Collapse right panel' : 'Expand right panel'"
+									class="w-6 h-6 flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors"
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1)">
+										<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+									</svg>
+								</button>
 							</div>
 						</div>
-					}
+						<!-- Separator line -->
+						<div class="h-px bg-line-soft"></div>
+					</div>
+					<!-- Scrollable session content -->
+					<div
+						id="session-main"
+						class="flex-1 overflow-y-auto min-w-0"
+						x-data="{ draft: '', streaming: false }"
+						@forge:streaming-start.document="streaming = true; draft = ''"
+						@forge:streaming-end.document="streaming = false"
+					>
+					<div class="min-h-full flex flex-col">
+						<div id="thread" class="flex-1 px-6 pt-4 pb-2">
+							@Thread(messages, meta.ArchivedAt != nil)
+						</div>
+						<div id="stream-area" class="px-6 pb-2"></div>
+						if meta.ArchivedAt == nil {
+							<div class="sticky bottom-0">
+								<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
+								<div class="bg-bg px-4 pb-3">
+									<div class="forge-thread-wrap">
+										<form
+											id="composer-form"
+											hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
+											hx-target="#stream-area"
+											hx-swap="innerHTML"
+											hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
+										>
+											<input type="hidden" name="ref" value={ activeRef }/>
+											<textarea
+												id="composer-input"
+												name="content"
+												rows="3"
+												placeholder="Message… (⌘↵ or Ctrl↵ to commit)"
+												class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+												x-model="draft"
+												@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+												@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+											></textarea>
+											<div class="flex justify-between items-center mt-2">
+												<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
+												<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
+												<button
+													id="composer-submit"
+													type="submit"
+													class="btn-accent text-ui-code"
+													:disabled="streaming || !draft.trim()"
+												>Commit</button>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+						}
+					</div>
+					</div>
 				</div>
+				<!-- RIGHT PANEL: siblings + session DAG + refs + path -->
+				<aside
+					style="transition:width .15s ease"
+					:style="rightPanel ? 'width:280px' : 'width:0'"
+					class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0"
+				>
+					<!-- Siblings (OOB-populated from /node response) -->
+					<div id="siblings-section" class="border-b border-line-soft shrink-0">
+						<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
+					</div>
+					<!-- Session DAG -->
+					<div class="flex items-center justify-between px-3 py-1.5 border-b border-line-soft shrink-0">
+						<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
+						<a
+							href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
+							class="text-ui-meta text-ink-3 hover:text-ink transition-colors"
+						>expand →</a>
+					</div>
+					<div
+						id="mini-dag"
+						hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+						class="shrink-0 border-b border-line-soft overflow-y-auto max-h-[200px]"
+					>
+						<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
+					</div>
+					<!-- Refs panel -->
+					<div
+						id="refs-panel"
+						hx-get={ "/ui/sessions/" + meta.ID + "/refs" }
+						hx-trigger="load"
+						hx-swap="innerHTML"
+						class="border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0"
+					>
+						<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
+					</div>
+					<!-- Path (OOB-populated from /node response, fills remaining space) -->
+					<div id="path-section" class="flex-1 min-h-0 overflow-hidden">
+						<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
+					</div>
+				</aside>
 			</div>
-			<!-- RIGHT PANEL: siblings + session DAG + refs + path -->
-			<aside
-				style="transition:width .15s ease"
-				:style="nodePanel ? 'width:280px' : 'width:0'"
-				class="bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0"
-			>
-				<!-- Siblings (OOB-populated from /node response) -->
-				<div id="siblings-section" class="border-b border-line-soft shrink-0">
-					<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
-				</div>
-				<!-- Session DAG (moved from left panel) -->
-				<div class="flex items-center justify-between px-3 py-1.5 border-b border-line-soft shrink-0">
-					<span class="text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold">Session DAG</span>
-					<a
-						href={ templ.SafeURL("/ui/sessions/" + meta.ID + "/dag") }
-						class="text-ui-meta text-ink-3 hover:text-ink transition-colors"
-					>expand →</a>
-				</div>
-				<div
-					id="mini-dag"
-					hx-get={ "/ui/sessions/" + meta.ID + "/dag/mini" }
-					hx-trigger="load"
-					hx-swap="innerHTML"
-					class="shrink-0 border-b border-line-soft overflow-y-auto max-h-[200px]"
-				>
-					<div class="px-3 py-2 text-ink-4 text-ui-meta">Loading…</div>
-				</div>
-				<!-- Refs panel (moved from left panel) -->
-				<div
-					id="refs-panel"
-					hx-get={ "/ui/sessions/" + meta.ID + "/refs" }
-					hx-trigger="load"
-					hx-swap="innerHTML"
-					class="border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0"
-				>
-					<div class="px-3 py-3 text-ink-3 text-ui-code">Loading refs…</div>
-				</div>
-				<!-- Path (OOB-populated from /node response, fills remaining space) -->
-				<div id="path-section" class="flex-1 min-h-0 overflow-hidden">
-					<div class="px-3 py-2 text-ink-4 text-ui-meta animate-pulse">···</div>
-				</div>
-			</aside>
-		</div>
-		<script>
-			(function() {
-				function onStreamEnd() {
-					stopObserving();
-					document.dispatchEvent(new CustomEvent('forge:streaming-end'));
-				}
-				document.body.addEventListener('htmx:sseClose', onStreamEnd);
-				document.body.addEventListener('htmx:sseError', onStreamEnd);
-
-				function scrollToBottom() {
-					const main = document.getElementById('session-main');
-					if (main) main.scrollTop = main.scrollHeight;
-				}
-
-				let chunkObserver = null;
-				function observeStreamContent() {
-					const el = document.getElementById('stream-content');
-					if (!el || chunkObserver) return;
-					chunkObserver = new MutationObserver(scrollToBottom);
-					chunkObserver.observe(el, { childList: true, subtree: true });
-				}
-				function stopObserving() {
-					if (chunkObserver) { chunkObserver.disconnect(); chunkObserver = null; }
-				}
-
-				document.body.addEventListener('htmx:afterSwap', function(e) {
-					const id = e.detail.target?.id;
-					if (id === 'stream-area') { observeStreamContent(); scrollToBottom(); }
-					else if (id === 'thread') { scrollToBottom(); }
-				});
-				document.body.addEventListener('htmx:oobAfterSwap', function(e) {
-					if (e.detail.target?.id === 'thread') scrollToBottom();
-				});
-			})();
-		</script>
 		</div>
 	}
 }
