@@ -3,8 +3,6 @@ package ui
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -15,8 +13,6 @@ import (
 	uidag "github.com/mwantia/forge/internal/application/ui/templates/dag"
 	tmplrefs "github.com/mwantia/forge/internal/application/ui/templates/refs"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
 )
 
 type streamHandlers struct {
@@ -26,45 +22,21 @@ type streamHandlers struct {
 	pipeline pipelineCommitter
 }
 
-var streamMD = goldmark.New(
-	goldmark.WithExtensions(
-		extension.Table,
-		extension.Strikethrough,
-		extension.TaskList,
-	),
-)
-
-func mdToHTML(src string) string {
-	src = strings.TrimSpace(src)
-	if src == "" {
-		return ""
-	}
-	var buf bytes.Buffer
-	if err := streamMD.Convert([]byte(src), &buf); err != nil {
-		return "<p>" + src + "</p>"
-	}
-	return buf.String()
-}
-
-func sseWrite(w io.Writer, flusher http.Flusher, event, data string) {
-	fmt.Fprintf(w, "event: %s\n", event)
+func sseWrite(w gin.ResponseWriter, flusher http.Flusher, event, data string) {
+	w.WriteString("event: " + event + "\n")
 	for _, line := range strings.Split(data, "\n") {
-		fmt.Fprintf(w, "data: %s\n", line)
+		w.WriteString("data: " + line + "\n")
 	}
-	fmt.Fprintf(w, "\n")
+	w.WriteString("\n")
 	if flusher != nil {
 		flusher.Flush()
 	}
 }
 
-func renderComponent(ctx context.Context, c templ.Component) string {
+func writeComponent(ctx context.Context, sb *strings.Builder, c templ.Component) {
 	var buf bytes.Buffer
 	_ = c.Render(ctx, &buf)
-	return buf.String()
-}
-
-func oobWrap(id, html string) string {
-	return `<div id="` + id + `" hx-swap-oob="innerHTML">` + html + `</div>`
+	sb.WriteString(buf.String())
 }
 
 func (h *streamHandlers) handleStream() gin.HandlerFunc {
@@ -93,8 +65,9 @@ func (h *streamHandlers) handleStream() gin.HandlerFunc {
 
 		events, err := h.pipeline.CommitEvents(ctx, job.SessionID, job.Ref, job.Content)
 		if err != nil {
-			errHTML := `<div class="rounded border border-rem/30 bg-rem/5 px-3 py-2 text-rem text-ui-body">` + err.Error() + `</div>`
-			sseWrite(c.Writer, flusher, "chunk", errHTML)
+			var sb strings.Builder
+			writeComponent(ctx, &sb, tmplsessions.StreamErrorBlock(err.Error()))
+			sseWrite(c.Writer, flusher, "chunk", sb.String())
 			return
 		}
 
@@ -108,40 +81,33 @@ func (h *streamHandlers) handleStream() gin.HandlerFunc {
 				}
 				if e.Boundary == apppipeline.ChunkBoundaryBlock || e.Boundary == apppipeline.ChunkBoundaryFinal {
 					if textBuf.Len() > 0 {
-						sseWrite(c.Writer, flusher, "chunk", mdToHTML(textBuf.String()))
+						sseWrite(c.Writer, flusher, "chunk", renderMarkdown(textBuf.String()))
 						textBuf.Reset()
 					}
 				}
 
 			case apppipeline.ToolCallEvent:
-				html := fmt.Sprintf(
-					`<div class="rounded border border-line-soft bg-bg-1 font-mono flex items-center gap-2 px-2 py-1.5 mt-1"><span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">call</span><span class="text-ui-meta text-ink-3 flex-1 truncate">%s</span></div>`,
-					e.Name,
-				)
-				sseWrite(c.Writer, flusher, "chunk", html)
+				var sb strings.Builder
+				writeComponent(ctx, &sb, tmplsessions.StreamToolCallChip(e.Name))
+				sseWrite(c.Writer, flusher, "chunk", sb.String())
 
 			case apppipeline.ToolResultEvent:
-				errTag := ""
-				if e.IsError {
-					errTag = `<span class="text-rem text-ui-label shrink-0">err</span>`
-				}
-				html := fmt.Sprintf(
-					`<div class="flex gap-3 items-start pl-10 mt-0.5"><div class="flex items-center gap-2 px-2 py-1.5 rounded border border-line-soft bg-bg-1 font-mono"><span class="text-ui-label text-ink-4 uppercase tracking-wide shrink-0">result</span><span class="text-ui-meta text-ink-3 flex-1 truncate">%s</span>%s</div></div>`,
-					e.Name, errTag,
-				)
-				sseWrite(c.Writer, flusher, "chunk", html)
+				var sb strings.Builder
+				writeComponent(ctx, &sb, tmplsessions.StreamToolResultChip(e.Name, e.IsError))
+				sseWrite(c.Writer, flusher, "chunk", sb.String())
 
 			case apppipeline.ErrorEvent:
 				if textBuf.Len() > 0 {
-					sseWrite(c.Writer, flusher, "chunk", mdToHTML(textBuf.String()))
+					sseWrite(c.Writer, flusher, "chunk", renderMarkdown(textBuf.String()))
 				}
-				errHTML := `<div class="rounded border border-rem/30 bg-rem/5 px-3 py-2 text-rem text-ui-body">` + e.Message + `</div>`
-				sseWrite(c.Writer, flusher, "chunk", errHTML)
+				var sb strings.Builder
+				writeComponent(ctx, &sb, tmplsessions.StreamErrorBlock(e.Message))
+				sseWrite(c.Writer, flusher, "chunk", sb.String())
 				return
 
 			case apppipeline.DoneEvent:
 				if textBuf.Len() > 0 {
-					sseWrite(c.Writer, flusher, "chunk", mdToHTML(textBuf.String()))
+					sseWrite(c.Writer, flusher, "chunk", renderMarkdown(textBuf.String()))
 				}
 				sseWrite(c.Writer, flusher, "done", h.renderDoneOOB(ctx, job.SessionID, ref))
 				return
@@ -151,8 +117,6 @@ func (h *streamHandlers) handleStream() gin.HandlerFunc {
 }
 
 func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref string) string {
-	var sb strings.Builder
-
 	meta, err := h.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
 		return ""
@@ -161,35 +125,25 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 	refs, _ := h.sessions.ListRefs(ctx, sessionID)
 	activeRef := resolveActiveRef(refs, ref)
 
-	// Thread
 	msgs, _ := h.sessions.ListMessagesFromRef(ctx, sessionID, activeRef, 0, 0)
-	rendered := make([]*tmplsessions.RenderedMessage, len(msgs))
-	for i, msg := range msgs {
-		rm := &tmplsessions.RenderedMessage{Message: msg, Rendered: msg.Content}
-		if h.renderer != nil {
-			if r, err := h.renderer.RenderContent(ctx, sessionID, msg.Content); err == nil {
-				rm.Rendered = r
-			}
-		}
-		rendered[i] = rm
-	}
-	sb.WriteString(oobWrap("thread", renderComponent(ctx, tmplsessions.Thread(rendered, meta.ArchivedAt != nil))))
+	rendered := renderMessages(ctx, h.renderer, sessionID, msgs)
 
-	// Refs panel
-	sb.WriteString(oobWrap("refs-panel", renderComponent(ctx, tmplrefs.Panel(sessionID, refs))))
-
-	// Left panel: session info card + plugins
 	allPlugins := pluginNamespacesFrom(h.tools)
-	sb.WriteString(oobWrap("session-info-card", renderComponent(ctx, tmplsessions.SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil))))
-	// Right panel: siblings + path (separate OOB to avoid nesting)
 	subSessions, _ := h.sessions.QuerySessions(ctx, appsession.SessionQuery{ParentID: sessionID})
-	sb.WriteString(oobWrap("siblings-section", renderComponent(ctx, tmplsessions.SiblingsSection(subSessions))))
-	sb.WriteString(oobWrap("path-section", renderComponent(ctx, tmplsessions.PathSection(msgs))))
 
-	// Mini DAG
 	dagMsgs, _ := h.sessions.ListMessages(ctx, sessionID, 0, 200)
 	nodes, edges := uidag.BuildMiniLayout(dagMsgs, refs)
-	sb.WriteString(oobWrap("mini-dag", renderComponent(ctx, uidag.Mini(nodes, edges, sessionID))))
 
+	var sb strings.Builder
+	for _, comp := range []templ.Component{
+		tmplsessions.ThreadOOB(rendered, meta.ArchivedAt != nil),
+		tmplrefs.RefsPanelOOB(sessionID, refs),
+		tmplsessions.SessionInfoCardOOB(sessionID, meta, allPlugins, meta.ArchivedAt == nil),
+		tmplsessions.SiblingsSectionOOB(subSessions),
+		tmplsessions.PathSectionOOB(msgs),
+		uidag.MiniOOB(nodes, edges, sessionID),
+	} {
+		writeComponent(ctx, &sb, comp)
+	}
 	return sb.String()
 }
