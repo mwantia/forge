@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
 	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
@@ -57,7 +56,10 @@ func (s *SessionService) AppendMessage(ctx context.Context, sessionID string, ms
 		return "", err
 	}
 
-	capturedUsage := msg.Usage
+	totalTokens := 0
+	if msg.Usage != nil {
+		totalTokens = msg.Usage.TotalTokens
+	}
 	hash, err := s.store.SaveMessage(ctx, sessionID, dag.HEAD, msg)
 
 	s.mu.Unlock()
@@ -65,9 +67,8 @@ func (s *SessionService) AppendMessage(ctx context.Context, sessionID string, ms
 		return "", err
 	}
 
-	if capturedUsage != nil {
-		// Fire ans forget call to asynchronously write usage
-		go s.accumulateUsage(ctx, sessionID, capturedUsage)
+	if totalTokens > 0 {
+		go s.stampContextTokens(ctx, sessionID, totalTokens)
 	}
 
 	return hash, nil
@@ -81,7 +82,10 @@ func (s *SessionService) AppendMessageToRef(ctx context.Context, sessionID, ref 
 		return "", err
 	}
 
-	capturedUsage := msg.Usage
+	totalTokens := 0
+	if msg.Usage != nil {
+		totalTokens = msg.Usage.TotalTokens
+	}
 	hash, err := s.store.SaveMessage(ctx, sessionID, ref, msg)
 
 	s.mu.Unlock()
@@ -89,40 +93,35 @@ func (s *SessionService) AppendMessageToRef(ctx context.Context, sessionID, ref 
 		return "", err
 	}
 
-	if capturedUsage != nil {
-		// Fire ans forget call to asynchronously write usage
-		go s.accumulateUsage(ctx, sessionID, capturedUsage)
+	if totalTokens > 0 {
+		go s.stampContextTokens(ctx, sessionID, totalTokens)
 	}
 
 	return hash, nil
 }
 
-// accumulateUsage folds a per-message TokenUsage into the session's running
-// total. Failures are logged and swallowed: usage accounting must not fail a
-// successful message commit.
-func (s *SessionService) accumulateUsage(ctx context.Context, sessionID string, usage *sdkplugins.TokenUsage) {
-	if usage == nil {
-		return
-	}
-
+// stampContextTokens overwrites the session's current context token count with
+// TotalTokens (input + output) from the most recent assistant message. This
+// represents what the next turn will need to fit in the context window.
+func (s *SessionService) stampContextTokens(ctx context.Context, sessionID string, totalTokens int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	meta, err := s.store.LoadSession(ctx, sessionID)
 	if err != nil {
-		s.logger.Warn("usage accumulate: load session failed", "session", sessionID, "error", err)
+		s.logger.Warn("stamp context tokens: load session failed", "session", sessionID, "error", err)
 		return
 	}
 
-	if meta.Usage == nil {
-		meta.Usage = &sdkplugins.TokenUsage{}
+	if meta.CurrentContextTokens == totalTokens {
+		return
 	}
 
-	meta.Usage.Add(usage)
+	meta.CurrentContextTokens = totalTokens
 	meta.UpdatedAt = time.Now()
 
 	if err := s.store.SaveSession(ctx, meta); err != nil {
-		s.logger.Warn("usage accumulate: save session failed", "session", sessionID, "error", err)
+		s.logger.Warn("stamp context tokens: save session failed", "session", sessionID, "error", err)
 	}
 }
 
@@ -146,6 +145,35 @@ func (s *SessionService) AccumulateDuration(ctx context.Context, sessionID strin
 
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		s.logger.Warn("duration accumulate: save session failed", "session", sessionID, "error", err)
+	}
+}
+
+// StampContextWindow implements SessionManager. It writes the model's context
+// window size onto the session metadata on the first pipeline turn where it is
+// known. Subsequent calls are no-ops when the stored value already matches.
+func (s *SessionService) StampContextWindow(ctx context.Context, sessionID string, size int) {
+	if size <= 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	meta, err := s.store.LoadSession(ctx, sessionID)
+	if err != nil {
+		s.logger.Warn("context window stamp: load session failed", "session", sessionID, "error", err)
+		return
+	}
+
+	if meta.ContextWindowSize == size {
+		return
+	}
+
+	meta.ContextWindowSize = size
+	meta.UpdatedAt = time.Now()
+
+	if err := s.store.SaveSession(ctx, meta); err != nil {
+		s.logger.Warn("context window stamp: save session failed", "session", sessionID, "error", err)
 	}
 }
 
