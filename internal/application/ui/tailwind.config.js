@@ -55,4 +55,9 @@ export const theme = {
     },
   },
 };
+export const safelist = [
+  'text-rem', 'border-rem/30',
+  'text-ok', 'border-ok/30',
+  'text-ink-4', 'border-line-soft',
+];
 export const plugins = [];
