@@ -9,15 +9,13 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"fmt"
 	"strings"
-	"time"
 
 	appsession "github.com/mwantia/forge/internal/application/session"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
 )
 
-func List(sessions []*appsession.SessionMetadata) templ.Component {
+func List(sessions []*appsession.SessionMetadata, availablePlugins []string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -50,304 +48,293 @@ func List(sessions []*appsession.SessionMetadata) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = layout.Topbar("", "", "").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = layout.TopbarSimple().Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto [scrollbar-gutter:stable]\"><div class=\"max-w-3xl mx-auto px-6 py-10\"><div class=\"flex items-end justify-between mb-6\"><div><h1 class=\"text-ui-h1 font-semibold tracking-tight\">Sessions</h1><p class=\"text-ink-3 text-ui-ctrl mt-1\">List of all active sessions based on the defined query.</p></div><button class=\"btn-accent\" hx-get=\"/ui/sessions/new\" hx-target=\"body\" hx-push-url=\"true\">New</button></div><div x-data=\"{\n\t\t\t\t\t\tsearch: '',\n\t\t\t\t\t\tshowActive: true,\n\t\t\t\t\t\tshowArchived: false,\n\t\t\t\t\t\tshowSiblings: false,\n\t\t\t\t\t\tpluginFilter: '',\n\t\t\t\t\t\tmatches(el) {\n\t\t\t\t\t\t\tconst s = this.search.toLowerCase();\n\t\t\t\t\t\t\tconst pf = this.pluginFilter.toLowerCase().trim();\n\t\t\t\t\t\t\tif (s && !el.dataset.name.includes(s) && !el.dataset.title.includes(s)) return false;\n\t\t\t\t\t\t\tif (el.dataset.archived === 'true' && !this.showArchived) return false;\n\t\t\t\t\t\t\tif (el.dataset.archived !== 'true' && !this.showActive) return false;\n\t\t\t\t\t\t\tif (el.dataset.sibling === 'true' && !this.showSiblings) return false;\n\t\t\t\t\t\t\tif (pf && !el.dataset.plugins.includes(pf)) return false;\n\t\t\t\t\t\t\treturn true;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\"><div class=\"flex flex-wrap items-center gap-2 mb-4\"><div class=\"relative flex-1 min-w-48\"><input type=\"text\" x-model=\"search\" placeholder=\"Search by name or title…\" class=\"w-full bg-bg-1 border border-line rounded-md px-3 py-1.5 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors\"></div><div class=\"relative min-w-36\"><input type=\"text\" x-model=\"pluginFilter\" placeholder=\"Filter by plugin…\" class=\"w-full bg-bg-1 border border-line rounded-md px-3 py-1.5 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors\"></div><label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showActive\" class=\"accent-accent\"> Active</label> <label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showArchived\" class=\"accent-accent\"> Archived</label> <label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showSiblings\" class=\"accent-accent\"> Siblings</label></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <main class=\"flex-1 overflow-auto [scrollbar-gutter:stable]\"><div class=\"max-w-3xl mx-auto px-6 py-10\"><div class=\"flex items-end justify-between mb-6\"><div><h1 class=\"text-ui-h1 font-semibold tracking-tight\">Sessions</h1><p class=\"text-ink-3 text-ui-ctrl mt-1\">List of all active sessions based on the defined query.</p></div><button class=\"btn-accent\" hx-get=\"/ui/sessions/new\" hx-target=\"body\" hx-push-url=\"true\">New</button></div><div x-data=\"{\n\t\t\t\t\t\tsearch: '',\n\t\t\t\t\t\tshowActive: true,\n\t\t\t\t\t\tshowArchived: false,\n\t\t\t\t\t\tshowSiblings: false,\n\t\t\t\t\t\tselectedPlugins: [],\n\t\t\t\t\t\tmatches(el) {\n\t\t\t\t\t\t\tconst s = this.search.toLowerCase();\n\t\t\t\t\t\t\tif (s && !el.dataset.name.includes(s) && !el.dataset.title.includes(s)) return false;\n\t\t\t\t\t\t\tif (el.dataset.archived === 'true' && !this.showArchived) return false;\n\t\t\t\t\t\t\tif (el.dataset.archived !== 'true' && !this.showActive) return false;\n\t\t\t\t\t\t\tif (el.dataset.sibling === 'true' && !this.showSiblings) return false;\n\t\t\t\t\t\t\tif (this.selectedPlugins.length && !this.selectedPlugins.every(p => el.dataset.plugins.includes(p))) return false;\n\t\t\t\t\t\t\treturn true;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\" @plugin-filter=\"selectedPlugins = $event.detail.selected\"><div class=\"flex flex-wrap items-center gap-2 mb-4\"><div class=\"relative flex-1 min-w-48\"><input type=\"text\" x-model=\"search\" placeholder=\"Search by name or title…\" class=\"w-full bg-bg-1 border border-line rounded-md px-3 py-1.5 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors\"></div><div class=\"relative min-w-48\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = PluginPicker(availablePlugins).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showActive\" class=\"accent-accent\"> Active</label> <label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showArchived\" class=\"accent-accent\"> Archived</label> <label class=\"flex items-center gap-1.5 text-ui-ctrl text-ink-3 cursor-pointer select-none\"><input type=\"checkbox\" x-model=\"showSiblings\" class=\"accent-accent\"> Siblings</label></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(sessions) == 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"flex flex-col items-center justify-center py-20 gap-2 text-center\"><p class=\"text-ink-3 text-ui-body\">No sessions yet.</p><p class=\"text-ink-4 text-ui-ctrl\">Create one to get started.</p></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"flex flex-col items-center justify-center py-20 gap-2 text-center\"><p class=\"text-ink-3 text-ui-body\">No sessions yet.</p><p class=\"text-ink-4 text-ui-ctrl\">Create one to get started.</p></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"flex flex-col gap-2\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"flex flex-col gap-2\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, s := range sessions {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<a href=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<a href=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var3 templ.SafeURL
 					templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/ui/sessions/" + s.ID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 84, Col: 53}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 77, Col: 53}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" x-show=\"matches($el)\" data-name=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" x-show=\"matches($el)\" data-name=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(strings.ToLower(s.Name))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 86, Col: 44}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 79, Col: 44}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" data-title=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" data-title=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(strings.ToLower(s.Title))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 87, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 80, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" data-archived=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-archived=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(sessionArchived(s))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 88, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 81, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-sibling=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" data-sibling=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(sessionHasParent(s))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 89, Col: 43}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 82, Col: 43}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" data-plugins=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" data-plugins=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(strings.ToLower(pluginNames(s.Plugins, " ")))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 90, Col: 68}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 83, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" class=\"group flex flex-col gap-3 p-4 rounded-lg border border-line hover:border-line-strong hover:bg-bg-1 transition-colors\"><div class=\"flex items-start justify-between gap-4\"><div class=\"flex flex-col gap-0.5 min-w-0\"><span class=\"text-ink font-semibold text-ui-body truncate group-hover:text-accent transition-colors\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" class=\"group flex flex-col gap-3 p-4 rounded-lg border border-line hover:border-line-strong hover:bg-bg-1 transition-colors\"><div class=\"flex items-start justify-between gap-4\"><div class=\"flex flex-col gap-0.5 min-w-0\"><span class=\"text-ink font-semibold text-ui-body truncate group-hover:text-accent transition-colors\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var9 string
-					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(sessionDisplayName(s))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 96, Col: 20}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 88, Col: 135}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span> <span class=\"font-mono text-ui-meta text-ink-4 truncate\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span> <span class=\"font-mono text-ui-meta text-ink-4 truncate\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var10 string
-					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(s.ID)
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 98, Col: 74}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 89, Col: 76}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></div><div class=\"flex items-center gap-1.5 shrink-0 mt-0.5\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</span></div><div class=\"flex items-center gap-1.5 shrink-0 mt-0.5\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					if s.Parent != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span class=\"font-mono text-[10px] text-ink-4 border border-line-soft rounded px-1.5 py-0.5\" title=\"")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<span class=\"font-mono text-[10px] text-ink-4 border border-line-soft rounded px-1.5 py-0.5\" title=\"")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var11 string
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("cloned from " + s.Parent)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 102, Col: 138}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 93, Col: 138}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">⎇ ")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">⎇ ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(s.Parent[:8])
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 102, Col: 159}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 93, Col: 159}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span> ")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</span> ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
 					if s.ArchivedAt != nil {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<span class=\"ref-pill\">archived</span>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"ref-pill\">archived</span>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div></div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					if s.Title != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<p class=\"text-accent text-ui-ctrl font-medium\">")
+					if s.Description != "" {
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"text-ink-3 text-ui-ctrl line-clamp-2 leading-relaxed\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var13 string
-						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(s.Title)
+						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(s.Description)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 110, Col: 67}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 101, Col: 89}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</p>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</p>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					if s.Description != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<p class=\"text-ink-3 text-ui-ctrl line-clamp-2 leading-relaxed\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var14 string
-						templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(s.Description)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 113, Col: 89}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</p>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"flex items-center flex-wrap gap-x-2 gap-y-1 text-ui-meta text-ink-4 pt-2 border-t border-line-soft\"><span class=\"font-mono text-ink-3\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex items-center flex-wrap gap-x-2 gap-y-1 text-ui-meta text-ink-4 pt-2 border-t border-line-soft\"><span class=\"font-mono text-ink-3\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var15 string
-					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(s.Model)
+					var templ_7745c5c3_Var14 string
+					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(s.Model)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 116, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 104, Col: 54}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</span> <span>·</span> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</span> <span>·</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					for _, p := range s.Plugins {
-						var templ_7745c5c3_Var16 = []any{pluginListPillClass(p)}
-						templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var16...)
+						var templ_7745c5c3_Var15 = []any{pluginListPillClass(p)}
+						templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var15...)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<span class=\"")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<span class=\"")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						var templ_7745c5c3_Var16 string
+						templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var15).String())
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 1, Col: 0}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16)
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var17 string
-						templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var16).String())
+						templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(p.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 1, Col: 0}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 107, Col: 58}
 						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\">")
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var18 string
-						templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(p.Name)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 119, Col: 58}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</span> ")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</span> ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<span class=\"ml-auto\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"ml-auto\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var18 string
+					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs("updated " + relativeTime(s.UpdatedAt))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 109, Col: 72}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</span> <span>·</span> <span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var19 string
-					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs("updated " + relativeTime(s.UpdatedAt))
+					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs("created " + relativeTime(s.CreatedAt))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 121, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 111, Col: 56}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</span> <span>·</span> <span>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var20 string
-					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs("created " + relativeTime(s.CreatedAt))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/list.templ`, Line: 123, Col: 56}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</span></div></a>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</span></div></a>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div></div></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div></div></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -363,13 +350,14 @@ func List(sessions []*appsession.SessionMetadata) templ.Component {
 
 func pluginListPillClass(p appsession.PluginConfig) string {
 	const base = "font-mono text-[10px] border rounded px-1.5 py-0.5"
-	if p.Disabled {
+	switch {
+	case p.Disabled:
 		return base + " text-rem border-rem/30"
-	}
-	if p.Enabled {
+	case p.Enabled:
 		return base + " text-ok border-ok/30"
+	default:
+		return base + " text-ink-4 border-line-soft"
 	}
-	return base + " text-ink-4 border-line-soft"
 }
 
 func sessionArchived(s *appsession.SessionMetadata) string {
@@ -384,22 +372,6 @@ func sessionHasParent(s *appsession.SessionMetadata) string {
 		return "true"
 	}
 	return "false"
-}
-
-func relativeTime(t time.Time) string {
-	d := time.Since(t)
-	switch {
-	case d < time.Minute:
-		return "just now"
-	case d < time.Hour:
-		return fmt.Sprintf("%dm ago", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh ago", int(d.Hours()))
-	case d < 7*24*time.Hour:
-		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
-	default:
-		return t.Format("Jan 2, 2006")
-	}
 }
 
 var _ = templruntime.GeneratedTemplate

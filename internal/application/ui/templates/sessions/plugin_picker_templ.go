@@ -69,8 +69,8 @@ func pluginPickerData(available []string) string {
 			const s = this.search.toLowerCase();
 			return this.available.filter(p => !this.selected.includes(p) && (!s || p.includes(s)));
 		},
-		add(p) { this.selected.push(p); this.search = ''; this.open = false; },
-		remove(p) { this.selected = this.selected.filter(s => s !== p); }
+		add(p) { this.selected.push(p); this.search = ''; this.open = false; this.$dispatch('plugin-filter', { selected: this.selected }); },
+		remove(p) { this.selected = this.selected.filter(s => s !== p); this.$dispatch('plugin-filter', { selected: this.selected }); }
 	}`
 }
 
