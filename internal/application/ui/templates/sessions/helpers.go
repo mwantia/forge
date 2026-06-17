@@ -96,6 +96,95 @@ func formatArgs(args map[string]any) string {
 	return string(b)
 }
 
+// formatTokens converts a raw token count to a compact human-readable string.
+// 4218 → "4.2k", 200000 → "200k", 1500000 → "1.5M".
+func formatTokens(n int) string {
+	if n == 0 {
+		return "0"
+	}
+
+	switch {
+	case n >= 1_000_000:
+		v := float64(n) / 1_000_000
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%dM", int(v))
+		}
+		
+		return fmt.Sprintf("%.1fM", v)
+	
+	case n >= 1_000:
+		v := float64(n) / 1_000
+		if v == float64(int(v)) {
+			return fmt.Sprintf("%dk", int(v))
+		}
+
+		return fmt.Sprintf("%.1fk", v)
+	
+	default:
+		return fmt.Sprintf("%d", n)
+	}
+}
+
+const fallbackContextWindow = 198_000
+
+// effectiveWindowSize returns ContextWindowSize when known, or the hardcoded
+// fallback of 198k tokens (to be replaced once the provider reports the value).
+func effectiveWindowSize(reported int) int {
+	if reported > 0 {
+		return reported
+	}
+	return fallbackContextWindow
+}
+
+// pressureClass returns the Tailwind text-colour token for context window pressure.
+// <70% → text-ok (green), 70–90% → text-accent (amber), >90% → text-rem (red).
+func pressureClass(used, limit int) string {
+	if limit <= 0 {
+		return "text-ink-2"
+	}
+	pct := used * 100 / limit
+	switch {
+	case pct >= 90:
+		return "text-rem"
+	case pct >= 70:
+		return "text-accent"
+	default:
+		return "text-ok"
+	}
+}
+
+// pressureBgClass returns the Tailwind bg-colour token matching pressureClass.
+func pressureBgClass(used, limit int) string {
+	if limit <= 0 {
+		return "bg-ink-4"
+	}
+	pct := used * 100 / limit
+	switch {
+	case pct >= 90:
+		return "bg-rem"
+	case pct >= 70:
+		return "bg-accent"
+	default:
+		return "bg-ok"
+	}
+}
+
+// formatCost renders a float64 cost value to a compact dollar string with
+// enough precision to show non-zero values (e.g. "$0.0002", "$1.23").
+func formatCost(f float64) string {
+	if f <= 0 {
+		return "$0.00"
+	}
+	// Find first non-zero decimal place and show 2 more digits.
+	for digits := 2; digits <= 8; digits++ {
+		s := fmt.Sprintf("%.*f", digits, f)
+		if s[len(s)-1] != '0' {
+			return "$" + s
+		}
+	}
+	return fmt.Sprintf("$%.8f", f)
+}
+
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s

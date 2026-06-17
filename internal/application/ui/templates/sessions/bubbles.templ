@@ -120,7 +120,7 @@ templ MessageBubble(rm *RenderedMessage) {
 						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
 						title="Toggle raw/rendered"
 					>{ "{}" }</button>
-					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) }</div>
+					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) } · { formatTokens(rm.DisplayTokens) } Tokens</div>
 				</div>
 			</div>
 			@layout.Avatar("U", "user")
@@ -156,7 +156,7 @@ templ MessageBubble(rm *RenderedMessage) {
 						:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-ink-4 border-line hover:text-ink-3'"
 						title="Toggle raw/rendered"
 					>{ "{}" }</button>
-					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) }</div>
+					<div class="text-ui-meta text-ink-4 font-mono">{ shortHash(rm.Hash) } · { fmtCreatedAt(rm.CreatedAt) } · { formatTokens(rm.DisplayTokens) } Tokens</div>
 				</div>
 			</div>
 		</div>
