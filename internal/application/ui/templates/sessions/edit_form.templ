@@ -1,0 +1,116 @@
+package tmplsessions
+
+import (
+	appsession "github.com/mwantia/forge/internal/application/session"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
+)
+
+// SessionEditForm renders an inline edit form for session metadata.
+// Submitted via hx-patch; on success the server returns SessionInfoCard.
+templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models []*domprovider.ProviderModelTemplate) {
+	<form
+		hx-patch={ "/ui/sessions/" + sessionID }
+		hx-target="#left-panel-content"
+		hx-swap="innerHTML"
+		class="flex flex-col gap-0"
+	>
+		<!-- header row -->
+		<div class="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-line-soft mx-3 mt-2 rounded-t border-x border-t bg-bg-2">
+			<span class="text-ink-4 text-ui-label flex-1">Edit metadata</span>
+			<button
+				type="button"
+				hx-get={ "/ui/sessions/" + sessionID + "/node" }
+				hx-target="#left-panel-content"
+				hx-swap="innerHTML"
+				class="shrink-0 w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
+				title="Cancel"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+			</button>
+		</div>
+		<div class="mx-3 rounded-b border border-t-0 border-line-soft bg-bg-2 px-2.5 py-2 flex flex-col gap-2">
+			<!-- Name -->
+			<div class="flex flex-col gap-0.5">
+				<label class="text-ui-label text-ink-4">name</label>
+				<input
+					type="text"
+					name="name"
+					value={ meta.Name }
+					placeholder="session-name"
+					class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder:text-ink-4 focus:outline-none focus:border-accent/50 transition-colors"
+				/>
+			</div>
+			<!-- Title -->
+			<div class="flex flex-col gap-0.5">
+				<label class="text-ui-label text-ink-4">title</label>
+				<input
+					type="text"
+					name="title"
+					value={ meta.Title }
+					placeholder="Human-readable title"
+					class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder:text-ink-4 focus:outline-none focus:border-accent/50 transition-colors"
+				/>
+			</div>
+			<!-- Description -->
+			<div class="flex flex-col gap-0.5">
+				<label class="text-ui-label text-ink-4">description</label>
+				<textarea
+					name="description"
+					rows="3"
+					placeholder="Optional description"
+					class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder:text-ink-4 resize-none focus:outline-none focus:border-accent/50 transition-colors"
+				>{ meta.Description }</textarea>
+			</div>
+			<!-- Model -->
+			<div class="flex flex-col gap-0.5">
+				<label class="text-ui-label text-ink-4">model</label>
+				if len(models) > 0 {
+					<select
+						name="model"
+						class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink focus:outline-none focus:border-accent/50 transition-colors"
+					>
+						for _, m := range models {
+							if "forge/" + m.Name == meta.Model {
+								<option value={ "forge/" + m.Name } selected>{ m.Name }</option>
+							} else {
+								<option value={ "forge/" + m.Name }>{ m.Name }</option>
+							}
+						}
+						<!-- allow current model even if not in alias list -->
+						if !modelInList(models, meta.Model) {
+							<option value={ meta.Model } selected>{ meta.Model }</option>
+						}
+					</select>
+				} else {
+					<input
+						type="text"
+						name="model"
+						value={ meta.Model }
+						placeholder="e.g. forge/assistant"
+						class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder:text-ink-4 focus:outline-none focus:border-accent/50 transition-colors"
+					/>
+				}
+			</div>
+		</div>
+		<!-- actions -->
+		<div class="mx-3 mt-2 flex gap-2">
+			<button
+				type="button"
+				hx-get={ "/ui/sessions/" + sessionID + "/node" }
+				hx-target="#left-panel-content"
+				hx-swap="innerHTML"
+				class="btn-ghost text-ui-code flex-1 justify-center"
+			>Cancel</button>
+			<button type="submit" class="btn-accent text-ui-code flex-1 justify-center">Save</button>
+		</div>
+	</form>
+}
+
+func modelInList(models []*domprovider.ProviderModelTemplate, current string) bool {
+	for _, m := range models {
+		if "forge/"+m.Name == current {
+			return true
+		}
+	}
+	return false
+}

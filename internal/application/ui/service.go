@@ -62,6 +62,8 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions/:id/archive", sess.handleArchive())
 	g.GET("/sessions/:id/thread", sess.handleThread())
 	g.GET("/sessions/:id/node", sess.handleNodePanel())
+	g.GET("/sessions/:id/edit", sess.handleEdit())
+	g.PATCH("/sessions/:id", sess.handleUpdate())
 	g.PATCH("/sessions/:id/plugins/:name", sess.handlePluginToggle())
 
 	refs := &refHandlers{

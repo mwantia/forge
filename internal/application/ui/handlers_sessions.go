@@ -48,7 +48,7 @@ func (h *sessionHandlers) handleList() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.List(sessions).Render(c.Request.Context(), c.Writer)
+		_ = tmplsessions.List(sessions, h.pluginNamespaces()).Render(c.Request.Context(), c.Writer)
 	}
 }
 
@@ -110,16 +110,7 @@ func (h *sessionHandlers) handleDetail() gin.HandlerFunc {
 		refs, _ := h.sessions.ListRefs(ctx, meta.ID)
 		activeRef := resolveActiveRef(refs, ref)
 
-		messages := make([]*tmplsessions.RenderedMessage, len(raw))
-		for i, msg := range raw {
-			rm := &tmplsessions.RenderedMessage{Message: msg, Rendered: msg.Content}
-			if h.renderer != nil {
-				if r, err := h.renderer.RenderContent(ctx, meta.ID, msg.Content); err == nil {
-					rm.Rendered = r
-				}
-			}
-			messages[i] = rm
-		}
+		messages := renderMessages(ctx, h.renderer, meta.ID, raw)
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
@@ -153,16 +144,7 @@ func (h *sessionHandlers) handleThread() gin.HandlerFunc {
 		activeRef := resolveActiveRef(refs, c.DefaultQuery("ref", ""))
 		raw, _ := h.sessions.ListMessagesFromRef(ctx, meta.ID, activeRef, 0, 0)
 
-		messages := make([]*tmplsessions.RenderedMessage, len(raw))
-		for i, msg := range raw {
-			rm := &tmplsessions.RenderedMessage{Message: msg, Rendered: msg.Content}
-			if h.renderer != nil {
-				if r, err := h.renderer.RenderContent(ctx, meta.ID, msg.Content); err == nil {
-					rm.Rendered = r
-				}
-			}
-			messages[i] = rm
-		}
+		messages := renderMessages(ctx, h.renderer, meta.ID, raw)
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
@@ -190,7 +172,79 @@ func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.NodePanel(id, meta, messages, activeRef, subSessions, h.pluginNamespaces()).Render(ctx, c.Writer)
+		_ = tmplsessions.LeftPanelResponse(id, meta, messages, activeRef, subSessions, h.pluginNamespaces()).Render(ctx, c.Writer)
+	}
+}
+
+func (h *sessionHandlers) handleEdit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found: %v", err)
+			return
+		}
+		if meta.ArchivedAt != nil {
+			c.String(http.StatusConflict, "session is archived")
+			return
+		}
+
+		var models []*domprovider.ProviderModelTemplate
+		if h.providers != nil {
+			models, _ = h.providers.ListModelsByType(ctx, domprovider.ModelTypeChat)
+		}
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		_ = tmplsessions.SessionEditForm(meta.ID, meta, models).Render(ctx, c.Writer)
+	}
+}
+
+func (h *sessionHandlers) handleUpdate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+		id := c.Param("id")
+
+		meta, err := h.sessions.ResolveSession(ctx, id)
+		if err != nil {
+			c.String(http.StatusNotFound, "not found: %v", err)
+			return
+		}
+		if meta.ArchivedAt != nil {
+			c.String(http.StatusConflict, "session is archived")
+			return
+		}
+
+		if name := strings.TrimSpace(c.PostForm("name")); name != "" && name != meta.Name {
+			// check uniqueness: if another session resolves to this name, reject
+			if existing, err := h.sessions.ResolveSession(ctx, name); err == nil && existing.ID != meta.ID {
+				c.String(http.StatusConflict, "name already in use: %s", name)
+				return
+			}
+			meta.Name = name
+		}
+		if title := c.PostForm("title"); title != meta.Title {
+			meta.Title = title
+		}
+		if desc := c.PostForm("description"); desc != meta.Description {
+			meta.Description = desc
+		}
+		if model := strings.TrimSpace(c.PostForm("model")); model != "" && model != meta.Model {
+			meta.Model = model
+		}
+
+		if err := h.sessions.SaveSession(ctx, meta); err != nil {
+			c.String(http.StatusInternalServerError, "save failed: %v", err)
+			return
+		}
+
+		allPlugins := h.pluginNamespaces()
+
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		_ = tmplsessions.SessionInfoCard(meta.ID, meta, allPlugins, true).Render(ctx, c.Writer)
 	}
 }
 
