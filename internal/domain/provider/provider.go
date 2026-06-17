@@ -19,6 +19,7 @@ type ProviderModelTemplate struct {
 	Options            *ProviderModelOptions `hcl:"options,block"`
 	CostPerInputToken  float64               `hcl:"cost_per_input_token,optional"`
 	CostPerOutputToken float64               `hcl:"cost_per_output_token,optional"`
+	ContextWindowSize  int                   `hcl:"context_window_size,optional"`
 }
 
 // ProviderModelOptions maps to model generation parameters.
