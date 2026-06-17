@@ -8,9 +8,16 @@ import (
 	appsession "github.com/mwantia/forge/internal/application/session"
 )
 
+// SessionInfoCardOOB wraps SessionInfoCard for use in OOB multi-region SSE done responses.
+templ SessionInfoCardOOB(sessionID string, meta *appsession.SessionMetadata, allPlugins []string, canEdit bool) {
+	<div id="left-panel-content" hx-swap-oob="innerHTML">
+		@SessionInfoCard(sessionID, meta, allPlugins, canEdit)
+	</div>
+}
+
 // SessionInfoCard renders session metadata rows and the plugin management table.
-// Primary content of #session-info-card in the left panel; also embedded in
-// NodePanel for the initial HTMX GET response.
+// Primary content of #left-panel-content in the left panel; also embedded in
+// LeftPanelResponse for the initial HTMX GET response.
 templ SessionInfoCard(sessionID string, meta *appsession.SessionMetadata, allPlugins []string, canEdit bool) {
 	<div class="mx-3 mt-2 rounded border border-line-soft bg-bg-2 text-ui-meta shrink-0">
 		<div x-data={ sidData(meta.ID) } class="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-line-soft">
@@ -18,14 +25,27 @@ templ SessionInfoCard(sessionID string, meta *appsession.SessionMetadata, allPlu
 			<button
 				type="button"
 				@click="navigator.clipboard.writeText(sid).then(() => { copied = true; setTimeout(() => copied = false, 1500) })"
-				class="shrink-0 w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
+				class="shrink-0 w-5 h-5 mt-1 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
 				title="Copy session ID"
 			>
-				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+				<svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+				<svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 			</button>
+			if canEdit {
+				<button
+					type="button"
+					hx-get={ "/ui/sessions/" + meta.ID + "/edit" }
+					hx-target="#left-panel-content"
+					hx-swap="innerHTML"
+					class="shrink-0 w-5 h-5 flex items-center justify-center rounded text-ink-4 hover:text-ink-2 transition-colors"
+					title="Edit metadata"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+				</button>
+			}
 		</div>
 		<div class="py-1">
+			@metaRow("name", meta.Name)
 			if meta.Parent != "" {
 				@metaRow("parent", abbreviateID(meta.Parent))
 			}
@@ -35,6 +55,9 @@ templ SessionInfoCard(sessionID string, meta *appsession.SessionMetadata, allPlu
 				@metaRow("tokens", strconv.Itoa(meta.Usage.InputTokens)+" in / "+strconv.Itoa(meta.Usage.OutputTokens)+" out")
 			}
 			@metaRow("model", meta.Model)
+			if meta.TotalDurationMs > 0 {
+				@metaRow("duration", millisTime(meta.TotalDurationMs))
+			}
 		</div>
 	</div>
 	<div class="px-3 pt-3 pb-1.5 flex items-center gap-2 shrink-0">

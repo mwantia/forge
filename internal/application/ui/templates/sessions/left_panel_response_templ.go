@@ -10,12 +10,12 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import appsession "github.com/mwantia/forge/internal/application/session"
 
-// NodePanel is the response for GET /ui/sessions/:id/node.
+// LeftPanelResponse is the response for GET /ui/sessions/:id/node.
 //
-// Primary content updates #session-info-card (left panel, innerHTML swap).
+// Primary content updates #left-panel-content (left panel, innerHTML swap).
 // OOB divs update #siblings-section and #path-section in the right panel.
-// renderDoneOOB renders the three components separately to avoid nested OOB.
-func NodePanel(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) templ.Component {
+// renderDoneOOB renders the components separately to avoid nested OOB.
+func LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

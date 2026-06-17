@@ -2,12 +2,12 @@ package tmplsessions
 
 import appsession "github.com/mwantia/forge/internal/application/session"
 
-// NodePanel is the response for GET /ui/sessions/:id/node.
+// LeftPanelResponse is the response for GET /ui/sessions/:id/node.
 //
-// Primary content updates #session-info-card (left panel, innerHTML swap).
+// Primary content updates #left-panel-content (left panel, innerHTML swap).
 // OOB divs update #siblings-section and #path-section in the right panel.
-// renderDoneOOB renders the three components separately to avoid nested OOB.
-templ NodePanel(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) {
+// renderDoneOOB renders the components separately to avoid nested OOB.
+templ LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) {
 	@SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil)
 	<div id="siblings-section" hx-swap-oob="innerHTML">
 		@SiblingsSection(subSessions)
