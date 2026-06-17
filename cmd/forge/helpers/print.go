@@ -132,15 +132,13 @@ func PrintSession(meta sessions.SessionMetadata, skipEmpty bool) error {
 	fmt.Fprintf(w, "Created\t= %s\n", meta.CreatedAt.Format(time.DateTime))
 	fmt.Fprintf(w, "Updated\t= %s\n", meta.UpdatedAt.Format(time.DateTime))
 
-	if meta.Usage != nil {
-		fmt.Fprint(w, "\nUSAGE\n")
-		fmt.Fprintf(w, "  Total Cost\t= %f\n", meta.Usage.TotalCost)
-		fmt.Fprintf(w, "  Total Tokens\t= %d\n\n", meta.Usage.TotalTokens)
-
-		fmt.Fprintf(w, "  Input Cost\t= %f\n", meta.Usage.InputCost)
-		fmt.Fprintf(w, "  Input Tokens\t= %d\n", meta.Usage.InputTokens)
-		fmt.Fprintf(w, "  Output Cost\t= %f\n", meta.Usage.OutputCost)
-		fmt.Fprintf(w, "  Output Tokens\t= %d\n", meta.Usage.OutputTokens)
+	if meta.CurrentContextTokens > 0 {
+		line := fmt.Sprintf("  Context\t= %s tokens", FormatTokens(meta.CurrentContextTokens))
+		if meta.ContextWindowSize > 0 {
+			pct := meta.CurrentContextTokens * 100 / meta.ContextWindowSize
+			line += fmt.Sprintf(" / %s (%d%%)", FormatTokens(meta.ContextWindowSize), pct)
+		}
+		fmt.Fprintln(w, line)
 	}
 
 	return w.Flush()
@@ -186,15 +184,8 @@ func PrintSessionLogTable(msgs []sessions.Message) error {
 
 func PrintSessionLogHeader(meta sessions.SessionMetadata, msgs []sessions.Message) {
 	roleCounts := map[string]int{}
-	var liveContext int
 	for _, m := range msgs {
 		roleCounts[displayRole(m)]++
-	}
-	for i := len(msgs) - 1; i >= 0; i-- {
-		if msgs[i].Role == "assistant" && msgs[i].Usage != nil && msgs[i].Usage.InputTokens > 0 {
-			liveContext = msgs[i].Usage.InputTokens
-			break
-		}
 	}
 
 	parts := []string{}
@@ -205,33 +196,13 @@ func PrintSessionLogHeader(meta sessions.SessionMetadata, msgs []sessions.Messag
 	}
 	fmt.Printf("%s · %s\n", meta.Name, meta.Model)
 	fmt.Printf("%d messages (%s)\n", len(msgs), strings.Join(parts, " · "))
-	if liveContext > 0 {
-		fmt.Printf("context: ~%s tokens (latest prompt)\n", FormatTokens(liveContext))
-	}
-	if meta.Usage != nil && meta.Usage.TotalTokens > 0 {
-		line := fmt.Sprintf("cumulative: in=%s out=%s total=%s",
-			FormatTokens(meta.Usage.InputTokens),
-			FormatTokens(meta.Usage.OutputTokens),
-			FormatTokens(meta.Usage.TotalTokens))
-		if meta.Usage.TotalCost > 0 {
-			line += fmt.Sprintf("  ($%.4f)", meta.Usage.TotalCost)
+	if meta.CurrentContextTokens > 0 {
+		line := fmt.Sprintf("context:    %s tokens", FormatTokens(meta.CurrentContextTokens))
+		if meta.ContextWindowSize > 0 {
+			pct := meta.CurrentContextTokens * 100 / meta.ContextWindowSize
+			line += fmt.Sprintf(" / %s (%d%%)", FormatTokens(meta.ContextWindowSize), pct)
 		}
 		fmt.Println(line)
-
-		if meta.Usage.CachedInputTokens > 0 || meta.Usage.CacheCreationInputTokens > 0 {
-			cacheLine := "cache:      "
-			if c := meta.Usage.CachedInputTokens; c > 0 {
-				ratio := float64(c) / float64(meta.Usage.InputTokens) * 100
-				cacheLine += fmt.Sprintf("read=%s (%.0f%% of input)", FormatTokens(c), ratio)
-			}
-			if w := meta.Usage.CacheCreationInputTokens; w > 0 {
-				if meta.Usage.CachedInputTokens > 0 {
-					cacheLine += "  "
-				}
-				cacheLine += fmt.Sprintf("write=%s", FormatTokens(w))
-			}
-			fmt.Println(cacheLine)
-		}
 	}
 }
 
