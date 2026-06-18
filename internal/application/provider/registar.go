@@ -43,7 +43,7 @@ func (s *ProviderService) resolveModel(providerName, modelName string) *sdkplugi
 				System:             tmpl.System,
 				CostPerInputToken:  tmpl.CostPerInputToken,
 				CostPerOutputToken: tmpl.CostPerOutputToken,
-				ContextWindowSize:  tmpl.ContextWindowSize,
+				ContextWindowSize:  tmpl.ParseContextWindowSize(),
 			}
 			if tmpl.Options != nil {
 				if tmpl.Options.Temperature != nil {

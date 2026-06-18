@@ -117,14 +117,6 @@ func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsessi
 		return nil, fmt.Errorf("build template: %w", err)
 	}
 
-	// Stamp the model's context window size onto the session the first time it
-	// is known. Fire-and-forget: a failure here must not block the commit.
-	if pname, mname, ok := s.splitModelName(meta.Model); ok {
-		if m, err := s.provider.GetModel(ctx, pname, mname); err == nil && m != nil && m.ContextWindowSize > 0 {
-			go s.sessions.StampContextWindow(ctx, meta.ID, m.ContextWindowSize)
-		}
-	}
-
 	// Render the full history — system at [0], conversation after.
 	chatMessages := buildChatMessages(history, scoped, s.logger)
 

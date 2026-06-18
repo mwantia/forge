@@ -52,18 +52,12 @@ type SessionMetadata struct {
 	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
 	ArchiveResourceID string     `json:"archive_resource_id,omitempty"`
 	ArchivePath       string     `json:"archive_path,omitempty"`
-	// CurrentContextTokens is the InputTokens from the most recent assistant
-	// message — the number of tokens currently occupying the context window.
-	// Stamped after each pipeline turn; zero until the first commit.
-	CurrentContextTokens int `json:"current_context_tokens,omitempty"`
 	// Plugins restricts which plugin namespaces are active for this session and
 	// their per-plugin activation state. Empty list means all plugins are active.
 	Plugins []PluginConfig `json:"plugins,omitempty"`
 	// TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline commits.
 	TotalDurationMs int64 `json:"total_duration_ms,omitempty"`
-	// ContextWindowSize is the model's maximum context window in tokens.
-	// Stamped on the first pipeline commit; zero when unknown.
-	ContextWindowSize int `json:"context_window_size,omitempty"`
+
 }
 
 // Message is the session-layer projection of a dag.MessageObj plus its

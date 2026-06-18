@@ -132,15 +132,6 @@ func PrintSession(meta sessions.SessionMetadata, skipEmpty bool) error {
 	fmt.Fprintf(w, "Created\t= %s\n", meta.CreatedAt.Format(time.DateTime))
 	fmt.Fprintf(w, "Updated\t= %s\n", meta.UpdatedAt.Format(time.DateTime))
 
-	if meta.CurrentContextTokens > 0 {
-		line := fmt.Sprintf("  Context\t= %s tokens", FormatTokens(meta.CurrentContextTokens))
-		if meta.ContextWindowSize > 0 {
-			pct := meta.CurrentContextTokens * 100 / meta.ContextWindowSize
-			line += fmt.Sprintf(" / %s (%d%%)", FormatTokens(meta.ContextWindowSize), pct)
-		}
-		fmt.Fprintln(w, line)
-	}
-
 	return w.Flush()
 }
 
@@ -196,14 +187,6 @@ func PrintSessionLogHeader(meta sessions.SessionMetadata, msgs []sessions.Messag
 	}
 	fmt.Printf("%s · %s\n", meta.Name, meta.Model)
 	fmt.Printf("%d messages (%s)\n", len(msgs), strings.Join(parts, " · "))
-	if meta.CurrentContextTokens > 0 {
-		line := fmt.Sprintf("context:    %s tokens", FormatTokens(meta.CurrentContextTokens))
-		if meta.ContextWindowSize > 0 {
-			pct := meta.CurrentContextTokens * 100 / meta.ContextWindowSize
-			line += fmt.Sprintf(" / %s (%d%%)", FormatTokens(meta.ContextWindowSize), pct)
-		}
-		fmt.Println(line)
-	}
 }
 
 func PrintSessionLogEntry(m sessions.Message, byHash map[string][]string, verbose, detailed bool) {
