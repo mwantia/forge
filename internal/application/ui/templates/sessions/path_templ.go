@@ -148,7 +148,7 @@ func SiblingsSection(subs []*appsession.SessionMetadata) templ.Component {
 				var templ_7745c5c3_Var5 templ.SafeURL
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/ui/sessions/" + s.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 38, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 39, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -161,7 +161,7 @@ func SiblingsSection(subs []*appsession.SessionMetadata) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(sessionDisplayName(s))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 38, Col: 230}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 39, Col: 230}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 				if templ_7745c5c3_Err != nil {
@@ -174,7 +174,7 @@ func SiblingsSection(subs []*appsession.SessionMetadata) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(sessionDisplayName(s))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 39, Col: 140}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 40, Col: 140}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -197,7 +197,7 @@ func SiblingsSection(subs []*appsession.SessionMetadata) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(relativeTime(s.CreatedAt))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 43, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 44, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -324,7 +324,7 @@ func PathNode(msg *appsession.Message) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Role)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 80, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 81, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -337,7 +337,7 @@ func PathNode(msg *appsession.Message) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(shortHash(msg.Hash))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 81, Col: 96}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/path.templ`, Line: 82, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {

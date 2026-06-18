@@ -172,7 +172,7 @@ func (h *sessionHandlers) handleNodePanel() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.LeftPanelResponse(id, meta, messages, activeRef, subSessions, h.pluginNamespaces()).Render(ctx, c.Writer)
+		_ = tmplsessions.LeftPanelResponse(id, meta, messages, activeRef, subSessions, h.pluginNamespaces(), lastAssistantTokens(messages), resolveWindowSize(ctx, h.providers, meta)).Render(ctx, c.Writer)
 	}
 }
 
@@ -244,7 +244,7 @@ func (h *sessionHandlers) handleUpdate() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		_ = tmplsessions.SessionInfoCard(meta.ID, meta, allPlugins, true).Render(ctx, c.Writer)
+		_ = tmplsessions.SessionInfoCard(meta.ID, meta, allPlugins, true, 0, resolveWindowSize(ctx, h.providers, meta)).Render(ctx, c.Writer)
 	}
 }
 

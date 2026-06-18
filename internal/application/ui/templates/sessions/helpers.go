@@ -125,17 +125,6 @@ func formatTokens(n int) string {
 	}
 }
 
-const fallbackContextWindow = 198_000
-
-// effectiveWindowSize returns ContextWindowSize when known, or the hardcoded
-// fallback of 198k tokens (to be replaced once the provider reports the value).
-func effectiveWindowSize(reported int) int {
-	if reported > 0 {
-		return reported
-	}
-	return fallbackContextWindow
-}
-
 // pressureClass returns the Tailwind text-colour token for context window pressure.
 // <70% → text-ok (green), 70–90% → text-accent (amber), >90% → text-rem (red).
 func pressureClass(used, limit int) string {

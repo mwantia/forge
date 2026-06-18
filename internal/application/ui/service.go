@@ -80,10 +80,11 @@ func (u *UIService) PostInit(_ context.Context) error {
 	g.POST("/sessions/:id/commit", pipe.handleCommit())
 
 	stream := &streamHandlers{
-		sessions: u.sessions,
-		tools:    u.tools,
-		renderer: u.renderer,
-		pipeline: u.pipeline,
+		sessions:  u.sessions,
+		tools:     u.tools,
+		renderer:  u.renderer,
+		pipeline:  u.pipeline,
+		providers: u.providers,
 	}
 	g.GET("/sessions/:id/stream", stream.handleStream())
 

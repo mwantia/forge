@@ -16,10 +16,11 @@ import (
 )
 
 type streamHandlers struct {
-	sessions sessionReader
-	tools    namespaceLister
-	renderer pipelineRenderer
-	pipeline pipelineCommitter
+	sessions  sessionReader
+	tools     namespaceLister
+	renderer  pipelineRenderer
+	pipeline  pipelineCommitter
+	providers modelLister
 }
 
 func sseWrite(w gin.ResponseWriter, flusher http.Flusher, event, data string) {
@@ -138,7 +139,7 @@ func (h *streamHandlers) renderDoneOOB(ctx context.Context, sessionID, ref strin
 	for _, comp := range []templ.Component{
 		tmplsessions.ThreadOOB(rendered, meta.ArchivedAt != nil),
 		tmplrefs.RefsPanelOOB(sessionID, refs),
-		tmplsessions.SessionInfoCardOOB(sessionID, meta, allPlugins, meta.ArchivedAt == nil),
+		tmplsessions.SessionInfoCardOOB(sessionID, meta, allPlugins, meta.ArchivedAt == nil, lastAssistantTokens(msgs), resolveWindowSize(ctx, h.providers, meta)),
 		tmplsessions.SiblingsSectionOOB(subSessions),
 		tmplsessions.PathSectionOOB(msgs),
 		uidag.MiniOOB(nodes, edges, sessionID),

@@ -40,19 +40,26 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 					<!-- Archive / Delete -->
 					<div class="px-3 py-2 border-t border-line-soft flex gap-2 shrink-0">
 						if meta.ArchivedAt == nil {
-							<button class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
+							<button
+								class="btn-ghost text-ui-code flex-1 justify-center text-accent border-accent/30 hover:border-accent/60"
 								hx-post={ "/ui/sessions/" + meta.ID + "/archive" }
 								hx-confirm={ "Archive session '" + meta.Name + "'? It will become read-only." }
-								hx-target="body" hx-push-url={ "/ui/sessions/" + meta.ID }>
+								hx-target="body"
+								hx-push-url={ "/ui/sessions/" + meta.ID }
+							>
 								Archive
 							</button>
 						} else {
 							<span class="btn-ghost text-ui-code flex-1 justify-center text-ink-4 border-line cursor-default opacity-50">Archived</span>
 						}
 						if meta.ArchivedAt != nil {
-							<button class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
-								hx-delete={ "/ui/sessions/" + meta.ID } hx-confirm={ "Delete session '" + meta.Name + "'?" }
-								hx-target="body" hx-push-url="/ui/sessions">
+							<button
+								class="btn-ghost text-ui-code flex-1 justify-center text-rem border-rem/30 hover:border-rem/60"
+								hx-delete={ "/ui/sessions/" + meta.ID }
+								hx-confirm={ "Delete session '" + meta.Name + "'?" }
+								hx-target="body"
+								hx-push-url="/ui/sessions"
+							>
 								Delete
 							</button>
 						} else {
@@ -72,7 +79,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 								class="w-6 h-6 flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors shrink-0"
 							>
 								<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+									<rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path>
 								</svg>
 							</button>
 							<!-- breadcrumb placeholder -->
@@ -85,10 +92,10 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 									class="w-6 h-6 hidden md:flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors"
 								>
 									<svg x-show="!wideMode" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+										<polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
 									</svg>
 									<svg x-show="wideMode" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+										<polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="10" y1="14" x2="3" y2="21"></line><line x1="21" y1="3" x2="14" y2="10"></line>
 									</svg>
 								</button>
 								<button
@@ -97,7 +104,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 									class="w-6 h-6 flex items-center justify-center rounded text-ink-4 hover:text-ink hover:bg-bg-2 transition-colors"
 								>
 									<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:scaleX(-1)">
-										<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>
+										<rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path>
 									</svg>
 								</button>
 							</div>
@@ -113,50 +120,50 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 						@forge:streaming-start.document="streaming = true; draft = ''"
 						@forge:streaming-end.document="streaming = false"
 					>
-					<div class="min-h-full flex flex-col">
-						<div id="thread" class="flex-1 px-6 pt-4 pb-2">
-							@Thread(messages, meta.ArchivedAt != nil)
-						</div>
-						<div id="stream-area" class="px-6 pb-2"></div>
-						if meta.ArchivedAt == nil {
-							<div class="sticky bottom-0">
-								<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
-								<div class="bg-bg px-4 pb-3">
-									<div class="forge-thread-wrap">
-										<form
-											id="composer-form"
-											hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
-											hx-target="#stream-area"
-											hx-swap="innerHTML"
-											hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
-										>
-											<input type="hidden" name="ref" value={ activeRef }/>
-											<textarea
-												id="composer-input"
-												name="content"
-												rows="3"
-												placeholder="Message… (⌘↵ or Ctrl↵ to commit)"
-												class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
-												x-model="draft"
-												@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
-												@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
-											></textarea>
-											<div class="flex justify-between items-center mt-2">
-												<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
-												<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
-												<button
-													id="composer-submit"
-													type="submit"
-													class="btn-accent text-ui-code"
-													:disabled="streaming || !draft.trim()"
-												>Commit</button>
-											</div>
-										</form>
+						<div class="min-h-full flex flex-col">
+							<div id="thread" class="flex-1 px-6 pt-4 pb-2">
+								@Thread(messages, meta.ArchivedAt != nil)
+							</div>
+							<div id="stream-area" class="px-6 pb-2"></div>
+							if meta.ArchivedAt == nil {
+								<div class="sticky bottom-0">
+									<div class="h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none"></div>
+									<div class="bg-bg px-4 pb-3">
+										<div class="forge-thread-wrap">
+											<form
+												id="composer-form"
+												hx-post={ "/ui/sessions/" + meta.ID + "/commit" }
+												hx-target="#stream-area"
+												hx-swap="innerHTML"
+												hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
+											>
+												<input type="hidden" name="ref" value={ activeRef }/>
+												<textarea
+													id="composer-input"
+													name="content"
+													rows="3"
+													placeholder="Message… (⌘↵ or Ctrl↵ to commit)"
+													class="w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50"
+													x-model="draft"
+													@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+													@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
+												></textarea>
+												<div class="flex justify-between items-center mt-2">
+													<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
+													<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
+													<button
+														id="composer-submit"
+														type="submit"
+														class="btn-accent text-ui-code"
+														:disabled="streaming || !draft.trim()"
+													>Commit</button>
+												</div>
+											</form>
+										</div>
 									</div>
 								</div>
-							</div>
-						}
-					</div>
+							}
+						</div>
 					</div>
 				</div>
 				<!-- RIGHT PANEL: siblings + session DAG + refs + path -->

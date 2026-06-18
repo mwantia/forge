@@ -15,7 +15,7 @@ import appsession "github.com/mwantia/forge/internal/application/session"
 // Primary content updates #left-panel-content (left panel, innerHTML swap).
 // OOB divs update #siblings-section and #path-section in the right panel.
 // renderDoneOOB renders the components separately to avoid nested OOB.
-func LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) templ.Component {
+func LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string, contextTokens int, windowSize int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -36,7 +36,7 @@ func LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messa
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil, contextTokens, windowSize).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

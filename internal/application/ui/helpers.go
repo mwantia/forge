@@ -2,10 +2,41 @@ package ui
 
 import (
 	"context"
+	"strings"
 
 	appsession "github.com/mwantia/forge/internal/application/session"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
 )
+
+// lastAssistantTokens returns the TotalTokens from the last assistant message
+// in msgs that carries usage data. Returns 0 if no such message exists.
+func lastAssistantTokens(msgs []*appsession.Message) int {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		m := msgs[i]
+		if m.Role == "assistant" && m.Usage != nil && m.Usage.TotalTokens > 0 {
+			return m.Usage.TotalTokens
+		}
+	}
+	return 0
+}
+
+// resolveWindowSize returns the context window size for the model declared on
+// meta. It splits meta.Model on "/" and calls GetModel; returns 0 when the
+// provider is unavailable or the model doesn't declare a context window.
+func resolveWindowSize(ctx context.Context, providers modelLister, meta *appsession.SessionMetadata) int {
+	if providers == nil || meta == nil {
+		return 0
+	}
+	pname, mname, ok := strings.Cut(meta.Model, "/")
+	if !ok {
+		return 0
+	}
+	m, err := providers.GetModel(ctx, pname, mname)
+	if err != nil || m == nil {
+		return 0
+	}
+	return m.ContextWindowSize
+}
 
 // pluginNamespacesFrom returns the names of all non-builtin namespaces from l.
 func pluginNamespacesFrom(l namespaceLister) []string {

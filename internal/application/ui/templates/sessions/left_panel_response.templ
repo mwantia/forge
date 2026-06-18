@@ -7,8 +7,8 @@ import appsession "github.com/mwantia/forge/internal/application/session"
 // Primary content updates #left-panel-content (left panel, innerHTML swap).
 // OOB divs update #siblings-section and #path-section in the right panel.
 // renderDoneOOB renders the components separately to avoid nested OOB.
-templ LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string) {
-	@SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil)
+templ LeftPanelResponse(sessionID string, meta *appsession.SessionMetadata, messages []*appsession.Message, activeRef string, subSessions []*appsession.SessionMetadata, allPlugins []string, contextTokens int, windowSize int) {
+	@SessionInfoCard(sessionID, meta, allPlugins, meta.ArchivedAt == nil, contextTokens, windowSize)
 	<div id="siblings-section" hx-swap-oob="innerHTML">
 		@SiblingsSection(subSessions)
 	</div>
