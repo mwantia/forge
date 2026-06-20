@@ -1,0 +1,351 @@
+package tmplresources
+
+import (
+	"fmt"
+
+	domresource "github.com/mwantia/forge/internal/domain/resource"
+	"github.com/mwantia/forge/internal/application/ui/templates/layout"
+)
+
+templ List(resources []*domresource.Resource, histories map[string][]*domresource.ResourceRevision) {
+	@layout.Base("Resources") {
+		@layout.TopbarSimple()
+		<div
+			class="flex flex-col overflow-hidden"
+			style="height: calc(100vh - 44px)"
+			x-data={ resourcesPageData(resources, histories) }
+		>
+			<!-- Page header -->
+			<div class="shrink-0 px-6 pt-[22px]">
+				<h2 class="text-[22px] font-semibold tracking-[-0.01em] text-ink">Resources</h2>
+				<p class="text-[13px] text-ink-3 mt-0.5">
+					{ fmt.Sprintf("%d item%s in the global bucket", len(resources), plural(len(resources))) }
+				</p>
+				<!-- Filter row -->
+				<div
+					class="flex flex-wrap items-center gap-[10px] mt-4 mb-[18px]"
+					@type-filter="filterType = $event.detail.value; selectFirst()"
+					@session-filter="filterSession = $event.detail.value; selectFirst()"
+				>
+					<div class="flex-1 min-w-48">
+						<input
+							type="text"
+							x-model="search"
+							@input="selectFirst()"
+							placeholder="Search by name, ID, or content…"
+							class="w-full bg-bg-1 border border-line rounded-md px-3 h-[38px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors"
+						/>
+					</div>
+					<!-- Type filter -->
+					<div
+						x-data="{ open: false, value: '', label: 'All types' }"
+						@click.outside="open = false"
+						class="relative"
+					>
+						<button
+							type="button"
+							@click="open = !open"
+							class="flex items-center gap-2 bg-bg-1 border border-line rounded-md px-2.5 h-[38px] text-ui-ctrl text-ink-2 hover:border-line-strong focus:outline-none focus:border-line-strong transition-colors min-w-[120px]"
+						>
+							<span class="flex-1 text-left" x-text="label"></span>
+							<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-ink-4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+						</button>
+						<div
+							x-show="open"
+							x-transition:enter="transition ease-out duration-75"
+							x-transition:enter-start="opacity-0 -translate-y-1"
+							x-transition:enter-end="opacity-100 translate-y-0"
+							class="absolute left-0 top-full mt-1 bg-bg-1 border border-line rounded-md shadow-lg z-20 overflow-hidden min-w-full"
+						>
+							<ul class="py-1">
+								<li>
+									<button type="button" @click="value=''; label='All types'; open=false; $dispatch('type-filter',{value:''})"
+										:class="value==='' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+										class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors">All types</button>
+								</li>
+								<li>
+									<button type="button" @click="value='memory'; label='memory'; open=false; $dispatch('type-filter',{value:'memory'})"
+										:class="value==='memory' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+										class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#e0a45e"></span>memory
+									</button>
+								</li>
+								<li>
+									<button type="button" @click="value='reference'; label='reference'; open=false; $dispatch('type-filter',{value:'reference'})"
+										:class="value==='reference' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+										class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#86c275"></span>reference
+									</button>
+								</li>
+								<li>
+									<button type="button" @click="value='online'; label='online'; open=false; $dispatch('type-filter',{value:'online'})"
+										:class="value==='online' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+										class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#6fa9d6"></span>online
+									</button>
+								</li>
+								<li>
+									<button type="button" @click="value='archive'; label='archive'; open=false; $dispatch('type-filter',{value:'archive'})"
+										:class="value==='archive' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+										class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
+										<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#9a9aa2"></span>archive
+									</button>
+								</li>
+							</ul>
+						</div>
+					</div>
+					<!-- Session filter -->
+					if hasSessions(resources) {
+						<div
+							x-data="{ open: false, value: '', label: 'All sessions' }"
+							@click.outside="open = false"
+							class="relative"
+						>
+							<button
+								type="button"
+								@click="open = !open"
+								class="flex items-center gap-2 bg-bg-1 border border-line rounded-md px-2.5 h-[38px] text-ui-ctrl text-ink-2 hover:border-line-strong focus:outline-none focus:border-line-strong transition-colors min-w-[140px]"
+							>
+								<span class="flex-1 text-left font-mono" x-text="label"></span>
+								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-ink-4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+							</button>
+							<div
+								x-show="open"
+								x-transition:enter="transition ease-out duration-75"
+								x-transition:enter-start="opacity-0 -translate-y-1"
+								x-transition:enter-end="opacity-100 translate-y-0"
+								class="absolute left-0 top-full mt-1 bg-bg-1 border border-line rounded-md shadow-lg z-20 overflow-hidden min-w-full"
+							>
+								<ul class="py-1">
+									<li>
+										<button type="button" @click="value=''; label='All sessions'; open=false; $dispatch('session-filter',{value:''})"
+											:class="value==='' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
+											class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors">All sessions</button>
+									</li>
+									for _, s := range uniqueSessions(resources) {
+										<li>
+											<button
+												type="button"
+												@click={ "value='" + s + "'; label='" + shortSession(s) + "…'; open=false; $dispatch('session-filter',{value:'" + s + "'})" }
+												:class={ "value==='" + s + "' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'" }
+												class="w-full text-left px-3 py-1.5 text-ui-ctrl font-mono transition-colors"
+											>{ shortSession(s) }…</button>
+										</li>
+									}
+								</ul>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+			<!-- Split pane -->
+			<div class="flex flex-1 border-t border-[rgba(255,255,255,0.06)] overflow-hidden min-h-0">
+				<!-- Left index: 336px fixed -->
+				<div class="w-[336px] flex-none border-r border-[rgba(255,255,255,0.06)] overflow-auto [scrollbar-gutter:stable]">
+					<!-- Empty filtered state -->
+					<div x-show="filteredResources.length === 0 && resources.length > 0" class="flex flex-col items-center justify-center py-24 gap-2 text-center px-6">
+						<p class="text-ink-3 text-[14px]">No resources match.</p>
+					</div>
+					<!-- Empty overall state -->
+					<div x-show="resources.length === 0" class="flex flex-col items-center justify-center py-24 gap-2 text-center px-6">
+						<p class="text-ink-3 text-[14px]">No resources stored yet.</p>
+						<p class="text-ink-4 text-[13px]">Use resource__store in a session to create one.</p>
+					</div>
+					<!-- Rows -->
+					<template x-for="r in filteredResources" :key="r.id">
+						<button
+							type="button"
+							@click="selectedId = r.id"
+							:style="selectedId === r.id ? 'border-left-color:#e3a35a;background:rgba(227,163,90,0.07)' : 'border-left-color:transparent'"
+							class="w-full text-left px-[14px] py-[10px] border-b border-[rgba(255,255,255,0.05)] border-l-2 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+						>
+							<!-- Line 1: dot + name -->
+							<div class="flex items-center gap-2 min-w-0">
+								<span
+									class="w-1.5 h-1.5 rounded-full shrink-0"
+									:style="`background-color:${typeColor(r.type)}`"
+								></span>
+								<span
+									class="text-[12.5px] font-semibold text-[#e6e6e9] truncate"
+									x-text="r.name || r.id"
+								></span>
+							</div>
+							<!-- Line 2: mono meta -->
+							<p
+								class="pl-[14px] mt-0.5 font-mono text-[10.5px] text-[#5f5f67] truncate"
+								x-text="`${r.id.slice(0,8)} · ${r.type} · ${r.created || '—'}`"
+							></p>
+						</button>
+					</template>
+				</div>
+				<!-- Right reader: flex-1 -->
+				<div class="flex-1 min-w-0 overflow-auto flex flex-col px-[26px] py-[22px]">
+					<!-- No selection -->
+					<div
+						x-show="!selected"
+						class="flex flex-col items-center justify-center h-full gap-2 text-center"
+					>
+						<p class="text-ink-4 text-[14px]">Select a resource to view its content.</p>
+					</div>
+					<!-- Reader -->
+					<div x-show="selected" class="flex flex-col h-full">
+						<!-- Header row -->
+						<div class="flex items-start justify-between gap-4">
+							<!-- Left: badge + id / name -->
+							<div class="min-w-0">
+								<div class="flex items-center gap-2">
+									<span
+										class="inline-flex items-center px-[7px] py-[2px] rounded-[4px] font-mono text-[10px] font-semibold leading-none flex-none"
+										:style="`color:${typeColor(selected?.type)};background:${typeBadge(selected?.type)}`"
+										x-text="selected?.type"
+									></span>
+									<span
+										class="font-mono text-[10.5px] text-[#5f5f67]"
+										x-text="selected?.id.slice(0,8)"
+									></span>
+								</div>
+								<h3
+									class="text-[17px] font-semibold text-[#f0f0f2] mt-[9px] leading-tight"
+									x-text="selected?.name || selected?.id"
+								></h3>
+								<!-- Tags -->
+								<div x-show="selected?.tags?.length > 0" class="flex flex-wrap gap-1 mt-2">
+									<template x-for="tag in (selected?.tags || [])" :key="tag">
+										<span
+											class="font-mono text-[10px] border border-[rgba(255,255,255,0.09)] rounded px-1.5 py-0.5 text-[#5f5f67]"
+											x-text="tag"
+										></span>
+									</template>
+								</div>
+							</div>
+							<!-- Right: L0/L1 toggle + compare placeholder -->
+							<div class="flex items-center gap-2 shrink-0 mt-0.5">
+								<!-- Segmented toggle -->
+								<div class="inline-flex gap-0.5 p-0.5 rounded-[8px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)]">
+									<button
+										type="button"
+										@click="level='L0'"
+										:class="level === 'L0' ? 'bg-[#e3a35a] text-[#161619]' : 'bg-transparent text-[#8a8a92]'"
+										class="px-[11px] py-[5px] rounded-[6px] font-mono text-[11px] font-semibold transition-colors"
+									>L0</button>
+									<button
+										type="button"
+										@click="level='L1'"
+										:class="level === 'L1' ? 'bg-[#e3a35a] text-[#161619]' : 'bg-transparent text-[#8a8a92]'"
+										class="px-[11px] py-[5px] rounded-[6px] font-mono text-[11px] font-semibold transition-colors"
+									>L1</button>
+								</div>
+								<!-- Compare placeholder -->
+								<div class="inline-flex items-center gap-[7px] px-[10px] py-[5px] border border-dashed border-[rgba(255,255,255,0.16)] rounded-[7px] text-[#8a8a92] text-[11px] font-medium select-none">
+									<span>⎇ compare</span>
+									<span class="text-[9px] px-[5px] py-[1px] rounded-[3px] bg-[rgba(255,255,255,0.06)] text-[#6f6f77]">soon</span>
+								</div>
+							</div>
+						</div>
+						<!-- Metadata strip -->
+						<div class="flex flex-wrap gap-[26px] py-[13px] border-t border-b border-[rgba(255,255,255,0.06)] mt-4">
+							<div>
+								<p class="font-mono text-[9px] font-semibold tracking-[.12em] uppercase text-[#5f5f67]">From Session</p>
+								<p
+									class="font-mono text-[12px] text-[#b8b8be] mt-1"
+									x-text="selected?.session ? `↳ ${selected.session.slice(0,8)}` : '—'"
+								></p>
+							</div>
+							<div>
+								<p class="font-mono text-[9px] font-semibold tracking-[.12em] uppercase text-[#5f5f67]">Created</p>
+								<p
+									class="font-mono text-[12px] text-[#b8b8be] mt-1"
+									x-text="selected?.created || '—'"
+								></p>
+							</div>
+							<div>
+								<p class="font-mono text-[9px] font-semibold tracking-[.12em] uppercase text-[#5f5f67]">Viewing</p>
+								<p
+									class="font-mono text-[12px] text-[#e3a35a] mt-1"
+									x-text="level === 'L0' ? 'L0 · raw context' : 'L1 · distilled summary'"
+								></p>
+							</div>
+						</div>
+						<!-- Content section -->
+						<div class="mt-4 flex flex-col flex-1 min-h-0">
+							<div class="flex items-center justify-between shrink-0">
+								<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">Content</p>
+								<button
+									type="button"
+									@click="copyContent()"
+									class="text-[11px] text-[#5f5f67] hover:text-ink-3 transition-colors"
+								>copy</button>
+							</div>
+							<!-- L0: monospace raw -->
+							<pre
+								x-show="level === 'L0'"
+								x-text="displayContent"
+								class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 font-mono text-[12.5px] leading-[1.65] text-[#c7c7cd] whitespace-pre-wrap break-words overflow-auto"
+							></pre>
+							<!-- L1: prose with content, rendered as markdown -->
+							<div
+								x-show="level === 'L1' && displayContent"
+								x-html="(typeof marked !== 'undefined') ? marked.parse(displayContent) : displayContent"
+								class="prose flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 overflow-auto"
+							></div>
+							<!-- L1: no summary -->
+							<div
+								x-show="level === 'L1' && !displayContent"
+								class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 flex items-center justify-center"
+							>
+								<p class="text-ink-4 text-[13px]">No distilled summary available for this resource.</p>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- History pane: 240px fixed -->
+				<div class="w-[240px] flex-none border-l border-[rgba(255,255,255,0.06)] flex flex-col overflow-hidden">
+					<!-- No selection -->
+					<div x-show="!selected" class="flex items-center justify-center h-full">
+						<p class="text-[#5f5f67] text-[12px]">—</p>
+					</div>
+					<!-- History list -->
+					<div x-show="selected" class="flex flex-col h-full overflow-hidden">
+						<div class="shrink-0 px-4 pt-[18px] pb-[10px] border-b border-[rgba(255,255,255,0.06)]">
+							<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">History</p>
+						</div>
+						<!-- Empty -->
+						<div x-show="!selected?.history?.length" class="flex items-center justify-center flex-1">
+							<p class="text-[#5f5f67] text-[12px]">No commits yet.</p>
+						</div>
+						<!-- Commits -->
+						<div x-show="selected?.history?.length" class="overflow-auto flex-1 [scrollbar-gutter:stable]">
+							<template x-for="(rev, i) in (selected?.history || [])" :key="rev.hash">
+								<div
+									class="px-4 py-[11px] border-b border-[rgba(255,255,255,0.04)] transition-colors"
+									:class="i === 0 ? 'bg-[rgba(227,163,90,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'"
+								>
+									<!-- Hash + HEAD badge -->
+									<div class="flex items-center gap-1.5 mb-[5px]">
+										<span
+											class="font-mono text-[10px]"
+											:class="i === 0 ? 'text-[#e3a35a]' : 'text-[#5f5f67]'"
+											x-text="rev.hash.slice(0,8)"
+										></span>
+										<span
+											x-show="i === 0"
+											class="font-mono text-[9px] px-[5px] py-[1px] rounded-[3px] bg-[rgba(227,163,90,0.12)] text-[#e3a35a] leading-none"
+										>HEAD</span>
+									</div>
+									<!-- Commit message -->
+									<p
+										class="text-[11.5px] leading-snug break-words"
+										:class="rev.message ? 'text-[#c7c7cd]' : 'text-[#5f5f67] italic'"
+										x-text="rev.message || 'no message'"
+									></p>
+									<!-- Timestamp -->
+									<p class="font-mono text-[10px] text-[#5f5f67] mt-[4px]" x-text="rev.when"></p>
+								</div>
+							</template>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}

@@ -280,8 +280,7 @@ func topbarBrand() templ.Component {
 	})
 }
 
-// topbarRight renders the permanent right section: vertical separator + user button.
-// The user button is a placeholder for future profile/settings navigation.
+// topbarRight renders the permanent right section: nav icons + separator + user button.
 func topbarRight() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -303,7 +302,7 @@ func topbarRight() templ.Component {
 			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex items-center gap-2 shrink-0\"><div class=\"w-px h-5 bg-line-soft\"></div><button type=\"button\" title=\"User settings\" class=\"w-7 h-7 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 font-semibold hover:bg-accent/30 transition-colors\">U</button></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"flex items-center gap-1 shrink-0\"><a href=\"/ui/sessions\" title=\"Sessions\" class=\"w-7 h-7 rounded flex items-center justify-center text-ink-3 hover:text-ink hover:bg-bg-2 transition-colors\"><!-- chat bubbles icon --><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"></path></svg></a> <a href=\"/ui/resources\" title=\"Resources\" class=\"w-7 h-7 rounded flex items-center justify-center text-ink-3 hover:text-ink hover:bg-bg-2 transition-colors\"><!-- archive/box icon --><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"21 8 21 21 3 21 3 8\"></polyline> <rect x=\"1\" y=\"3\" width=\"22\" height=\"5\"></rect> <line x1=\"10\" y1=\"12\" x2=\"14\" y2=\"12\"></line></svg></a><div class=\"w-px h-5 bg-line-soft mx-1\"></div><button type=\"button\" title=\"User settings\" class=\"w-7 h-7 rounded bg-accent/20 text-accent text-ui-label flex items-center justify-center shrink-0 font-semibold hover:bg-accent/30 transition-colors\">U</button></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

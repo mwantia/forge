@@ -34,6 +34,8 @@ tasks:
         - templ generate ./internal/application/ui/...
         sources:
         - internal/application/ui/templates/**/*.templ
+        generates:
+        - internal/application/ui/templates/**/*_templ.go
 
     ui:css:
         desc: Compile Tailwind CSS for embedded assets (requires Node)

@@ -12,6 +12,7 @@ import (
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
+	domresource "github.com/mwantia/forge/internal/domain/resource"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
 	"github.com/mwantia/forge/internal/application/ui/templates/layout"
@@ -26,6 +27,7 @@ type UIService struct {
 	providers domprovider.ProviderRegistar   `fabric:"inject"`
 	pipeline  apppipeline.PipelineCommitter  `fabric:"inject"`
 	renderer  apppipeline.PipelineRenderer   `fabric:"inject"`
+	resources domresource.ResourceRegistar   `fabric:"inject"`
 
 	logger hclog.Logger `fabric:"logger=ui"`
 }
@@ -93,6 +95,11 @@ func (u *UIService) PostInit(_ context.Context) error {
 	}
 	g.GET("/sessions/:id/dag", dag.handleFull())
 	g.GET("/sessions/:id/dag/mini", dag.handleMini())
+
+	res := &resourceHandlers{
+		resources: u.resources,
+	}
+	g.GET("/resources", res.handleList())
 
 	layout.SetAssetVersion(AssetVersion)
 
