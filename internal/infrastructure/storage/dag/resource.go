@@ -1,40 +1,25 @@
 package dag
 
-import (
-	"fmt"
-	"strings"
-	"time"
-)
+import "fmt"
 
-// Resource storage layout (mirrors the session layout):
+// Resource storage layout (flat bucket — no namespace prefix):
 //
-//	resources/<namespace>/refs/<name>                        mutable hash pointer
-//	resources/<namespace>/log/<020d-unix_nano>_<hash>.json  ResourceMeta sidecar
+//	resources/refs/<id>          mutable hash pointer
+//	resources/meta/<id>.json     mutable sidecar (ResourceMeta)
 //
-// The shared object pool (objects/<aa>/<rest>) is used for content blobs,
-// identical to session MessageObjs.
+// The shared object pool (objects/<aa>/<rest>) holds immutable content blobs.
 
-func resourceBucket(namespace string) string {
-	return "resources/" + strings.Trim(namespace, "/")
+// ResourceRefKey returns the storage key for a resource ref by ID.
+func ResourceRefKey(id string) string {
+	return fmt.Sprintf("resources/refs/%s", id)
 }
 
-// ResourceRefKey returns the storage key for a named resource ref.
-func ResourceRefKey(namespace, name string) string {
-	return fmt.Sprintf("%s/refs/%s", resourceBucket(namespace), name)
+// ResourceRefsPrefix returns the prefix covering all resource refs.
+func ResourceRefsPrefix() string {
+	return "resources/refs/"
 }
 
-// ResourceRefsPrefix returns the prefix for all refs under namespace.
-func ResourceRefsPrefix(namespace string) string {
-	return resourceBucket(namespace) + "/refs/"
-}
-
-// ResourceLogPrefix returns the prefix for all sidecar log entries under namespace.
-func ResourceLogPrefix(namespace string) string {
-	return resourceBucket(namespace) + "/log/"
-}
-
-// ResourceLogKey returns the storage key for a ResourceMeta sidecar.
-// The zero-padded unix-nano prefix gives chronological order from a plain ListEntry.
-func ResourceLogKey(namespace string, createdAt time.Time, hash string) string {
-	return fmt.Sprintf("%s%020d_%s.json", ResourceLogPrefix(namespace), createdAt.UnixNano(), hash)
+// ResourceMetaKey returns the storage key for a resource's mutable sidecar.
+func ResourceMetaKey(id string) string {
+	return fmt.Sprintf("resources/meta/%s.json", id)
 }
