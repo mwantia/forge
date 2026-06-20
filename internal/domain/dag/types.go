@@ -81,28 +81,32 @@ func (t *ToolCatalog) Hash() (string, error) { return contenthash.Hash(t) }
 // Identity = sha256(canonical_json(ResourceObj)). ContentType lets the recall
 // layer choose the right embedding strategy without inspecting the content.
 // ParentHash links revisions into a version chain for history, diff, and revert.
+// CommitMessage and CommittedAt are part of the canonical object so two commits
+// with identical content but different messages or timestamps get distinct hashes.
 type ResourceObj struct {
-	ContentType string `json:"content_type"`
-	Content     string `json:"content"`
-	ParentHash  string `json:"parent_hash,omitempty"`
+	ContentType   string    `json:"content_type"`
+	Content       string    `json:"content"`
+	CommitMessage string    `json:"commit_message,omitempty"`
+	CommittedAt   time.Time `json:"committed_at"`
+	ParentHash    string    `json:"parent_hash,omitempty"`
 }
 
 func (r *ResourceObj) Hash() (string, error) { return contenthash.Hash(r) }
 
-// ResourceMeta is the mutable sidecar for a ResourceObj revision.
-// Never folded into the hashed object so tags and metadata can change
-// without invalidating the content hash or breaking deduplication.
-// Layout: resources/<namespace>/log/<020d-unix_nano>_<hash>.json
+// ResourceMeta is the mutable sidecar for a resource, stored at
+// resources/meta/<id>.json. Mirrors domain/resource.ResourceMeta plus
+// DAG bookkeeping fields (Hash, ID, IndexedAt, IndexedBy).
 type ResourceMeta struct {
-	Hash      string         `json:"hash"`
-	Namespace string         `json:"namespace"`
-	Name      string         `json:"name"`
-	Tags      []string       `json:"tags,omitempty"`
-	Metadata  map[string]any `json:"metadata,omitempty"`
-	CreatedAt time.Time      `json:"created_at"`
-
-	// Set after RecallPlugin.Index succeeds. Enables incremental rebuilds:
-	// only re-index entries where IndexedAt is nil or before CreatedAt.
-	IndexedAt *time.Time `json:"indexed_at,omitempty"`
-	IndexedBy string     `json:"indexed_by,omitempty"`
+	ID          string         `json:"id"`
+	Hash        string         `json:"hash"`
+	Name        string         `json:"name,omitempty"`
+	Type        string         `json:"type,omitempty"`
+	Tags        []string       `json:"tags,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Session     string         `json:"session,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	Extra       map[string]any `json:"extra,omitempty"`
+	IndexedAt   *time.Time     `json:"indexed_at,omitempty"`
+	IndexedBy   string         `json:"indexed_by,omitempty"`
 }

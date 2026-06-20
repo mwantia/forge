@@ -51,7 +51,6 @@ type SessionMetadata struct {
 	// sessions are immutable: ref/commit writes return 409.
 	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
 	ArchiveResourceID string     `json:"archive_resource_id,omitempty"`
-	ArchivePath       string     `json:"archive_path,omitempty"`
 	// Plugins restricts which plugin namespaces are active for this session and
 	// their per-plugin activation state. Empty list means all plugins are active.
 	Plugins []PluginConfig `json:"plugins,omitempty"`
