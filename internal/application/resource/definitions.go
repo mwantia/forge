@@ -8,58 +8,96 @@ import "github.com/mwantia/forge-sdk/pkg/plugins"
 var ToolsDefinitions = []plugins.ToolDefinition{
 	{
 		Name: "store",
-		Description: `Persist a piece of context into long-term memory for retrieval across turns or sessions.
-
-type controls where the resource lives:
-  memory    — facts, preferences, decisions, recurring constraints; stored under the current session namespace.
-  reference — external links, cited documents, API specs, code snippets; stored per-session.
-  online    — web-fetched or time-sensitive content that may go stale; stored per-session. Set metadata.expires_at (RFC3339) to mark freshness.
-  global    — agent-wide facts shared across all sessions (e.g. user identity, long-lived preferences).`,
+		Description: `Persist a piece of context into long-term memory for retrieval across turns or sessions.`,
 		Tags: []string{"resource", "store"},
 		Annotations: plugins.ToolAnnotations{
 			CostHint: plugins.ToolCostCheap,
 			System: `Persist information future turns or sessions may need. Skip transient turn details — those already live in message history.
-Choose type carefully: memory for durable facts, reference for cited material, online for fetched pages (add expires_at), global only for truly cross-session data.
-Use tags for fast filtering (e.g. ["preference","ui"]). Metadata fields are available as filter predicates in recall.`,
+
+type values:
+  memory    — facts, preferences, decisions, recurring constraints.
+  reference — external links, cited documents, API specs, code snippets.
+  online    — web-fetched or time-sensitive content. Set extra.expires_at (RFC3339) to mark freshness.
+  archive   — reserved for session archives; do not use directly.
+
+Resources are scoped to the current session automatically. Use recall with scope="global" to search across sessions.
+Use tags for fast filtering (e.g. ["preference","ui"]). Named resources (name field) can be updated by storing again with the same name — name is a label, not a unique key.`,
 		},
 		Parameters: plugins.ToolParameters{
 			Type: "object",
 			Properties: map[string]plugins.ToolProperty{
-				"type": {
-					Type:        "string",
-					Description: "Resource category — determines the storage namespace.",
-					Enum:        []string{"memory", "reference", "online", "global"},
-				},
-				"name": {
-					Type:        "string",
-					Description: `Short human-readable identifier (e.g. "project-goals", "auth-decision"). If omitted, derived from content hash. Overwriting the same name replaces the previous version and keeps history.`,
-				},
 				"content": {
 					Type:        "string",
 					Description: "The text content to store.",
+				},
+				"name": {
+					Type:        "string",
+					Description: `Short human-readable label (e.g. "project-goals", "auth-decision"). Optional; used for display and recall filtering only.`,
+				},
+				"type": {
+					Type:        "string",
+					Description: "Resource category.",
+					Enum:        []string{"memory", "reference", "online"},
+				},
+				"description": {
+					Type:        "string",
+					Description: "Optional longer description of what this resource contains.",
 				},
 				"tags": {
 					Type:        "array",
 					Description: `Optional list of string tags (e.g. ["preference", "ui"]). Used for filtering in recall.`,
 				},
-				"metadata": {
+				"commit_message": {
+					Type:        "string",
+					Description: `Optional short message describing what this resource is or why it was created (e.g. "initial save", "project goals as of kick-off").`,
+				},
+				"extra": {
 					Type:        "object",
-					Description: `Optional structured metadata. For online resources, set expires_at (RFC3339) to indicate freshness. Other keys are available as recall filter predicates.`,
+					Description: `Optional unstructured metadata. For online resources, set expires_at (RFC3339) to indicate freshness.`,
 				},
 			},
-			Required: []string{"type", "content"},
+			Required: []string{"content"},
+		},
+	},
+	{
+		Name:        "commit",
+		Description: `Update the content of an existing resource, creating a new versioned revision and advancing HEAD.`,
+		Tags:        []string{"resource", "commit"},
+		Annotations: plugins.ToolAnnotations{
+			CostHint: plugins.ToolCostCheap,
+			System: `Use when the user asks to update, revise, or overwrite an existing stored resource. Requires the resource ID from a prior store or recall result.
+
+The previous content is preserved in the revision chain and can be retrieved via history, diff, or revert. HEAD always points to the latest revision.
+Provide a short commit_message so the history list is human-readable (e.g. "updated auth decision after team review").`,
+		},
+		Parameters: plugins.ToolParameters{
+			Type: "object",
+			Properties: map[string]plugins.ToolProperty{
+				"id": {
+					Type:        "string",
+					Description: "The ID of the resource to update (returned by store or visible in recall results).",
+				},
+				"content": {
+					Type:        "string",
+					Description: "The new full content to store as the next revision.",
+				},
+				"commit_message": {
+					Type:        "string",
+					Description: `Short description of what changed and why (e.g. "revised project goals after retro").`,
+				},
+			},
+			Required: []string{"id", "content"},
 		},
 	},
 	{
 		Name: "recall",
-		Description: `Search previously stored resources by type, content query, tags, metadata filters, or time range.
+		Description: `Search previously stored resources by content query, type, tags, metadata filters, or time range.
 
-type selects which namespace to search:
-  memory    — session memories (facts, preferences, decisions).
-  reference — session references (links, docs, specs).
-  online    — session web-fetched content.
-  global    — agent-wide shared resources.
-  any       — all namespaces within the current session (falls back to substring search; HNSW not available).`,
+scope controls session scoping:
+  session   — only resources from the current session (default for most queries).
+  global    — all resources regardless of session.
+
+Use type to filter by resource category. Combine with query for semantic or substring search.`,
 		Tags: []string{"resource", "recall"},
 		Annotations: plugins.ToolAnnotations{
 			ReadOnly:   true,
@@ -67,32 +105,37 @@ type selects which namespace to search:
 			CostHint:   plugins.ToolCostCheap,
 			System: `Search over previously stored resources. Reach for this when the user references prior knowledge ("the thing we decided last week", "my preferences") that is not in the current message history.
 
-filter is a list of {key, op, value} objects (AND semantics):
+filter is a list of {key, op, value} objects (AND semantics). Valid keys: name, type, session, description, or any key in extra.
     op values: eq | prefix | contains | gte | lte
-    Example: [{"key":"kind","op":"eq","value":"decision"}]
+    Example: [{"key":"type","op":"eq","value":"reference"}]
 
 tags is an AND filter: resource must carry all listed tags. created_after / created_before accept RFC3339 timestamps.
-Prefer a specific type over "any" when possible — it enables HNSW semantic search.`,
+Prefer scope="session" unless the user explicitly asks for global results.`,
 		},
 		Parameters: plugins.ToolParameters{
 			Type: "object",
 			Properties: map[string]plugins.ToolProperty{
-				"type": {
-					Type:        "string",
-					Description: "Namespace to search. Use \"any\" to search across all session namespaces (disables HNSW).",
-					Enum:        []string{"memory", "reference", "online", "global", "any"},
-				},
 				"query": {
 					Type:        "string",
-					Description: "Content text search. When embed_model is configured and type is not \"any\", uses HNSW semantic search. Empty means no content filter.",
+					Description: "Content text search. Uses semantic search when embed_model is configured, otherwise substring. Empty means no content filter.",
+				},
+				"type": {
+					Type:        "string",
+					Description: "Filter by resource type (eq match).",
+					Enum:        []string{"memory", "reference", "online"},
+				},
+				"scope": {
+					Type:        "string",
+					Description: `"session" to restrict to the current session (recommended); "global" to search all sessions.`,
+					Enum:        []string{"session", "global"},
 				},
 				"tags": {
 					Type:        "array",
-					Description: `Tag filter (AND): resource must carry all listed tags. Example: ["preference","ui"].`,
+					Description: `Tag filter (AND): resource must carry all listed tags.`,
 				},
 				"filter": {
 					Type:        "array",
-					Description: `Metadata predicates (AND). Each element: {"key": "<field>", "op": "eq|prefix|contains|gte|lte", "value": <any>}.`,
+					Description: `Metadata predicates (AND). Each element: {"key": "<field>", "op": "eq|prefix|contains|gte|lte", "value": <any>}. Valid keys: name, type, session, description, or any extra key.`,
 				},
 				"created_after": {
 					Type:        "string",
@@ -107,33 +150,27 @@ Prefer a specific type over "any" when possible — it enables HNSW semantic sea
 					Description: "Maximum number of results to return. Defaults to 5.",
 				},
 			},
-			Required: []string{"type"},
 		},
 	},
 	{
 		Name:        "forget",
-		Description: `Delete a previously stored resource by type and name.`,
+		Description: `Delete a previously stored resource by its ID.`,
 		Tags:        []string{"resource", "forget"},
 		Annotations: plugins.ToolAnnotations{
 			Idempotent: true,
 			CostHint:   plugins.ToolCostCheap,
 			System: `Use when the user asks to remove a stored memory, or when a prior recall surfaced information that is no longer correct.
-Pair with recall first to find the right name; do not loop forget over many names without confirmation.`,
+Pair with recall first to find the right ID; do not loop forget over many IDs without confirmation.`,
 		},
 		Parameters: plugins.ToolParameters{
 			Type: "object",
 			Properties: map[string]plugins.ToolProperty{
-				"type": {
+				"id": {
 					Type:        "string",
-					Description: "Namespace the resource lives in.",
-					Enum:        []string{"memory", "reference", "online", "global"},
-				},
-				"name": {
-					Type:        "string",
-					Description: "The name (ref key) of the resource to delete.",
+					Description: "The unique ID of the resource to delete (returned by store or visible in recall results).",
 				},
 			},
-			Required: []string{"type", "name"},
+			Required: []string{"id"},
 		},
 	},
 }

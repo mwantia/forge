@@ -75,20 +75,20 @@ func (s *ResourceService) PostInit(ctx context.Context) error {
 		}
 	}
 
-	// /v1/resources
-	// Method convention (avoids Gin wildcard conflicts):
-	//   GET    /*path          → list (or get with ?id=)
-	//   PUT    /*path          → store
-	//   POST   /*path          → recall (RecallQuery JSON body)
-	//   DELETE /*path          → forget (?id= required)
+	// /v1/resources — flat bucket, no path prefix
 	group := s.router.AuthGroup("/resources")
 	{
-		group.GET("", s.handleStatus())
-		group.GET("/*path", s.handleListOrGet())
-		group.PUT("/*path", s.handleStoreResource())
-		group.POST("/*path", s.handleRecallResources())
-		group.PATCH("/*path", s.handlePatchResource())
-		group.DELETE("/*path", s.handleForgetResource())
+		group.GET("", s.handleListResources())
+		group.PUT("", s.handleStoreResource())
+		group.POST("/recall", s.handleRecallResources())
+		group.GET("/:id", s.handleGetResource())
+		group.POST("/:id/commit", s.handleCommitResource())
+		group.GET("/:id/history", s.handleHistory())
+		group.GET("/:id/diff", s.handleDiff())
+		group.GET("/:id/versions/:hash", s.handleGetVersion())
+		group.POST("/:id/revert", s.handleRevert())
+		group.PATCH("/:id", s.handlePatchResource())
+		group.DELETE("/:id", s.handleForgetResource())
 	}
 
 	return nil

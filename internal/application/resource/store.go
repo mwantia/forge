@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bmatcuk/doublestar/v4"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/google/uuid"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
 	infrastorage "github.com/mwantia/forge/internal/infrastructure/storage"
@@ -18,25 +17,24 @@ import (
 type ResourceRevision = domresource.ResourceRevision
 
 // resourceStore is the narrow storage contract ResourceService depends on.
-// Current implementation: dagResourceStore (built-in, DAG-backed, sole backend).
 type resourceStore interface {
-	Store(ctx context.Context, path, name, content string, tags []string, metadata map[string]any) (*sdkplugins.Resource, error)
-	Recall(ctx context.Context, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, error)
-	Forget(ctx context.Context, path, name string) error
-	List(ctx context.Context, path string) ([]*sdkplugins.Resource, error)
-	Get(ctx context.Context, path, name string) (*sdkplugins.Resource, error)
-	UpdateMeta(ctx context.Context, path, name string, tags []string, metadata map[string]any) error
-	History(ctx context.Context, path, name string) ([]*ResourceRevision, error)
+	Store(ctx context.Context, content, commitMessage string, meta domresource.ResourceMeta) (*domresource.Resource, error)
+	Commit(ctx context.Context, id, content, commitMessage string) (*domresource.Resource, error)
+	Recall(ctx context.Context, q domresource.RecallQuery) ([]*domresource.Resource, error)
+	Forget(ctx context.Context, id string) error
+	List(ctx context.Context, filter []domresource.FilterPredicate) ([]*domresource.Resource, error)
+	Get(ctx context.Context, id string) (*domresource.Resource, error)
+	UpdateMeta(ctx context.Context, id string, meta domresource.ResourceMeta) error
+	History(ctx context.Context, id string) ([]*ResourceRevision, error)
 	GetAt(ctx context.Context, hash string) (*dag.ResourceObj, error)
-	Revert(ctx context.Context, path, name, toHash string) error
+	Revert(ctx context.Context, id, toHash string) error
 }
 
 // dagResourceStore persists resources on the shared content-addressed DAG.
 // Objects land in the global object pool (objects/<aa>/<rest-of-hash>).
-// Refs live at resources/<namespace>/refs/<name>. Log entries (ResourceMeta
-// sidecars) live at resources/<namespace>/log/<unix_nano>_<hash>.json.
+// Refs live at resources/refs/<id>. Mutable sidecars at resources/meta/<id>.json.
 type dagResourceStore struct {
-	storage infrastorage.StorageBackend // for WriteJson/ReadJson on log entries
+	storage infrastorage.StorageBackend
 	objects *dag.ObjectStore
 	refs    *dag.RefStore
 }
@@ -49,29 +47,15 @@ func newDagResourceStore(s infrastorage.StorageBackend) *dagResourceStore {
 	}
 }
 
-// namespace converts a path string into the DAG namespace key.
-func namespace(path string) string {
-	return strings.Trim(path, "/")
-}
-
-func (s *dagResourceStore) Store(ctx context.Context, path, name, content string, tags []string, metadata map[string]any) (*sdkplugins.Resource, error) {
-	ns := namespace(path)
+func (s *dagResourceStore) Store(ctx context.Context, content, commitMessage string, meta domresource.ResourceMeta) (*domresource.Resource, error) {
+	id := uuid.New().String()
 	now := time.Now()
 
-	// Read current tip to set ParentHash and for CAS.
-	prevHash := ""
-	if name != "" {
-		h, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
-		if err != nil && !errors.Is(err, dag.ErrNotFound) {
-			return nil, fmt.Errorf("read current tip: %w", err)
-		}
-		prevHash = h
-	}
-
 	obj := &dag.ResourceObj{
-		ContentType: "text",
-		Content:     content,
-		ParentHash:  prevHash,
+		ContentType:   "text",
+		Content:       content,
+		CommitMessage: commitMessage,
+		CommittedAt:   now,
 	}
 
 	hash, err := s.objects.PutResource(ctx, obj)
@@ -79,52 +63,69 @@ func (s *dagResourceStore) Store(ctx context.Context, path, name, content string
 		return nil, fmt.Errorf("store resource object: %w", err)
 	}
 
-	// If no name was given, derive one from the content hash.
-	if name == "" {
-		name = hash[:16]
-		// Now that we have the name, re-read the current tip.
-		if h, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name)); err == nil {
-			prevHash = h
-			obj.ParentHash = prevHash
-			if hash, err = s.objects.PutResource(ctx, obj); err != nil {
-				return nil, fmt.Errorf("store resource object with parent: %w", err)
-			}
-		}
+	meta.CreatedAt = now
+	meta.UpdatedAt = now
+
+	dagMeta := toDagMeta(id, hash, meta, nil, "")
+	if err := s.storage.WriteJson(ctx, dag.ResourceMetaKey(id), dagMeta); err != nil {
+		return nil, fmt.Errorf("write resource meta: %w", err)
 	}
 
-	meta := &dag.ResourceMeta{
-		Hash:      hash,
-		Namespace: ns,
-		Name:      name,
-		Tags:      tags,
-		Metadata:  metadata,
-		CreatedAt: now,
-	}
-	if err := s.writeResourceLogEntry(ctx, ns, now, hash, meta); err != nil {
-		return nil, fmt.Errorf("write resource log: %w", err)
-	}
-
-	if err := s.refs.CASKey(ctx, dag.ResourceRefKey(ns, name), prevHash, hash); err != nil {
+	if err := s.refs.CASKey(ctx, dag.ResourceRefKey(id), "", hash); err != nil {
 		return nil, fmt.Errorf("advance resource ref: %w", err)
 	}
 
-	return &sdkplugins.Resource{
-		ID:        name,
-		Path:      path,
-		Content:   content,
-		Tags:      tags,
-		Metadata:  metadata,
-		CreatedAt: now,
+	return &domresource.Resource{
+		ID:      id,
+		Content: content,
+		Meta:    meta,
 	}, nil
 }
 
-func (s *dagResourceStore) Get(ctx context.Context, path, name string) (*sdkplugins.Resource, error) {
-	ns := namespace(path)
-
-	hash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
+func (s *dagResourceStore) Commit(ctx context.Context, id, content, commitMessage string) (*domresource.Resource, error) {
+	currentHash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(id))
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
-			return nil, fmt.Errorf("resource %q not found in %s", name, path)
+			return nil, fmt.Errorf("resource %q not found", id)
+		}
+		return nil, err
+	}
+
+	obj := &dag.ResourceObj{
+		ContentType:   "text",
+		Content:       content,
+		CommitMessage: commitMessage,
+		CommittedAt:   time.Now(),
+		ParentHash:    currentHash,
+	}
+
+	newHash, err := s.objects.PutResource(ctx, obj)
+	if err != nil {
+		return nil, fmt.Errorf("commit resource object: %w", err)
+	}
+
+	if err := s.refs.CASKey(ctx, dag.ResourceRefKey(id), currentHash, newHash); err != nil {
+		return nil, fmt.Errorf("advance resource ref: %w", err)
+	}
+
+	dagMeta, err := s.loadMeta(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	dagMeta.Hash = newHash
+	dagMeta.UpdatedAt = time.Now()
+	if err := s.storage.WriteJson(ctx, dag.ResourceMetaKey(id), dagMeta); err != nil {
+		return nil, fmt.Errorf("update resource meta: %w", err)
+	}
+
+	return toResource(id, obj, dagMeta), nil
+}
+
+func (s *dagResourceStore) Get(ctx context.Context, id string) (*domresource.Resource, error) {
+	hash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(id))
+	if err != nil {
+		if errors.Is(err, dag.ErrNotFound) {
+			return nil, fmt.Errorf("resource %q not found", id)
 		}
 		return nil, err
 	}
@@ -134,155 +135,97 @@ func (s *dagResourceStore) Get(ctx context.Context, path, name string) (*sdkplug
 		return nil, fmt.Errorf("load resource object %s: %w", hash, err)
 	}
 
-	meta := s.loadRecentMeta(ctx, ns, hash)
-	return toSDKResource(path, name, hash, obj, meta), nil
-}
-
-func (s *dagResourceStore) Forget(ctx context.Context, path, name string) error {
-	ns := namespace(path)
-	return s.refs.DeleteKey(ctx, dag.ResourceRefKey(ns, name))
-}
-
-func (s *dagResourceStore) List(ctx context.Context, path string) ([]*sdkplugins.Resource, error) {
-	ns := namespace(path)
-
-	nameToHash, err := s.refs.ListKeys(ctx, dag.ResourceRefsPrefix(ns))
+	dagMeta, err := s.loadMeta(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(nameToHash) > 0 {
-		out := make([]*sdkplugins.Resource, 0, len(nameToHash))
-		for name, hash := range nameToHash {
-			obj, err := s.objects.GetResource(ctx, hash)
-			if err != nil {
-				continue
-			}
-			meta := s.loadRecentMeta(ctx, ns, hash)
-			out = append(out, toSDKResource(path, name, hash, obj, meta))
-		}
-		sort.SliceStable(out, func(i, j int) bool {
-			return out[i].ID < out[j].ID
-		})
-		return out, nil
-	}
-
-	// No resources at this exact path — return immediate virtual subdirectories.
-	return s.listImmediate(ctx, ns)
+	return toResource(id, obj, dagMeta), nil
 }
 
-// listImmediate returns one Resource{Type:"dir"} per unique immediate child
-// segment under ns. E.g. ns="forge" → ["forge/sessions", "forge/global"].
-func (s *dagResourceStore) listImmediate(ctx context.Context, ns string) ([]*sdkplugins.Resource, error) {
-	all, err := s.listNamespaces(ctx, ns)
+func (s *dagResourceStore) Forget(ctx context.Context, id string) error {
+	if err := s.refs.DeleteKey(ctx, dag.ResourceRefKey(id)); err != nil {
+		return err
+	}
+	// Best-effort removal of the sidecar; not fatal if missing.
+	_ = s.storage.DeleteEntry(ctx, dag.ResourceMetaKey(id))
+	return nil
+}
+
+func (s *dagResourceStore) List(ctx context.Context, filter []domresource.FilterPredicate) ([]*domresource.Resource, error) {
+	idToHash, err := s.refs.ListKeys(ctx, dag.ResourceRefsPrefix())
 	if err != nil {
 		return nil, err
 	}
 
-	prefix := ns
-	if prefix != "" {
-		prefix += "/"
-	}
-
-	seen := map[string]struct{}{}
-	var out []*sdkplugins.Resource
-	for _, fullNS := range all {
-		rel := strings.TrimPrefix(fullNS, prefix)
-		seg := rel
-		if i := strings.Index(rel, "/"); i >= 0 {
-			seg = rel[:i]
-		}
-		if seg == "" {
+	out := make([]*domresource.Resource, 0, len(idToHash))
+	for id := range idToHash {
+		dagMeta, err := s.loadMeta(ctx, id)
+		if err != nil {
 			continue
 		}
-		child := prefix + seg
-		if _, dup := seen[child]; dup {
+		if !metaMatchesFilter(dagMeta, filter) {
 			continue
 		}
-		seen[child] = struct{}{}
-		out = append(out, &sdkplugins.Resource{
-			ID:   seg,
-			Path: "/" + child,
-			Type: "dir",
-		})
+		obj, err := s.objects.GetResource(ctx, dagMeta.Hash)
+		if err != nil {
+			continue
+		}
+		out = append(out, toResource(id, obj, dagMeta))
 	}
 
 	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].ID < out[j].ID
+		return out[i].Meta.CreatedAt.Before(out[j].Meta.CreatedAt)
 	})
 	return out, nil
 }
 
-func (s *dagResourceStore) Recall(ctx context.Context, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, error) {
-	if q.Path == "" {
-		return nil, fmt.Errorf("path is required")
-	}
-
+func (s *dagResourceStore) Recall(ctx context.Context, q domresource.RecallQuery) ([]*domresource.Resource, error) {
 	limit := q.Limit
 	if limit <= 0 {
 		limit = 5
 	}
 
-	hasWildcard := strings.ContainsAny(q.Path, "*?[")
 	queryLower := strings.ToLower(strings.TrimSpace(q.Query))
 
-	var namespaces []string
-	if hasWildcard {
-		basePath := globBase(q.Path)
-		ns := namespace(basePath)
-		all, err := s.listNamespaces(ctx, ns)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range all {
-			path := "/" + n
-			matched, _ := doublestar.Match(q.Path, path)
-			if matched {
-				namespaces = append(namespaces, n)
-			}
-		}
-	} else {
-		namespaces = []string{namespace(q.Path)}
+	idToHash, err := s.refs.ListKeys(ctx, dag.ResourceRefsPrefix())
+	if err != nil {
+		return nil, err
 	}
 
-	var scored []*sdkplugins.Resource
-	for _, ns := range namespaces {
-		path := "/" + ns
-		nameToHash, err := s.refs.ListKeys(ctx, dag.ResourceRefsPrefix(ns))
+	var scored []*domresource.Resource
+	for id := range idToHash {
+		dagMeta, err := s.loadMeta(ctx, id)
 		if err != nil {
 			continue
 		}
-		for name, hash := range nameToHash {
-			obj, err := s.objects.GetResource(ctx, hash)
-			if err != nil {
-				continue
-			}
-			meta := s.loadRecentMeta(ctx, ns, hash)
 
-			if meta != nil {
-				if !tagsMatch(meta.Tags, q.Tags) {
-					continue
-				}
-				if !predicatesMatch(meta.Metadata, q.Filter) {
-					continue
-				}
-				if !q.CreatedAfter.IsZero() && meta.CreatedAt.Before(q.CreatedAfter) {
-					continue
-				}
-				if !q.CreatedBefore.IsZero() && meta.CreatedAt.After(q.CreatedBefore) {
-					continue
-				}
-			}
-
-			score := substringScore(obj.Content, queryLower)
-			if queryLower != "" && score == 0 {
-				continue
-			}
-
-			r := toSDKResource(path, name, hash, obj, meta)
-			r.Score = score
-			scored = append(scored, r)
+		if !tagsMatch(dagMeta.Tags, q.Tags) {
+			continue
 		}
+		if !metaMatchesFilter(dagMeta, q.Filter) {
+			continue
+		}
+		if !q.CreatedAfter.IsZero() && dagMeta.CreatedAt.Before(q.CreatedAfter) {
+			continue
+		}
+		if !q.CreatedBefore.IsZero() && dagMeta.CreatedAt.After(q.CreatedBefore) {
+			continue
+		}
+
+		obj, err := s.objects.GetResource(ctx, dagMeta.Hash)
+		if err != nil {
+			continue
+		}
+
+		score := substringScore(obj.Content, queryLower)
+		if queryLower != "" && score == 0 {
+			continue
+		}
+
+		r := toResource(id, obj, dagMeta)
+		r.Score = score
+		scored = append(scored, r)
 	}
 
 	sort.SliceStable(scored, func(i, j int) bool {
@@ -294,113 +237,28 @@ func (s *dagResourceStore) Recall(ctx context.Context, q sdkplugins.RecallQuery)
 	return scored, nil
 }
 
-// listNamespaces returns all resource namespaces that are sub-paths of root.
-// root="" lists everything; root="sessions" lists all namespaces under sessions/.
-func (s *dagResourceStore) listNamespaces(ctx context.Context, root string) ([]string, error) {
-	prefix := "resources/"
-	if root != "" {
-		prefix = "resources/" + root + "/"
-	}
-
-	allRefs, err := s.refs.ListKeys(ctx, prefix)
+func (s *dagResourceStore) UpdateMeta(ctx context.Context, id string, meta domresource.ResourceMeta) error {
+	existing, err := s.loadMeta(ctx, id)
 	if err != nil {
-		return nil, err
-	}
-
-	seen := map[string]struct{}{}
-	var result []string
-	for key := range allRefs {
-		if i := strings.Index(key, "/refs/"); i >= 0 {
-			ns := key[:i]
-			if root != "" {
-				ns = root + "/" + ns
-			}
-			if _, dup := seen[ns]; !dup {
-				seen[ns] = struct{}{}
-				result = append(result, ns)
-			}
-		}
-	}
-	return result, nil
-}
-
-func (s *dagResourceStore) writeResourceLogEntry(ctx context.Context, ns string, createdAt time.Time, hash string, meta *dag.ResourceMeta) error {
-	key := dag.ResourceLogKey(ns, createdAt, hash)
-	return s.storage.WriteJson(ctx, key, meta)
-}
-
-// loadRecentMeta returns the most-recent ResourceMeta log entry for hash
-// in namespace ns. Returns nil if not found (non-fatal).
-func (s *dagResourceStore) loadRecentMeta(ctx context.Context, ns, hash string) *dag.ResourceMeta {
-	prefix := dag.ResourceLogPrefix(ns)
-	entries, err := s.refs.Backend.ListEntry(ctx, prefix)
-	if err != nil {
-		return nil
-	}
-
-	suffix := "_" + hash + ".json"
-	var best string
-	for _, e := range entries {
-		if strings.HasSuffix(e, suffix) {
-			if e > best {
-				best = e
-			}
-		}
-	}
-
-	if best == "" {
-		return nil
-	}
-
-	var meta dag.ResourceMeta
-	if err := s.storage.ReadJson(ctx, prefix+best, &meta); err != nil {
-		return nil
-	}
-	return &meta
-}
-
-func (s *dagResourceStore) UpdateMeta(ctx context.Context, path, name string, tags []string, metadata map[string]any) error {
-	ns := namespace(path)
-
-	hash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
-	if err != nil {
-		if errors.Is(err, dag.ErrNotFound) {
-			return fmt.Errorf("resource %q not found in %s", name, path)
-		}
 		return err
 	}
 
-	existing := s.loadRecentMeta(ctx, ns, hash)
-	now := time.Now()
-
-	meta := &dag.ResourceMeta{
-		Hash:      hash,
-		Namespace: ns,
-		Name:      name,
-		Tags:      tags,
-		Metadata:  metadata,
-		CreatedAt: now,
-	}
-	if existing != nil {
-		meta.IndexedAt = existing.IndexedAt
-		meta.IndexedBy = existing.IndexedBy
-	}
-
-	return s.writeResourceLogEntry(ctx, ns, now, hash, meta)
+	updated := toDagMeta(id, existing.Hash, meta, existing.IndexedAt, existing.IndexedBy)
+	updated.CreatedAt = existing.CreatedAt
+	updated.UpdatedAt = time.Now()
+	return s.storage.WriteJson(ctx, dag.ResourceMetaKey(id), updated)
 }
 
-// History walks the ParentHash chain from the current tip, joining each
-// revision with its most-recent log entry for metadata.
-func (s *dagResourceStore) History(ctx context.Context, path, name string) ([]*ResourceRevision, error) {
-	ns := namespace(path)
-
-	hash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
+func (s *dagResourceStore) History(ctx context.Context, id string) ([]*ResourceRevision, error) {
+	hash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(id))
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
-			return nil, fmt.Errorf("resource %q not found in %s", name, path)
+			return nil, fmt.Errorf("resource %q not found", id)
 		}
 		return nil, err
 	}
+
+	dagMeta, _ := s.loadMeta(ctx, id)
 
 	var out []*ResourceRevision
 	for hash != "" {
@@ -408,13 +266,14 @@ func (s *dagResourceStore) History(ctx context.Context, path, name string) ([]*R
 		if err != nil {
 			break
 		}
-		rev := &ResourceRevision{Hash: hash}
-		if m := s.loadRecentMeta(ctx, ns, hash); m != nil {
-			rev.CreatedAt = m.CreatedAt
-			rev.Tags = m.Tags
-			rev.Metadata = m.Metadata
-			rev.IndexedAt = m.IndexedAt
-			rev.IndexedBy = m.IndexedBy
+		rev := &ResourceRevision{
+			Hash:          hash,
+			CommitMessage: obj.CommitMessage,
+			CommittedAt:   obj.CommittedAt,
+		}
+		if dagMeta != nil {
+			rev.IndexedAt = dagMeta.IndexedAt
+			rev.IndexedBy = dagMeta.IndexedBy
 		}
 		out = append(out, rev)
 		hash = obj.ParentHash
@@ -422,61 +281,108 @@ func (s *dagResourceStore) History(ctx context.Context, path, name string) ([]*R
 	return out, nil
 }
 
-// GetAt fetches any historical ResourceObj directly by content hash.
 func (s *dagResourceStore) GetAt(ctx context.Context, hash string) (*dag.ResourceObj, error) {
 	return s.objects.GetResource(ctx, hash)
 }
 
-// Revert CAS-moves the named ref to toHash and writes a new log entry.
-func (s *dagResourceStore) Revert(ctx context.Context, path, name, toHash string) error {
-	ns := namespace(path)
-
-	currentHash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
+func (s *dagResourceStore) Revert(ctx context.Context, id, toHash string) error {
+	currentHash, err := s.refs.ReadKey(ctx, dag.ResourceRefKey(id))
 	if err != nil {
 		if errors.Is(err, dag.ErrNotFound) {
-			return fmt.Errorf("resource %q not found in %s", name, path)
+			return fmt.Errorf("resource %q not found", id)
 		}
 		return err
 	}
 
-	// Verify the target exists in the object pool.
 	if _, err := s.objects.GetResource(ctx, toHash); err != nil {
 		return fmt.Errorf("revert target %s not found: %w", toHash, err)
 	}
 
-	if err := s.refs.CASKey(ctx, dag.ResourceRefKey(ns, name), currentHash, toHash); err != nil {
+	if err := s.refs.CASKey(ctx, dag.ResourceRefKey(id), currentHash, toHash); err != nil {
 		return fmt.Errorf("revert CAS failed: %w", err)
 	}
 
-	now := time.Now()
-	meta := &dag.ResourceMeta{
-		Hash:      toHash,
-		Namespace: ns,
-		Name:      name,
-		CreatedAt: now,
+	existing, err := s.loadMeta(ctx, id)
+	if err != nil {
+		return err
 	}
-	// Preserve existing indexing state if available.
-	if existing := s.loadRecentMeta(ctx, ns, toHash); existing != nil {
-		meta.Tags = existing.Tags
-		meta.Metadata = existing.Metadata
-		meta.IndexedAt = existing.IndexedAt
-		meta.IndexedBy = existing.IndexedBy
-	}
-	return s.writeResourceLogEntry(ctx, ns, now, toHash, meta)
+	existing.Hash = toHash
+	existing.UpdatedAt = time.Now()
+	return s.storage.WriteJson(ctx, dag.ResourceMetaKey(id), existing)
 }
 
-func toSDKResource(path, name, hash string, obj *dag.ResourceObj, meta *dag.ResourceMeta) *sdkplugins.Resource {
-	r := &sdkplugins.Resource{
-		ID:      name,
-		Path:    path,
+func (s *dagResourceStore) loadMeta(ctx context.Context, id string) (*dag.ResourceMeta, error) {
+	var meta dag.ResourceMeta
+	if err := s.storage.ReadJson(ctx, dag.ResourceMetaKey(id), &meta); err != nil {
+		return nil, fmt.Errorf("load meta for resource %q: %w", id, err)
+	}
+	return &meta, nil
+}
+
+func toDagMeta(id, hash string, m domresource.ResourceMeta, indexedAt *time.Time, indexedBy string) *dag.ResourceMeta {
+	return &dag.ResourceMeta{
+		ID:          id,
+		Hash:        hash,
+		Name:        m.Name,
+		Type:        m.Type,
+		Tags:        m.Tags,
+		Description: m.Description,
+		Session:     m.Session,
+		CreatedAt:   m.CreatedAt,
+		UpdatedAt:   m.UpdatedAt,
+		Extra:       m.Extra,
+		IndexedAt:   indexedAt,
+		IndexedBy:   indexedBy,
+	}
+}
+
+func toResource(id string, obj *dag.ResourceObj, dagMeta *dag.ResourceMeta) *domresource.Resource {
+	var meta domresource.ResourceMeta
+	if dagMeta != nil {
+		meta = domresource.ResourceMeta{
+			Name:        dagMeta.Name,
+			Type:        dagMeta.Type,
+			Tags:        dagMeta.Tags,
+			Description: dagMeta.Description,
+			Session:     dagMeta.Session,
+			CreatedAt:   dagMeta.CreatedAt,
+			UpdatedAt:   dagMeta.UpdatedAt,
+			Extra:       dagMeta.Extra,
+		}
+	}
+	return &domresource.Resource{
+		ID:      id,
 		Content: obj.Content,
+		Meta:    meta,
 	}
-	if meta != nil {
-		r.Tags = meta.Tags
-		r.Metadata = meta.Metadata
-		r.CreatedAt = meta.CreatedAt
+}
+
+func metaMatchesFilter(m *dag.ResourceMeta, preds []domresource.FilterPredicate) bool {
+	for _, p := range preds {
+		if !metaPredicateMatches(m, p) {
+			return false
+		}
 	}
-	return r
+	return true
+}
+
+func metaPredicateMatches(m *dag.ResourceMeta, p domresource.FilterPredicate) bool {
+	var got any
+	switch p.Key {
+	case "name":
+		got = m.Name
+	case "type":
+		got = m.Type
+	case "session":
+		got = m.Session
+	case "description":
+		got = m.Description
+	default:
+		if m.Extra != nil {
+			got = m.Extra[p.Key]
+		}
+	}
+	return predicateMatches(got, p.Op, p.Value)
 }
 
 func substringScore(content, query string) float64 {
@@ -507,47 +413,21 @@ func tagsMatch(resourceTags, queryTags []string) bool {
 	return true
 }
 
-func predicatesMatch(meta map[string]any, preds []sdkplugins.FilterPredicate) bool {
-	for _, p := range preds {
-		v, ok := meta[p.Key]
-		if !ok {
-			return false
-		}
-		if !predicateMatches(v, p.Op, p.Value) {
-			return false
-		}
-	}
-	return true
-}
-
-func predicateMatches(got any, op sdkplugins.FilterOp, want any) bool {
+func predicateMatches(got any, op domresource.FilterOp, want any) bool {
 	gs := fmt.Sprintf("%v", got)
 	ws := fmt.Sprintf("%v", want)
 	switch op {
-	case sdkplugins.FilterOpEq:
+	case domresource.FilterOpEq:
 		return gs == ws
-	case sdkplugins.FilterOpPrefix:
+	case domresource.FilterOpPrefix:
 		return strings.HasPrefix(gs, ws)
-	case sdkplugins.FilterOpContains:
+	case domresource.FilterOpContains:
 		return strings.Contains(gs, ws)
-	case sdkplugins.FilterOpGte:
+	case domresource.FilterOpGte:
 		return gs >= ws
-	case sdkplugins.FilterOpLte:
+	case domresource.FilterOpLte:
 		return gs <= ws
 	default:
 		return false
 	}
-}
-
-// globBase returns the deepest path segment before the first wildcard char.
-func globBase(pattern string) string {
-	idx := strings.IndexAny(pattern, "*?[")
-	if idx < 0 {
-		return pattern
-	}
-	slash := strings.LastIndex(pattern[:idx], "/")
-	if slash < 0 {
-		return "/"
-	}
-	return pattern[:slash+1]
 }

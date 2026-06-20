@@ -7,77 +7,61 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	domresource "github.com/mwantia/forge/internal/domain/resource"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
 	"github.com/viterin/vek/vek32"
 )
 
-// vectorIndex holds two shared flat vector maps keyed by graph name.
-// "memory" covers all */memories namespaces; "resources" covers everything else.
-// Both span all sessions so cross-session semantic search works naturally.
-// Node keys are "namespace/name" (e.g. "forge/sessions/abc/memories/dark-mode").
+const vectorIndexKey = "flat/resources.bin"
+
+// vectorIndex is a flat in-memory cosine similarity index over all resources.
+// Node keys are resource IDs.
 type vectorIndex struct {
-	mu   sync.Mutex
-	maps map[string]map[string][]float32 // graph-key → (node-key → normalized vector)
+	mu sync.Mutex
+	m  map[string][]float32 // id → normalized vector
 }
 
 func newVectorIndex() *vectorIndex {
-	return &vectorIndex{maps: make(map[string]map[string][]float32)}
+	return &vectorIndex{m: make(map[string][]float32)}
 }
 
-// graphKey returns the shared index name for a namespace path.
-func graphKey(ns string) string {
-	if ns == "memories" || strings.HasSuffix(ns, "/memories") {
-		return "memory"
-	}
-	return "resources"
-}
-
-func vectorKey(gk string) string {
-	return "hnsw/" + gk + ".bin"
-}
-
-// load returns the vector map for gk, loading from storage if necessary.
-// Creates an empty map when nothing is stored yet. Caller must NOT hold mu.
-func (idx *vectorIndex) load(ctx context.Context, s *ResourceService, gk string) map[string][]float32 {
+// load populates the in-memory map from storage if not already loaded.
+func (idx *vectorIndex) load(ctx context.Context, s *ResourceService) map[string][]float32 {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	if m, ok := idx.maps[gk]; ok {
-		return m
+	if idx.m != nil && len(idx.m) > 0 {
+		return idx.m
 	}
 
 	m := make(map[string][]float32)
-	raw, err := s.storage.ReadRaw(ctx, vectorKey(gk))
+	raw, err := s.storage.ReadRaw(ctx, vectorIndexKey)
 	if err == nil && len(raw) > 0 {
 		if loaded, decErr := decodeVectorMap(bytes.NewReader(raw)); decErr == nil {
 			m = loaded
 		} else {
-			s.logger.Warn("Failed to decode vector index; starting fresh", "graph", gk, "error", decErr)
+			s.logger.Warn("Failed to decode vector index; starting fresh", "error", decErr)
 		}
 	}
-	idx.maps[gk] = m
+	idx.m = m
 	return m
 }
 
-// persist serializes the vector map for gk to the storage backend.
-// Caller must NOT hold mu.
-func (idx *vectorIndex) persist(ctx context.Context, s *ResourceService, gk string, m map[string][]float32) {
+// persist serializes the in-memory map to storage.
+func (idx *vectorIndex) persist(ctx context.Context, s *ResourceService, m map[string][]float32) {
 	var buf bytes.Buffer
 	if err := encodeVectorMap(&buf, m); err != nil {
-		s.logger.Warn("Failed to encode vector index", "graph", gk, "error", err)
+		s.logger.Warn("Failed to encode vector index", "error", err)
 		return
 	}
-	if err := s.storage.WriteRaw(ctx, vectorKey(gk), buf.Bytes()); err != nil {
-		s.logger.Warn("Failed to persist vector index", "graph", gk, "error", err)
+	if err := s.storage.WriteRaw(ctx, vectorIndexKey, buf.Bytes()); err != nil {
+		s.logger.Warn("Failed to persist vector index", "error", err)
 	}
 }
 
-// encodeVectorMap writes the binary format defined in docs/13-proposal-flat-vector-index.md.
 func encodeVectorMap(w io.Writer, m map[string][]float32) error {
 	if err := binary.Write(w, binary.LittleEndian, uint32(len(m))); err != nil {
 		return err
@@ -100,7 +84,6 @@ func encodeVectorMap(w io.Writer, m map[string][]float32) error {
 	return nil
 }
 
-// decodeVectorMap reads the binary format written by encodeVectorMap.
 func decodeVectorMap(r io.Reader) (map[string][]float32, error) {
 	var count uint32
 	if err := binary.Read(r, binary.LittleEndian, &count); err != nil {
@@ -129,7 +112,6 @@ func decodeVectorMap(r io.Reader) (map[string][]float32, error) {
 	return m, nil
 }
 
-// normalizeVec returns a unit vector so that vek32.Dot == cosine similarity.
 func normalizeVec(vec []float32) []float32 {
 	norm := vek32.Norm(vec)
 	if norm == 0 {
@@ -142,48 +124,43 @@ func normalizeVec(vec []float32) []float32 {
 	return out
 }
 
-// indexContent embeds content and stores the normalized vector in the shared index for ns.
-func (s *ResourceService) indexContent(ctx context.Context, ns, name string, res *sdkplugins.Resource) {
+// indexContent embeds content and stores the normalized vector for id.
+func (s *ResourceService) indexContent(ctx context.Context, id string, res *domresource.Resource) {
 	if s.embedProvider == "" || s.embedModel == "" {
 		return
 	}
 
 	vecs, err := s.provider.Embed(ctx, s.embedProvider, s.embedModel, res.Content)
 	if err != nil || len(vecs) == 0 {
-		s.logger.Warn("Embed failed for resource; skipping index", "namespace", ns, "name", name, "error", err)
+		s.logger.Warn("Embed failed for resource; skipping index", "id", id, "error", err)
 		return
 	}
 
-	gk := graphKey(ns)
-	nodeKey := ns + "/" + name
 	vec := normalizeVec(vecs[0])
 
-	m := s.idx.load(ctx, s, gk)
+	m := s.idx.load(ctx, s)
 	s.idx.mu.Lock()
-	m[nodeKey] = vec
+	m[id] = vec
 	s.idx.mu.Unlock()
-	s.idx.persist(ctx, s, gk, m)
+	s.idx.persist(ctx, s, m)
 
 	now := time.Now()
 	indexedBy := fmt.Sprintf("%s/%s", s.embedProvider, s.embedModel)
-	s.updateIndexedAt(ctx, "/"+ns, name, now, indexedBy, res.Tags, res.Metadata)
+	s.updateIndexedAt(ctx, id, now, indexedBy)
 }
 
-// removeFromIndex is intentionally a no-op. Forgotten resources are soft-deleted:
-// their vector entry stays in the map and is skipped at recall time when
-// hitStore.Get returns an error for the absent resource.
-func (s *ResourceService) removeFromIndex(_ context.Context, _, _ string) {}
+// removeFromIndex is intentionally a no-op. Forgotten resources stay in the
+// vector map and are skipped at recall time when Get returns not-found.
+func (s *ResourceService) removeFromIndex(_ context.Context, _ string) {}
 
 type scoredHit struct {
-	nodeKey string
-	score   float32
+	id    string
+	score float32
 }
 
-// recallSemantic performs cross-session semantic recall using the shared flat vector index.
-// The index is selected by ns (via graphKey). Each hit's node key is parsed back into
-// a path + name so the resource can be fetched from the correct store.
+// recallSemantic performs semantic recall using the flat vector index.
 // Returns nil, false when semantic search is not available or query is empty.
-func (s *ResourceService) recallSemantic(ctx context.Context, ns, query string, q sdkplugins.RecallQuery) ([]*sdkplugins.Resource, bool) {
+func (s *ResourceService) recallSemantic(ctx context.Context, query string, q domresource.RecallQuery) ([]*domresource.Resource, bool) {
 	if s.embedProvider == "" || s.embedModel == "" || query == "" {
 		return nil, false
 	}
@@ -195,8 +172,7 @@ func (s *ResourceService) recallSemantic(ctx context.Context, ns, query string, 
 	}
 	qvec := normalizeVec(qvecs[0])
 
-	gk := graphKey(ns)
-	m := s.idx.load(ctx, s, gk)
+	m := s.idx.load(ctx, s)
 
 	limit := q.Limit
 	if limit <= 0 {
@@ -205,8 +181,8 @@ func (s *ResourceService) recallSemantic(ctx context.Context, ns, query string, 
 
 	s.idx.mu.Lock()
 	hits := make([]scoredHit, 0, len(m))
-	for key, vec := range m {
-		hits = append(hits, scoredHit{key, vek32.Dot(qvec, vec)})
+	for id, vec := range m {
+		hits = append(hits, scoredHit{id, vek32.Dot(qvec, vec)})
 	}
 	s.idx.mu.Unlock()
 
@@ -216,19 +192,12 @@ func (s *ResourceService) recallSemantic(ctx context.Context, ns, query string, 
 	}
 
 	if len(hits) == 0 {
-		return []*sdkplugins.Resource{}, true
+		return []*domresource.Resource{}, true
 	}
 
-	var out []*sdkplugins.Resource
+	var out []*domresource.Resource
 	for _, hit := range hits {
-		lastSlash := strings.LastIndex(hit.nodeKey, "/")
-		if lastSlash < 0 {
-			continue
-		}
-		hitPath := "/" + hit.nodeKey[:lastSlash]
-		hitName := hit.nodeKey[lastSlash+1:]
-
-		res, err := s.defaultStore.Get(ctx, hitPath, hitName)
+		res, err := s.defaultStore.Get(ctx, hit.id)
 		if err != nil {
 			continue // soft-deleted or moved; stale vector entry skipped
 		}
@@ -241,57 +210,46 @@ func (s *ResourceService) recallSemantic(ctx context.Context, ns, query string, 
 	return out, true
 }
 
-// passesFilters checks tag, metadata, and time filters on a resource.
-func passesFilters(res *sdkplugins.Resource, q sdkplugins.RecallQuery) bool {
-	if !tagsMatch(res.Tags, q.Tags) {
+func passesFilters(res *domresource.Resource, q domresource.RecallQuery) bool {
+	if !tagsMatch(res.Meta.Tags, q.Tags) {
 		return false
 	}
-	if !predicatesMatch(res.Metadata, q.Filter) {
+	if !metaMatchesFilter(metaFromResource(res), q.Filter) {
 		return false
 	}
-	if !q.CreatedAfter.IsZero() && res.CreatedAt.Before(q.CreatedAfter) {
+	if !q.CreatedAfter.IsZero() && res.Meta.CreatedAt.Before(q.CreatedAfter) {
 		return false
 	}
-	if !q.CreatedBefore.IsZero() && res.CreatedAt.After(q.CreatedBefore) {
+	if !q.CreatedBefore.IsZero() && res.Meta.CreatedAt.After(q.CreatedBefore) {
 		return false
 	}
 	return true
 }
 
-// updateIndexedAt writes a new ResourceMeta log entry stamping IndexedAt/IndexedBy.
-func (s *ResourceService) updateIndexedAt(ctx context.Context, path, name string, indexedAt time.Time, indexedBy string, tags []string, metadata map[string]any) {
+// metaFromResource builds a minimal dag.ResourceMeta for filter evaluation.
+func metaFromResource(res *domresource.Resource) *dag.ResourceMeta {
+	return &dag.ResourceMeta{
+		ID:          res.ID,
+		Name:        res.Meta.Name,
+		Type:        res.Meta.Type,
+		Session:     res.Meta.Session,
+		Description: res.Meta.Description,
+		Extra:       res.Meta.Extra,
+	}
+}
+
+func (s *ResourceService) updateIndexedAt(ctx context.Context, id string, indexedAt time.Time, indexedBy string) {
 	dagStore, ok := s.defaultStore.(*dagResourceStore)
 	if !ok {
 		return
 	}
-	ns := namespace(path)
-	hash, err := dagStore.refs.ReadKey(ctx, dag.ResourceRefKey(ns, name))
+	existing, err := dagStore.loadMeta(ctx, id)
 	if err != nil {
 		return
 	}
-
-	existing := dagStore.loadRecentMeta(ctx, ns, hash)
-	now := time.Now()
-	m := &dag.ResourceMeta{
-		Hash:      hash,
-		Namespace: ns,
-		Name:      name,
-		Tags:      tags,
-		Metadata:  metadata,
-		CreatedAt: now,
-		IndexedAt: &indexedAt,
-		IndexedBy: indexedBy,
-	}
-	if existing != nil {
-		if m.Tags == nil {
-			m.Tags = existing.Tags
-		}
-		if m.Metadata == nil {
-			m.Metadata = existing.Metadata
-		}
-		m.CreatedAt = existing.CreatedAt
-	}
-	if err := dagStore.writeResourceLogEntry(ctx, ns, now, hash, m); err != nil {
-		s.logger.Warn("Failed to write IndexedAt to resource meta", "namespace", ns, "name", name, "error", err)
+	existing.IndexedAt = &indexedAt
+	existing.IndexedBy = indexedBy
+	if err := dagStore.storage.WriteJson(ctx, dag.ResourceMetaKey(id), existing); err != nil {
+		s.logger.Warn("Failed to write IndexedAt to resource meta", "id", id, "error", err)
 	}
 }
