@@ -372,7 +372,7 @@ func (s *PipelineService) persistMessage(ctx context.Context, sess *Session, msg
 // marshalResult converts a tool result to a string for storage and LLM feed-back.
 func marshalResult(v any) string {
 	if v == nil {
-		return ""
+		return "null"
 	}
 
 	b, err := json.Marshal(v)
