@@ -64,7 +64,7 @@ func (h *streamHandlers) handleStream() gin.HandlerFunc {
 			flusher.Flush()
 		}
 
-		events, err := h.pipeline.CommitEvents(ctx, job.SessionID, job.Ref, job.Content)
+		events, err := h.pipeline.CommitEvents(ctx, job.SessionID, job.Ref, job.Content, job.Mode)
 		if err != nil {
 			var sb strings.Builder
 			writeComponent(ctx, &sb, tmplsessions.StreamErrorBlock(err.Error()))

@@ -52,6 +52,7 @@ templ SessionInfoCard(sessionID string, meta *appsession.SessionMetadata, allPlu
 			@metaRow("created", relativeTime(meta.CreatedAt))
 			@metaRow("updated", relativeTime(meta.UpdatedAt))
 			@metaRow("model", meta.Model)
+			@metaRow("mode", appsession.ModeOrDefault(meta.Mode))
 			if meta.TotalDurationMs > 0 {
 				@metaRow("duration", millisTime(meta.TotalDurationMs))
 			}

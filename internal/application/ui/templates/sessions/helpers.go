@@ -200,3 +200,10 @@ func pathRoleColor(role string) string {
 		return "text-ink-4"
 	}
 }
+
+// modePickerData returns the Alpine.js x-data expression for the mode selector.
+// initialMode is the session's current effective mode; it pre-selects the matching pill.
+func modePickerData(initialMode string) string {
+	b, _ := json.Marshal(initialMode)
+	return "{ activeMode: " + string(b) + " }"
+}

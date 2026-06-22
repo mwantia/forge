@@ -136,8 +136,10 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 												hx-target="#stream-area"
 												hx-swap="innerHTML"
 												hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
+												x-data={ modePickerData(appsession.ModeOrDefault(meta.Mode)) }
 											>
 												<input type="hidden" name="ref" value={ activeRef }/>
+												<input type="hidden" name="mode" :value="activeMode"/>
 												<textarea
 													id="composer-input"
 													name="content"
@@ -148,13 +150,23 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 													@keydown.meta.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
 													@keydown.ctrl.enter.prevent="if(!streaming && draft.trim()) $el.closest('form').requestSubmit()"
 												></textarea>
-												<div class="flex justify-between items-center mt-2">
+												<div class="flex items-center gap-1.5 mt-2">
 													<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
-													<span class="text-ink-4 text-ui-code" x-show="!streaming">⌘↵ / Ctrl↵ to commit</span>
+													<span class="text-ink-4 text-ui-code shrink-0" x-show="!streaming">⌘↵ / Ctrl↵</span>
+													<div class="flex items-center gap-1 flex-1 justify-end">
+														for _, m := range []string{"chat", "plan", "code", "research"} {
+															<button
+																type="button"
+																@click={ "activeMode = '" + m + "'" }
+																:class={ "activeMode === '" + m + "' ? 'text-accent border-accent/50 bg-accent/5' : 'text-ink-4 border-line hover:border-line-strong hover:text-ink-2'" }
+																class="px-2 py-0.5 rounded border text-ui-code transition-colors"
+															>{ m }</button>
+														}
+													</div>
 													<button
 														id="composer-submit"
 														type="submit"
-														class="btn-accent text-ui-code"
+														class="btn-accent text-ui-code shrink-0"
 														:disabled="streaming || !draft.trim()"
 													>Commit</button>
 												</div>

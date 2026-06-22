@@ -225,14 +225,21 @@ func (h *sessionHandlers) handleUpdate() gin.HandlerFunc {
 			}
 			meta.Name = name
 		}
+
 		if title := c.PostForm("title"); title != meta.Title {
 			meta.Title = title
 		}
+
 		if desc := c.PostForm("description"); desc != meta.Description {
 			meta.Description = desc
 		}
+
 		if model := strings.TrimSpace(c.PostForm("model")); model != "" && model != meta.Model {
 			meta.Model = model
+		}
+
+		if mode := strings.TrimSpace(c.PostForm("mode")); mode != "" && mode != meta.Mode {
+			meta.Mode = mode
 		}
 
 		if err := h.sessions.SaveSession(ctx, meta); err != nil {
@@ -244,6 +251,7 @@ func (h *sessionHandlers) handleUpdate() gin.HandlerFunc {
 
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
+		
 		_ = tmplsessions.SessionInfoCard(meta.ID, meta, allPlugins, true, 0, resolveWindowSize(ctx, h.providers, meta)).Render(ctx, c.Writer)
 	}
 }
