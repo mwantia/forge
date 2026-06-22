@@ -175,7 +175,7 @@ func (s *dagResourceStore) List(ctx context.Context, filter []domresource.Filter
 	}
 
 	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].Meta.CreatedAt.Before(out[j].Meta.CreatedAt)
+		return out[i].Meta.UpdatedAt.After(out[j].Meta.UpdatedAt)
 	})
 	return out, nil
 }
