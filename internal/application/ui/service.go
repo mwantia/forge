@@ -100,6 +100,7 @@ func (u *UIService) PostInit(_ context.Context) error {
 		resources: u.resources,
 	}
 	g.GET("/resources", res.handleList())
+	g.POST("/resources/recall", res.handleRecall())
 
 	layout.SetAssetVersion(AssetVersion)
 
