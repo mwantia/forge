@@ -50,6 +50,14 @@
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
+  .btn-ai {
+    @apply inline-flex items-center px-3.5 py-1.5 rounded font-semibold text-ui-ctrl cursor-pointer border-none no-underline transition-colors;
+    background: #a48afa;
+    color: #0b0c0f;
+    &:hover { background: #b39dfb; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
   /* Prose: markdown-rendered assistant message content */
   .prose {
     @apply text-ui-body leading-relaxed text-ink;
