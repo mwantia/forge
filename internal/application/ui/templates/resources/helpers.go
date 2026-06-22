@@ -188,6 +188,8 @@ func resourcesPageData(resources []*domresource.Resource, histories map[string][
 		`body:JSON.stringify({content:this.uploadContent,commit_message:this.uploadCommit,meta:{name:this.uploadName,type:this.uploadType,tags}})});` +
 		`if(!r.ok){const d=await r.json();this.uploadError=d.error||'Upload failed.';return;}` +
 		`location.reload();}catch(e){this.uploadError='Upload failed.';}finally{this.uploadWorking=false;}},` +
+		// download handler
+		`doDownload(){if(!this.selected)return;const b=new Blob([this.selected.level0],{type:'text/markdown'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=(this.selected.name||this.selected.id)+'.md';a.click();URL.revokeObjectURL(u);},` +
 		// edit handlers
 		`startEdit(){this.editing=true;this.editContent=this.selected?.level0||'';this.editMessage='';this.editError='';},` +
 		`cancelEdit(){this.editing=false;this.editError='';},` +
