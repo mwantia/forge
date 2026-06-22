@@ -119,7 +119,7 @@ func New(models []*domprovider.ProviderModelTemplate, availablePlugins []string)
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<!-- Actions --><div class=\"flex items-center justify-end gap-3 pt-2\"><a href=\"/ui/sessions\" class=\"btn-ghost\">Cancel</a> <button type=\"submit\" class=\"btn-accent\">Create Session</button></div></form></div></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<!-- Actions --><div class=\"flex items-center justify-end gap-3 pt-2\"><a href=\"/ui/sessions\" class=\"btn-ghost\">Cancel</a> <button type=\"submit\" class=\"btn-accent items-center gap-1.5\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg> <span>Create Session</span></button></div></form></div></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

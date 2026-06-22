@@ -327,7 +327,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div><button id=\"composer-submit\" type=\"submit\" class=\"btn-accent text-ui-code shrink-0\" :disabled=\"streaming || !draft.trim()\">Commit</button></div></form></div></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div><button id=\"composer-submit\" type=\"submit\" class=\"btn-accent items-center gap-1.5\" :disabled=\"streaming || !draft.trim()\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg> <span>Commit</span></button></div></form></div></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
