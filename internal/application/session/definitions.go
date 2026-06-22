@@ -22,6 +22,7 @@ Execute as soon as the direction of a session is clear and no title/description 
 				"session_id":  {Type: "string", Description: "The ID of the session to update. Defaults to the caller session."},
 				"title":       {Type: "string", Description: "Short human-readable title (under 60 characters)."},
 				"description": {Type: "string", Description: "Longer description injected as session-layer context on every turn."},
+				"mode":        {Type: "string", Description: `Active routing mode. Canonical values: "chat" (default), "plan", "code", "research". Any non-empty string is accepted for custom routing. Set to "chat" to clear specialization.`, Enum: []string{"chat", "plan", "code", "research"}},
 			},
 		},
 	},

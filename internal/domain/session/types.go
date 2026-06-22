@@ -56,7 +56,9 @@ type SessionMetadata struct {
 	Plugins []PluginConfig `json:"plugins,omitempty"`
 	// TotalDurationMs is the sum of wall-clock milliseconds spent in pipeline commits.
 	TotalDurationMs int64 `json:"total_duration_ms,omitempty"`
-
+	// Mode is the active routing mode for this session.
+	// Empty string is treated as "chat" everywhere it is consumed.
+	Mode string `json:"mode,omitempty"`
 }
 
 // Message is the session-layer projection of a dag.MessageObj plus its

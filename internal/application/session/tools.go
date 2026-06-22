@@ -109,7 +109,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return &plugins.ExecuteResponse{Result: clone}, nil
 	}
 
@@ -130,19 +130,36 @@ func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
 
-	updated := false
+	changes := map[string]map[string]string{}
+
 	if title, ok := ArgString(args, "title"); ok {
+		changes["title"] = map[string]string{
+			"previous": meta.Title,
+			"new":      title,
+		}
 		meta.Title = title
-		updated = true
 	}
 
 	if desc, ok := ArgString(args, "description"); ok {
+		changes["description"] = map[string]string{
+			"previous": meta.Description,
+			"new":      desc,
+		}
 		meta.Description = desc
-		updated = true
 	}
 
-	if !updated {
-		return &plugins.ExecuteResponse{Result: "no fields provided"}, nil
+	if mode, ok := ArgString(args, "mode"); ok {
+		changes["mode"] = map[string]string{
+			"previous": ModeOrDefault(meta.Mode),
+			"new":      mode,
+		}
+		meta.Mode = mode
+	}
+
+	if len(changes) == 0 {
+		return &plugins.ExecuteResponse{
+			Result: "no fields provided",
+		}, nil
 	}
 
 	meta.UpdatedAt = time.Now()
@@ -150,7 +167,9 @@ func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]
 		return nil, err
 	}
 
-	return &plugins.ExecuteResponse{Result: "session metadata updated"}, nil
+	return &plugins.ExecuteResponse{
+		Result: changes,
+	}, nil
 }
 
 func (s *SessionService) execCreateSession(ctx context.Context, args map[string]any) (*plugins.ExecuteResponse, error) {
@@ -189,10 +208,12 @@ func (s *SessionService) execCreateSession(ctx context.Context, args map[string]
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	
+
 	if err := s.store.SaveSession(ctx, meta); err != nil {
 		return nil, fmt.Errorf("failed to create sub-session: %w", err)
 	}
 
-	return &plugins.ExecuteResponse{Result: meta}, nil
+	return &plugins.ExecuteResponse{
+		Result: meta,
+	}, nil
 }
