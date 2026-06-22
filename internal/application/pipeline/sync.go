@@ -207,7 +207,8 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 
 // CommitEvents implements PipelineCommitter. Returns typed PipelineEvents directly,
 // avoiding the WireEvent marshal/unmarshal round-trip needed by the SSE HTML bridge.
-func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, content string) (<-chan PipelineEvent, error) {
+// mode overrides the session's stored mode for this turn only; empty string uses session mode.
+func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, content, mode string) (<-chan PipelineEvent, error) {
 	meta, err := s.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("resolve session: %w", err)
@@ -215,6 +216,17 @@ func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, cont
 	if ref == "" {
 		ref = dag.HEAD
 	}
+	
+	resolvedMode := appsession.ModeOrDefault(meta.Mode)
+	if mode != "" {
+		resolvedMode = mode
+	}
+	if resolvedMode != meta.Mode {
+		copy := *meta
+		copy.Mode = resolvedMode
+		meta = &copy
+	}
+
 	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
 	if err != nil {
 		return nil, err

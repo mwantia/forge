@@ -149,6 +149,7 @@ You are a Forge agent — an LLM-driven assistant that orchestrates work through
         "description": "Test session created to ",
         "parent": "5f95edafe49ee982adb29ed11c245f0f",
         "model": "ollama/glm-5.1:cloud",
+        "mode": "research",
         "created_at": "2026-06-08T12:04:12.670681882+02:00",
         "updated_at": "2026-06-09T02:10:59.506715243+02:00"
     },

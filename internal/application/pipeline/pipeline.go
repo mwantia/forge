@@ -17,7 +17,9 @@ import (
 // PipelineCommitter is the narrow interface used by the UI service to initiate
 // a streaming pipeline commit without depending on the concrete PipelineService.
 type PipelineCommitter interface {
-	CommitEvents(ctx context.Context, sessionID, ref, content string) (<-chan PipelineEvent, error)
+	// CommitEvents starts a pipeline turn and returns a channel of typed events.
+	// mode overrides the session's stored mode for this turn only (empty = use session mode).
+	CommitEvents(ctx context.Context, sessionID, ref, content, mode string) (<-chan PipelineEvent, error)
 }
 
 // PipelineRenderer renders a raw template string through a session's scoped

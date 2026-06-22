@@ -21,6 +21,7 @@ import (
 type commitRequest struct {
 	SessionID string `json:"session_id" binding:"required"`
 	Content   string `json:"content"    binding:"required"`
+	Mode      string `json:"mode,omitempty"`
 }
 
 // handleCommit godoc
@@ -51,6 +52,18 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			return
 		}
 
+		// Resolve mode: request.mode > session.Mode > "chat".
+		// request.mode is ephemeral — it affects only this turn and is not persisted.
+		resolvedMode := appsession.ModeOrDefault(meta.Mode)
+		if req.Mode != "" {
+			resolvedMode = req.Mode
+		}
+		if resolvedMode != meta.Mode {
+			metaCopy := *meta
+			metaCopy.Mode = resolvedMode
+			meta = &metaCopy
+		}
+
 		output := s.config.Output.resolve()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
 			output = rawOverride()
@@ -63,6 +76,7 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 		}
 
 		c.Writer.Header().Set("X-Forge-Ref", ref)
+		c.Writer.Header().Set("X-Forge-Mode", resolvedMode)
 
 		start := time.Now()
 		out := make(chan PipelineEvent, 32)
