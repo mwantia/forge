@@ -17,10 +17,22 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 		>
 			<!-- Page header -->
 			<div class="shrink-0 px-6 pt-[22px]">
-				<h2 class="text-[22px] font-semibold tracking-[-0.01em] text-ink">Resources</h2>
-				<p class="text-[13px] text-ink-3 mt-0.5">
-					{ fmt.Sprintf("%d item%s in the global bucket", len(resources), plural(len(resources))) }
-				</p>
+				<div class="flex items-center justify-between gap-4">
+					<div>
+						<h2 class="text-[22px] font-semibold tracking-[-0.01em] text-ink">Resources</h2>
+						<p class="text-[13px] text-ink-3 mt-0.5">
+							{ fmt.Sprintf("%d item%s in the global bucket", len(resources), plural(len(resources))) }
+						</p>
+					</div>
+					<button
+						type="button"
+						@click="openUpload()"
+						class="shrink-0 flex items-center gap-1.5 px-3 h-[34px] rounded-[7px] bg-accent text-[#161619] text-[12px] font-semibold hover:bg-accent/90 transition-colors"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+						Upload
+					</button>
+				</div>
 				<!-- Filter row -->
 				<div
 					class="flex flex-col gap-[8px] mt-4 mb-[18px]"
@@ -292,10 +304,10 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									</template>
 								</div>
 							</div>
-							<!-- Right: L0/L1 toggle + compare placeholder -->
+							<!-- Right: Edit + L0/L1 toggle + compare placeholder -->
 							<div class="flex items-center gap-2 shrink-0 mt-0.5">
 								<!-- Segmented toggle -->
-								<div class="inline-flex gap-0.5 p-0.5 rounded-[8px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)]">
+								<div x-show="!editing" class="inline-flex gap-0.5 p-0.5 rounded-[8px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)]">
 									<button
 										type="button"
 										@click="level='L0'"
@@ -310,10 +322,20 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									>L1</button>
 								</div>
 								<!-- Compare placeholder -->
-								<div class="inline-flex items-center gap-[7px] px-[10px] py-[5px] border border-dashed border-[rgba(255,255,255,0.16)] rounded-[7px] text-[#8a8a92] text-[11px] font-medium select-none">
+								<div x-show="!editing" class="inline-flex items-center gap-[7px] px-[10px] py-[5px] border border-dashed border-[rgba(255,255,255,0.16)] rounded-[7px] text-[#8a8a92] text-[11px] font-medium select-none">
 									<span>⎇ compare</span>
 									<span class="text-[9px] px-[5px] py-[1px] rounded-[3px] bg-[rgba(255,255,255,0.06)] text-[#6f6f77]">soon</span>
 								</div>
+								<!-- Edit button -->
+								<button
+									x-show="!editing"
+									type="button"
+									@click="startEdit()"
+									class="flex items-center gap-1.5 px-3 h-[30px] rounded-[7px] bg-accent text-[#161619] text-[11px] font-semibold hover:bg-accent/90 transition-colors"
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+									Edit
+								</button>
 							</div>
 						</div>
 						<!-- Metadata strip -->
@@ -344,40 +366,79 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 						<div class="mt-4 flex flex-col flex-1 min-h-0">
 							<div class="flex items-center justify-between shrink-0">
 								<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">Content</p>
-								<div class="flex items-center gap-2">
-									<button
-										type="button"
-										@click="raw = !raw"
-										class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
-										:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-[#5f5f67] border-[rgba(255,255,255,0.09)] hover:text-ink-3'"
-										title="Toggle raw/rendered"
-									>{ "{}" }</button>
-									<button
-										type="button"
-										@click="copyContent()"
-										class="text-[11px] text-[#5f5f67] hover:text-ink-3 transition-colors"
-									>copy</button>
+								<template x-if="!editing">
+									<div class="flex items-center gap-2">
+										<button
+											type="button"
+											@click="raw = !raw"
+											class="text-ui-label font-mono px-1.5 py-0.5 rounded border transition-colors"
+											:class="raw ? 'text-accent border-accent/40 bg-accent/5' : 'text-[#5f5f67] border-[rgba(255,255,255,0.09)] hover:text-ink-3'"
+											title="Toggle raw/rendered"
+										>{ "{}" }</button>
+										<button
+											type="button"
+											@click="copyContent()"
+											class="text-[11px] text-[#5f5f67] hover:text-ink-3 transition-colors"
+										>copy</button>
+									</div>
+								</template>
+							</div>
+							<!-- view mode -->
+							<div x-show="!editing" class="flex flex-col flex-1 min-h-0">
+								<!-- rendered: server-side markdown HTML -->
+								<div
+									x-show="!raw && displayContent"
+									x-html="selected?.rendered"
+									class="prose flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 overflow-auto"
+								></div>
+								<!-- raw: monospace -->
+								<pre
+									x-show="raw"
+									x-cloak
+									x-text="displayContent"
+									class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 font-mono text-[12.5px] leading-[1.65] text-[#c7c7cd] whitespace-pre-wrap break-words overflow-auto"
+								></pre>
+								<!-- no content (L1 with no summary) -->
+								<div
+									x-show="!raw && !displayContent"
+									class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 flex items-center justify-center"
+								>
+									<p class="text-ink-4 text-[13px]">No distilled summary available for this resource.</p>
 								</div>
 							</div>
-							<!-- rendered: server-side markdown HTML -->
-							<div
-								x-show="!raw && displayContent"
-								x-html="selected?.rendered"
-								class="prose flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 overflow-auto"
-							></div>
-							<!-- raw: monospace -->
-							<pre
-								x-show="raw"
-								x-cloak
-								x-text="displayContent"
-								class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 font-mono text-[12.5px] leading-[1.65] text-[#c7c7cd] whitespace-pre-wrap break-words overflow-auto"
-							></pre>
-							<!-- no content (L1 with no summary) -->
-							<div
-								x-show="!raw && !displayContent"
-								class="flex-1 mt-[10px] bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] rounded-[8px] p-4 flex items-center justify-center"
-							>
-								<p class="text-ink-4 text-[13px]">No distilled summary available for this resource.</p>
+							<!-- edit mode -->
+							<div x-show="editing" class="flex flex-col flex-1 min-h-0 mt-[10px]">
+								<textarea
+									x-model="editContent"
+									@keydown.ctrl.enter.prevent="doCommit()"
+									class="flex-1 min-h-0 resize-none bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.06)] focus:border-line-strong rounded-[8px] p-4 font-mono text-[12.5px] leading-[1.65] text-[#c7c7cd] focus:outline-none transition-colors"
+								></textarea>
+								<div class="shrink-0 mt-3 flex flex-col gap-2">
+									<div class="flex items-center gap-2">
+										<input
+											type="text"
+											x-model="editMessage"
+											placeholder="Commit message (optional)"
+											class="flex-1 bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+										/>
+										<button
+											type="button"
+											@click="cancelEdit()"
+											:disabled="editWorking"
+											class="shrink-0 text-[12px] text-ink-3 hover:text-ink transition-colors disabled:opacity-40"
+										>Cancel</button>
+										<button type="button" @click="doCommit()" :disabled="editWorking || !editContent"
+											class="shrink-0 flex items-center gap-1.5 px-3 h-[34px] rounded-[7px] bg-accent text-[#161619] text-[12px] font-semibold hover:bg-accent/90 transition-colors disabled:opacity-40"
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+												<polyline points="20 6 9 17 4 12"/>
+											</svg>
+											<span x-show="!editWorking">Commit changes</span>
+											<span x-show="editWorking" class="animate-pulse">saving…</span>
+										</button>
+									</div>
+									<p x-show="editError" x-text="editError" class="text-[11px] text-rem"></p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -430,6 +491,105 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 					</div>
 				</div>
 			</div>
+			<!-- Upload modal -->
+			<div
+				x-show="uploadOpen"
+			x-cloak
+			class="fixed inset-0 z-50 flex items-center justify-center"
+		>
+			<!-- backdrop -->
+			<div class="absolute inset-0 bg-black/60" @click="closeUpload()"></div>
+			<!-- dialog -->
+			<div class="relative z-10 w-[480px] bg-bg-2 border border-line rounded-[12px] shadow-2xl p-6 flex flex-col gap-5">
+				<!-- header -->
+				<div class="flex items-center justify-between">
+					<h3 class="text-[15px] font-semibold text-ink">Upload resource</h3>
+					<button type="button" @click="closeUpload()" class="text-ink-4 hover:text-ink-3 transition-colors">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+					</button>
+				</div>
+				<!-- drop zone -->
+				<label
+					@dragover.prevent
+					@drop.prevent="onFileChange($event)"
+					class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-[8px] p-8 cursor-pointer hover:border-line-strong transition-colors"
+					:class="uploadContent ? 'border-accent/40 bg-accent/5' : ''"
+				>
+					<input
+						type="file"
+						accept=".txt,.md"
+						class="sr-only"
+						@change="onFileChange($event)"
+					/>
+					<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+					<p x-show="!uploadContent" class="text-[12px] text-ink-4 text-center">Drop <span class="font-mono">.txt</span> / <span class="font-mono">.md</span> here<br/>or click to browse</p>
+					<p x-show="uploadContent" class="text-[12px] text-accent font-mono" x-text="uploadName || 'file loaded'"></p>
+				</label>
+				<!-- form fields -->
+				<div class="flex flex-col gap-3">
+					<div class="flex flex-col gap-1">
+						<label class="text-[11px] text-ink-3 font-medium">Name</label>
+						<input
+							type="text"
+							x-model="uploadName"
+							placeholder="resource name"
+							class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+						/>
+					</div>
+					<div class="flex gap-3">
+						<div class="flex flex-col gap-1 flex-1">
+							<label class="text-[11px] text-ink-3 font-medium">Type</label>
+							<select
+								x-model="uploadType"
+								class="bg-bg-1 border border-line rounded-md px-2 h-[34px] text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+							>
+								<option value="memory">memory</option>
+								<option value="reference">reference</option>
+								<option value="online">online</option>
+							</select>
+						</div>
+						<div class="flex flex-col gap-1 flex-1">
+							<label class="text-[11px] text-ink-3 font-medium">Tags</label>
+							<input
+								type="text"
+								x-model="uploadTags"
+								placeholder="comma-separated"
+								class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+							/>
+						</div>
+					</div>
+					<div class="flex flex-col gap-1">
+						<label class="text-[11px] text-ink-3 font-medium">Commit message</label>
+						<input
+							type="text"
+							x-model="uploadCommit"
+							placeholder="describe this resource (optional)"
+							class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+						/>
+					</div>
+				</div>
+				<!-- error -->
+				<p x-show="uploadError" x-text="uploadError" class="text-[11px] text-rem -mt-2"></p>
+				<!-- actions -->
+				<div class="flex items-center justify-end gap-3 pt-1">
+					<button
+						type="button"
+						@click="closeUpload()"
+						:disabled="uploadWorking"
+						class="text-[12px] text-ink-3 hover:text-ink transition-colors disabled:opacity-40"
+					>Cancel</button>
+					<button
+						type="button"
+						@click="doUpload()"
+						:disabled="uploadWorking || !uploadContent || !uploadName"
+						class="flex items-center gap-1.5 px-4 h-[34px] rounded-[7px] bg-accent text-[#161619] text-[12px] font-semibold hover:bg-accent/90 transition-colors disabled:opacity-40"
+					>
+						<span x-show="!uploadWorking">Upload</span>
+						<span x-show="uploadWorking" class="animate-pulse">uploading…</span>
+					</button>
+				</div>
+			</div>
+		</div>
 		</div>
 	}
 }

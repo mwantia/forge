@@ -101,6 +101,8 @@ func (u *UIService) PostInit(_ context.Context) error {
 	}
 	g.GET("/resources", res.handleList())
 	g.POST("/resources/recall", res.handleRecall())
+	g.POST("/resources/upload", res.handleUpload())
+	g.POST("/resources/:id/commit", res.handleUICommit())
 
 	layout.SetAssetVersion(AssetVersion)
 
