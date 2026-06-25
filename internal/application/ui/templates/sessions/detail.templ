@@ -136,10 +136,8 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 												hx-target="#stream-area"
 												hx-swap="innerHTML"
 												hx-on:htmx:before-send="document.dispatchEvent(new CustomEvent('forge:streaming-start'))"
-												x-data={ modePickerData(appsession.ModeOrDefault(meta.Mode)) }
 											>
 												<input type="hidden" name="ref" value={ activeRef }/>
-												<input type="hidden" name="mode" :value="activeMode"/>
 												<textarea
 													id="composer-input"
 													name="content"
@@ -154,14 +152,26 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 													<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
 													<span class="text-ink-4 text-ui-code shrink-0" x-show="!streaming">⌘↵ / Ctrl↵</span>
 													<div class="flex items-center gap-1 flex-1 justify-end">
-														for _, m := range []string{"chat", "plan", "code", "research"} {
-															<button
-																type="button"
-																@click={ "activeMode = '" + m + "'" }
-																:class={ "activeMode === '" + m + "' ? 'text-accent border-accent/50 bg-accent/5' : 'text-ink-4 border-line hover:border-line-strong hover:text-ink-2'" }
-																class="px-2 py-0.5 rounded border text-ui-code transition-colors"
-															>{ m }</button>
-														}
+														<select
+															name="language"
+															class="cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors"
+														>
+															for _, l := range appsession.AllowedLanguages {
+																<option value={ l.Code }>{ l.Code }</option>
+															}
+														</select>
+														<select
+															name="mode"
+															class="cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors"
+														>
+															for _, m := range []string{"chat", "plan", "code", "research"} {
+																if m == appsession.ModeOrDefault(meta.Mode) {
+																	<option value={ m } selected>{ m }</option>
+																} else {
+																	<option value={ m }>{ m }</option>
+																}
+															}
+														</select>
 													</div>
 													<button id="composer-submit" type="submit" class="btn-accent items-center gap-1.5" :disabled="streaming || !draft.trim()">
 														<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

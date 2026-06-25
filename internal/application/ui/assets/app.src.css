@@ -58,26 +58,43 @@
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
-  /* Prose: markdown-rendered assistant message content */
+  /* Prose: markdown-rendered content */
   .prose {
     @apply text-ui-body leading-relaxed text-ink;
 
-    h1, h2, h3, h4 {
-      @apply font-semibold text-ink mt-3 mb-1;
+    h1 {
+      font-size: 20px; line-height: 28px;
+      @apply font-semibold text-ink mt-8 mb-3 pb-2;
+      border-bottom: 1px solid #262a33;
     }
-    h1 { @apply text-base; }
-    h2 { @apply text-sm; }
-    h3, h4 { @apply text-ui-body; }
+    h2 {
+      font-size: 17px; line-height: 24px;
+      @apply font-semibold text-ink mt-7 mb-2 pb-1.5;
+      border-bottom: 1px solid #1d2027;
+    }
+    h3 {
+      font-size: 15px; line-height: 22px;
+      @apply font-semibold text-ink mt-5 mb-1.5;
+    }
+    h4 {
+      font-size: 13px; line-height: 20px;
+      @apply font-semibold text-ink-2 uppercase tracking-wide mt-4 mb-1;
+    }
+    /* Don't add top margin when a heading immediately follows another */
+    h1 + h2, h2 + h3, h3 + h4 { margin-top: 0.75rem; }
+    /* No top margin on very first element */
+    > :first-child { margin-top: 0 !important; }
 
-    p { @apply mb-2; }
+    p { @apply mb-3; }
     p:last-child { @apply mb-0; }
 
     a { color: #e8a531; text-decoration: underline; }
 
-    ul, ol { @apply pl-5 mb-2; }
+    ul, ol { @apply pl-5 mb-3; }
     ul { list-style-type: disc; }
     ol { list-style-type: decimal; }
-    li { @apply mb-0.5; }
+    li { @apply mb-1; }
+    li > ul, li > ol { @apply mt-1 mb-0; }
 
     strong { @apply font-semibold text-ink; }
     em { @apply italic; }
@@ -89,7 +106,7 @@
     }
 
     pre {
-      @apply font-mono text-ui-code rounded p-3 mb-2 overflow-x-auto;
+      @apply font-mono text-ui-code rounded p-3 mb-3 overflow-x-auto;
       background: #0b0c0f;
       border: 1px solid #262a33;
       code {
@@ -100,16 +117,20 @@
     }
 
     blockquote {
-      @apply pl-3 my-2 text-ink-3 italic;
+      @apply pl-3 my-3 text-ink-3 italic;
       border-left: 2px solid #343844;
     }
 
-    hr { @apply my-3 border-line-soft; }
+    hr {
+      @apply my-6;
+      border: none;
+      border-top: 1px solid #262a33;
+    }
 
     table {
-      @apply w-full text-ui-ctrl mb-2;
+      @apply w-full text-ui-ctrl mb-3;
       border-collapse: collapse;
-      th, td { @apply px-2 py-1; border: 1px solid #262a33; }
+      th, td { @apply px-2 py-1.5; border: 1px solid #262a33; }
       th { @apply font-semibold bg-bg-2; }
     }
   }
