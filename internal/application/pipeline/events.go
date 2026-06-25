@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 )
 
 // PipelineEvent is the sealed interface for all pipeline events.
@@ -42,12 +42,22 @@ type ToolCallEvent struct {
 	Args   map[string]any `json:"args,omitempty"`
 }
 
+// ToolResultResource is the summary of a resource auto-stored from a tool result.
+type ToolResultResource struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Description string   `json:"description,omitempty"`
+}
+
 // ToolResultEvent carries the result of an executed tool call.
 type ToolResultEvent struct {
-	CallID  string `json:"call_id,omitempty"`
-	Name    string `json:"name"`
-	Result  any    `json:"result"`
-	IsError bool   `json:"is_error,omitempty"`
+	CallID   string              `json:"call_id,omitempty"`
+	Name     string              `json:"name"`
+	Result   any                 `json:"result"`
+	IsError  bool                `json:"is_error,omitempty"`
+	Resource *ToolResultResource `json:"resource,omitempty"`
 }
 
 // ErrorEvent signals a pipeline or provider error. Does not necessarily close the stream.
@@ -57,9 +67,9 @@ type ErrorEvent struct {
 
 // DoneEvent signals the pipeline finished cleanly. Always the last event on the channel.
 type DoneEvent struct {
-	Usage    *sdkplugins.TokenUsage `json:"usage,omitempty"`
-	Metadata map[string]any         `json:"metadata,omitempty"`
-	Duration int64                  `json:"duration,omitempty"`
+	Usage    *provider.TokenUsage `json:"usage,omitempty"`
+	Metadata map[string]any       `json:"metadata,omitempty"`
+	Duration int64                `json:"duration,omitempty"`
 }
 
 // ApprovalEvent signals that a tool call is awaiting human approval.
@@ -70,12 +80,12 @@ type ApprovalEvent struct {
 	CallID string `json:"call_id,omitempty"`
 }
 
-func (ChunkEvent) pipelineEvent()    {}
-func (ToolCallEvent) pipelineEvent() {}
+func (ChunkEvent) pipelineEvent()      {}
+func (ToolCallEvent) pipelineEvent()   {}
 func (ToolResultEvent) pipelineEvent() {}
-func (ErrorEvent) pipelineEvent()    {}
-func (DoneEvent) pipelineEvent()     {}
-func (ApprovalEvent) pipelineEvent() {}
+func (ErrorEvent) pipelineEvent()      {}
+func (DoneEvent) pipelineEvent()       {}
+func (ApprovalEvent) pipelineEvent()   {}
 
 // WireEvent is the JSON-serializable envelope used at transport adapter boundaries.
 // The Type field identifies the event; Data holds the marshaled concrete event payload.

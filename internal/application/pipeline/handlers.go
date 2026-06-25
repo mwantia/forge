@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-hclog"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
 	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
@@ -22,6 +22,7 @@ type commitRequest struct {
 	SessionID string `json:"session_id" binding:"required"`
 	Content   string `json:"content"    binding:"required"`
 	Mode      string `json:"mode,omitempty"`
+	Language  string `json:"language,omitempty"`
 }
 
 // handleCommit godoc
@@ -64,12 +65,24 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			meta = &metaCopy
 		}
 
+		// Resolve language: request.language > "en".
+		// Non-empty unrecognized codes are rejected; empty falls back to "en".
+		resolvedLanguage := req.Language
+		if resolvedLanguage != "" && !appsession.IsAllowedLanguage(resolvedLanguage) {
+			codes := make([]string, 0, len(appsession.AllowedLanguages))
+			for _, l := range appsession.AllowedLanguages {
+				codes = append(codes, l.Code)
+			}
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_language", "allowed": codes})
+			return
+		}
+
 		output := s.config.Output.resolve()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
 			output = rawOverride()
 		}
 
-		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, output)
+		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, resolvedLanguage, output)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -77,6 +90,7 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 
 		c.Writer.Header().Set("X-Forge-Ref", ref)
 		c.Writer.Header().Set("X-Forge-Mode", resolvedMode)
+		c.Writer.Header().Set("X-Forge-Language", resolvedLanguage)
 
 		start := time.Now()
 		out := make(chan PipelineEvent, 32)
@@ -144,7 +158,7 @@ func (s *PipelineService) handleRender() gin.HandlerFunc {
 			return
 		}
 
-		scoped, err := s.buildScopedTemplate(ctx, meta)
+		scoped, err := s.buildScopedTemplate(ctx, meta, "")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "template init: " + err.Error()})
 			return
@@ -235,7 +249,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			return
 		}
 
-		scoped, err := s.buildScopedTemplate(ctx, meta)
+		scoped, err := s.buildScopedTemplate(ctx, meta, "")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "template init: " + err.Error()})
 			return
@@ -250,7 +264,7 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 			if r, err := scoped.RenderBody(req.Content); err == nil {
 				rendered = r
 			}
-			chatMessages = append(chatMessages, sdkplugins.ChatMessage{
+			chatMessages = append(chatMessages, provider.ChatMessage{
 				Role:    "user",
 				Content: rendered,
 			})
@@ -346,7 +360,7 @@ func (s *PipelineService) resolveCommitRef(ctx context.Context, sessionID, ref, 
 // provider is about to receive and stores it in the global object pool.
 // Returns the resulting hash, which is stamped onto every assistant + tool
 // message produced during the run. history must include the system message.
-func (s *PipelineService) recordPromptContext(ctx context.Context, meta *appsession.SessionMetadata, history []*appsession.Message, userHash string, tools []sdkplugins.ToolCall) (string, error) {
+func (s *PipelineService) recordPromptContext(ctx context.Context, meta *appsession.SessionMetadata, history []*appsession.Message, userHash string, tools []provider.ToolCall) (string, error) {
 	provider, model, _ := s.splitModelName(meta.Model)
 
 	hashes := make([]string, 0, len(history)+1)
@@ -375,7 +389,7 @@ func (s *PipelineService) recordPromptContext(ctx context.Context, meta *appsess
 	return s.sessions.PutPromptContext(ctx, pc)
 }
 
-func buildToolCatalog(tools []sdkplugins.ToolCall) *dag.ToolCatalog {
+func buildToolCatalog(tools []provider.ToolCall) *dag.ToolCatalog {
 	defs := make([]dag.ToolDefinition, 0, len(tools))
 	for _, t := range tools {
 		var schema map[string]any
@@ -412,8 +426,8 @@ func (s *PipelineService) fetchModelSystem(ctx context.Context, modelRef string)
 // template expressions resolve to their current values. On render failure the
 // raw source is used and the error is logged — the commit is never aborted
 // due to a template error in a stored message.
-func buildChatMessages(history []*appsession.Message, tmpl *infratemplate.Template, logger hclog.Logger) []sdkplugins.ChatMessage {
-	messages := make([]sdkplugins.ChatMessage, 0, len(history))
+func buildChatMessages(history []*appsession.Message, tmpl *infratemplate.Template, logger hclog.Logger) []provider.ChatMessage {
+	messages := make([]provider.ChatMessage, 0, len(history))
 	for _, msg := range history {
 		content := msg.Content
 
@@ -423,7 +437,7 @@ func buildChatMessages(history []*appsession.Message, tmpl *infratemplate.Templa
 			content = rendered
 		}
 
-		cm := sdkplugins.ChatMessage{
+		cm := provider.ChatMessage{
 			Role:    msg.Role,
 			Content: content,
 		}
@@ -431,19 +445,19 @@ func buildChatMessages(history []*appsession.Message, tmpl *infratemplate.Templa
 		switch msg.Role {
 		case "assistant":
 			if len(msg.ToolCalls) > 0 {
-				calls := make([]sdkplugins.ChatToolCall, 0, len(msg.ToolCalls))
+				calls := make([]provider.ChatToolCall, 0, len(msg.ToolCalls))
 				for _, tc := range msg.ToolCalls {
-					calls = append(calls, sdkplugins.ChatToolCall{
+					calls = append(calls, provider.ChatToolCall{
 						ID:        tc.ID,
 						Name:      tc.Name,
 						Arguments: tc.Arguments,
 					})
 				}
-				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{ToolCalls: calls}
+				cm.ToolCalls = &provider.ChatMessageToolCalls{ToolCalls: calls}
 			}
 		case "tool":
 			if len(msg.ToolCalls) > 0 {
-				cm.ToolCalls = &sdkplugins.ChatMessageToolCalls{
+				cm.ToolCalls = &provider.ChatMessageToolCalls{
 					ID:   msg.ToolCalls[0].ID,
 					Name: msg.ToolCalls[0].Name,
 				}

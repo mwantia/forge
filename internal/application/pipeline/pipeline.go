@@ -9,9 +9,11 @@ import (
 	"sync"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
+	domresource "github.com/mwantia/forge/internal/domain/resource"
 )
 
 // PipelineCommitter is the narrow interface used by the UI service to initiate
@@ -19,7 +21,8 @@ import (
 type PipelineCommitter interface {
 	// CommitEvents starts a pipeline turn and returns a channel of typed events.
 	// mode overrides the session's stored mode for this turn only (empty = use session mode).
-	CommitEvents(ctx context.Context, sessionID, ref, content, mode string) (<-chan PipelineEvent, error)
+	// language is the BCP 47 response language for this turn (empty = "en").
+	CommitEvents(ctx context.Context, sessionID, ref, content, mode, language string) (<-chan PipelineEvent, error)
 }
 
 // PipelineRenderer renders a raw template string through a session's scoped
@@ -56,7 +59,7 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 		return fmt.Errorf("invalid model format, expected '<provider>/<model>', got '%s'", sess.Metadata.Model)
 	}
 
-	messages := make([]sdkplugins.ChatMessage, len(sess.Messages))
+	messages := make([]provider.ChatMessage, len(sess.Messages))
 	copy(messages, sess.Messages)
 
 	for i := range s.config.MaxToolIterations {
@@ -118,19 +121,20 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 			return err
 		}
 
-		messages = append(messages, sdkplugins.ChatMessage{
+		messages = append(messages, provider.ChatMessage{
 			Role:    "assistant",
 			Content: content,
-			ToolCalls: &sdkplugins.ChatMessageToolCalls{
+			ToolCalls: &provider.ChatMessageToolCalls{
 				ToolCalls: toolCalls,
 			},
 		})
 
 		// Execute all tool calls in parallel.
 		type toolResult struct {
-			tc      sdkplugins.ChatToolCall
-			result  any
-			isError bool
+			tc       provider.ChatToolCall
+			result   any
+			isError  bool
+			resource *ToolResultResource
 		}
 
 		results := make([]toolResult, len(toolCalls))
@@ -140,14 +144,15 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 		for idx, tc := range toolCalls {
 			wg.Add(1)
 
-			go func(idx int, tc sdkplugins.ChatToolCall) {
+			go func(idx int, tc provider.ChatToolCall) {
 				defer wg.Done()
 
-				result, isError := s.executeToolCall(ctx, tc)
+				result, isError, resource := s.executeToolCall(ctx, tc)
 				results[idx] = toolResult{
-					tc:      tc,
-					result:  result,
-					isError: isError,
+					tc:       tc,
+					result:   result,
+					isError:  isError,
+					resource: resource,
 				}
 
 			}(idx, tc)
@@ -156,10 +161,11 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 
 		for _, r := range results {
 			out <- ToolResultEvent{
-				CallID:  r.tc.ID,
-				Name:    r.tc.Name,
-				Result:  r.result,
-				IsError: r.isError,
+				CallID:   r.tc.ID,
+				Name:     r.tc.Name,
+				Result:   r.result,
+				IsError:  r.isError,
+				Resource: r.resource,
 			}
 
 			res := marshalResult(r.result)
@@ -181,10 +187,10 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 				return err
 			}
 
-			messages = append(messages, sdkplugins.ChatMessage{
+			messages = append(messages, provider.ChatMessage{
 				Role:    "tool",
 				Content: res,
-				ToolCalls: &sdkplugins.ChatMessageToolCalls{
+				ToolCalls: &provider.ChatMessageToolCalls{
 					ID:   r.tc.ID,
 					Name: r.tc.Name,
 				},
@@ -200,12 +206,12 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 // streamFromProvider reads from a provider ChatStream, feeding deltas through
 // a chunker that emits ChunkEvents at the configured boundary. Returns when
 // the stream signals Done. finalChunk carries Done=true plus any tool calls.
-func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplugins.ChatStream, out chan<- PipelineEvent, policy resolvedOutput) (content string, toolCalls []sdkplugins.ChatToolCall, final *sdkplugins.ChatChunk, err error) {
+func (s *PipelineService) streamFromProvider(ctx context.Context, stream provider.ChatStream, out chan<- PipelineEvent, policy resolvedOutput) (content string, toolCalls []provider.ChatToolCall, final *provider.ChatChunk, err error) {
 	defer stream.Close()
 
 	ch := newChunker(out, policy)
 	var buf strings.Builder
-	var calls []sdkplugins.ChatToolCall
+	var calls []provider.ChatToolCall
 
 	for {
 		chunk, recvErr := stream.Recv()
@@ -213,7 +219,7 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 			if flushErr := ch.flush(ctx); flushErr != nil {
 				return "", nil, nil, flushErr
 			}
-			return buf.String(), calls, &sdkplugins.ChatChunk{Done: true}, nil
+			return buf.String(), calls, &provider.ChatChunk{Done: true}, nil
 		}
 
 		if recvErr != nil {
@@ -247,7 +253,7 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream sdkplug
 //
 // ctx cancellation aborts immediately; all other errors are treated as
 // transient and retried with exponential backoff.
-func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, modelName string, messages []sdkplugins.ChatMessage, tools []sdkplugins.ToolCall, out chan<- PipelineEvent, policy resolvedOutput, iteration int) (string, []sdkplugins.ChatToolCall, *sdkplugins.ChatChunk, error) {
+func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, modelName string, messages []provider.ChatMessage, tools []provider.ToolCall, out chan<- PipelineEvent, policy resolvedOutput, iteration int) (string, []provider.ChatToolCall, *provider.ChatChunk, error) {
 	//
 	attempts := 3
 	if s.config.Retry.Attempts > 0 {
@@ -304,11 +310,11 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 
 // executeToolCall dispatches a single tool call via the tools registrar.
 // Tool call names are expected in "namespace__name" format.
-func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.ChatToolCall) (any, bool) {
+func (s *PipelineService) executeToolCall(ctx context.Context, tc provider.ChatToolCall) (any, bool, *ToolResultResource) {
 	parts := strings.SplitN(tc.Name, "__", 2)
 	if len(parts) != 2 {
 		s.logger.Warn("Invalid tool call name format", "tool", tc.Name)
-		return fmt.Sprintf("error: invalid tool name format %q", tc.Name), true
+		return fmt.Sprintf("error: invalid tool name format %q", tc.Name), true, nil
 	}
 
 	namespace, name := strings.ToLower(parts[0]), strings.ToLower(parts[1])
@@ -316,7 +322,7 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 
 	if s.approvals != nil {
 		if s.approvals.CheckDeny(fullName) {
-			return fmt.Sprintf("error: tool %q is not permitted", fullName), true
+			return fmt.Sprintf("error: tool %q is not permitted", fullName), true, nil
 		}
 
 		if !s.approvals.CheckAllow(fullName) {
@@ -344,7 +350,7 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 						reason = string(rec.Status)
 					}
 
-					return fmt.Sprintf("error: tool call %q was %s", fullName, reason), true
+					return fmt.Sprintf("error: tool call %q was %s", fullName, reason), true, nil
 				}
 			}
 		}
@@ -353,10 +359,41 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc sdkplugins.Cha
 	resp, err := s.tools.ExecuteToolWithCallID(ctx, namespace, name, tc.Arguments, tc.ID)
 	if err != nil {
 		s.logger.Warn("Tool execution error", "tool", tc.Name, "error", err)
-		return fmt.Sprintf("error: %v", err), true
+		return fmt.Sprintf("error: %v", err), true, nil
 	}
 
-	return resp.Result, resp.IsError
+	if !resp.Success {
+		msg := fmt.Sprintf("error: tool %q failed", fullName)
+		if resp.Error != nil {
+			msg = resp.Error.Message
+		}
+		return msg, true, nil
+	}
+
+	// Auto-store resource if the plugin requested it.
+	var stored *ToolResultResource
+	if resp.Resource != nil {
+		content := marshalResult(resp.Data)
+		res, storeErr := s.resources.Store(ctx, content, "auto-stored by "+name, domresource.ResourceMeta{
+			Name:        resp.Resource.Name,
+			Type:        resp.Resource.Type,
+			Tags:        resp.Resource.Tags,
+			Description: resp.Resource.Description,
+		})
+		if storeErr != nil {
+			s.logger.Warn("Failed to auto-store tool resource", "tool", fullName, "error", storeErr)
+		} else {
+			stored = &ToolResultResource{
+				ID:          res.ID,
+				Name:        res.Meta.Name,
+				Type:        res.Meta.Type,
+				Tags:        res.Meta.Tags,
+				Description: res.Meta.Description,
+			}
+		}
+	}
+
+	return resp.Data, false, stored
 }
 
 // persistMessage saves a message to storage via the session manager.

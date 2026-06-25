@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
@@ -27,7 +27,7 @@ func (s *PipelineService) RenderContent(ctx context.Context, sessionID, content 
 	if err != nil {
 		return content, err
 	}
-	scoped, err := s.buildScopedTemplate(ctx, meta)
+	scoped, err := s.buildScopedTemplate(ctx, meta, "")
 	if err != nil {
 		return content, err
 	}
@@ -37,13 +37,18 @@ func (s *PipelineService) RenderContent(ctx context.Context, sessionID, content 
 var _ PipelineRenderer = (*PipelineService)(nil)
 
 // buildScopedTemplate clones the base template and injects session variables,
-// the live tool namespace tree, and the active model's config data.
-// Called once per commit; the resulting template renders all stored messages.
-func (s *PipelineService) buildScopedTemplate(ctx context.Context, meta *appsession.SessionMetadata) (*infratemplate.Template, error) {
+// the live tool namespace tree, the active model's config data, and the
+// request-scoped language. language is a BCP 47 tag; empty resolves to "en".
+func (s *PipelineService) buildScopedTemplate(ctx context.Context, meta *appsession.SessionMetadata, language string) (*infratemplate.Template, error) {
+	lang, _ := appsession.FindLanguage(language)
 	return s.tmpl.Clone(
 		appsession.SessionVars(meta),
 		infratemplate.WithAnyValue("tools", buildToolsData(ctx, s.tools, meta.Plugins)),
 		infratemplate.WithAnyValue("model", buildModelData(ctx, s.provider, s.splitModelName, meta.Model)),
+		infratemplate.WithAnyValue("language", map[string]any{
+			"code": lang.Code,
+			"name": lang.Name,
+		}),
 	)
 }
 
@@ -79,7 +84,7 @@ func buildModelData(ctx context.Context, provider domprovider.ProviderRegistar, 
 //     rendered form to the chat slice.
 //  6. Resolves and filters available tool calls.
 //  7. Records the PromptContext and stamps its hash.
-func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsession.SessionMetadata, ref, content string, output resolvedOutput) (*pipelineRun, error) {
+func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsession.SessionMetadata, ref, content, language string, output resolvedOutput) (*pipelineRun, error) {
 	var history []*appsession.Message
 	var err error
 	if ref == dag.HEAD {
@@ -112,7 +117,7 @@ func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsessi
 		history = append([]*appsession.Message{sysMsg}, history...)
 	}
 
-	scoped, err := s.buildScopedTemplate(ctx, meta)
+	scoped, err := s.buildScopedTemplate(ctx, meta, language)
 	if err != nil {
 		return nil, fmt.Errorf("build template: %w", err)
 	}
@@ -135,7 +140,7 @@ func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsessi
 	if r, err := scoped.RenderBody(content); err == nil {
 		renderedContent = r
 	}
-	chatMessages = append(chatMessages, sdkplugins.ChatMessage{
+	chatMessages = append(chatMessages, provider.ChatMessage{
 		Role:    "user",
 		Content: renderedContent,
 	})
@@ -177,7 +182,7 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 		ref = dag.HEAD
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", s.config.Output.resolve())
 	if err != nil {
 		return "", err
 	}
@@ -208,7 +213,8 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 // CommitEvents implements PipelineCommitter. Returns typed PipelineEvents directly,
 // avoiding the WireEvent marshal/unmarshal round-trip needed by the SSE HTML bridge.
 // mode overrides the session's stored mode for this turn only; empty string uses session mode.
-func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, content, mode string) (<-chan PipelineEvent, error) {
+// language is the BCP 47 response language for this turn; empty resolves to "en".
+func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, content, mode, language string) (<-chan PipelineEvent, error) {
 	meta, err := s.sessions.ResolveSession(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("resolve session: %w", err)
@@ -216,7 +222,7 @@ func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, cont
 	if ref == "" {
 		ref = dag.HEAD
 	}
-	
+
 	resolvedMode := appsession.ModeOrDefault(meta.Mode)
 	if mode != "" {
 		resolvedMode = mode
@@ -227,7 +233,7 @@ func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, cont
 		meta = &copy
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, s.config.Output.resolve())
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, language, s.config.Output.resolve())
 	if err != nil {
 		return nil, err
 	}

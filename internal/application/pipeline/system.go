@@ -84,4 +84,9 @@ You are operating in '{{ .session.mode }}' mode.
 > Requires explicit user confirmation before execution.
 {{ end }}
 {{ end -}}
-{{ end }}`
+{{ end }}
+{{- if ne .language.code "en" -}}
+# Response Language
+
+Always respond in {{ .language.name }} ({{ .language.code }}). This applies to every message regardless of the language the user writes in. Do not switch languages unless the user explicitly instructs you to do so.
+{{- end }}`

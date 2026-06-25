@@ -169,6 +169,10 @@ You are a Forge agent — an LLM-driven assistant that orchestrates work through
             }
         }
     },
+    "language": {
+        "code": "en",
+        "name": "English"
+    },
     "model": {
         "name": "glm-5.1:cloud",
         "provider": "ollama",
