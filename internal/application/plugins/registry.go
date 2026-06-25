@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 )
 
@@ -37,7 +37,7 @@ func (s *PluginsService) ListDrivers() []*PluginDriver {
 	return drivers
 }
 
-func (s *PluginsService) GetPlugin(ctx context.Context, ptype PluginType, name string) (plugins.BasePlugin, error) {
+func (s *PluginsService) GetPlugin(ctx context.Context, ptype PluginType, name string) (base.BasePlugin, error) {
 	driver, ok := s.GetDriver(name)
 	if !ok {
 		return nil, fmt.Errorf("unable to find driver with name %q", name)

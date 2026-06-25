@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 )
 
@@ -113,7 +113,7 @@ func (s *ApprovalService) handleRespond() gin.HandlerFunc {
 			return
 		}
 
-		ad := sdkplugins.ApprovalDecision{
+		ad := base.ApprovalDecision{
 			Allow:  req.Allow,
 			Reason: req.Reason,
 		}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 )
 
 type ApprovalStatus string
@@ -44,8 +44,8 @@ type ApprovalFilter struct {
 
 // ApprovalRegistar is the interface injected by other services.
 type ApprovalRegistar interface {
-	Create(ctx context.Context, req sdkplugins.ApprovalRequest, meta ApprovalMeta) (*ApprovalRecord, error)
-	Respond(id string, decision sdkplugins.ApprovalDecision) error
+	Create(ctx context.Context, req base.ApprovalRequest, meta ApprovalMeta) (*ApprovalRecord, error)
+	Respond(id string, decision base.ApprovalDecision) error
 	Get(id string) (*ApprovalRecord, error)
 	List(filter ApprovalFilter) ([]*ApprovalRecord, error)
 	Cancel(id string) error

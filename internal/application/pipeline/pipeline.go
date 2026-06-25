@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
@@ -329,8 +329,8 @@ func (s *PipelineService) executeToolCall(ctx context.Context, tc provider.ChatT
 			def, err := s.tools.GetToolDefinition(namespace, name)
 
 			if err == nil && (def.Annotations.RequiresConfirmation || def.Annotations.Destructive) {
-				req := sdkplugins.ApprovalRequest{
-					Type:    sdkplugins.ApprovalTypeToolCall,
+				req := base.ApprovalRequest{
+					Type:    base.ApprovalTypeToolCall,
 					Title:   fullName,
 					Message: "Tool requires approval before execution.",
 					Details: tc.Arguments,

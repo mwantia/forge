@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
 )
@@ -36,7 +36,7 @@ func (s *ToolsService) getToolNamespace(namespace, name string) (*ToolsNamespace
 	return nil, false
 }
 
-func (s *ToolsService) RegisterTool(namespace string, definition plugins.ToolDefinition, exec ToolsExecution) error {
+func (s *ToolsService) RegisterTool(namespace string, definition tool.ToolDefinition, exec ToolsExecution) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -60,16 +60,16 @@ func (s *ToolsService) RegisterTool(namespace string, definition plugins.ToolDef
 	return nil
 }
 
-func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteToolResponse, error) {
-	tool, ok := s.getToolNamespace(namespace, name)
+func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*tool.ExecuteToolResponse, error) {
+	t, ok := s.getToolNamespace(namespace, name)
 	if !ok {
 		return nil, fmt.Errorf("tool with namespace %q and name %q not found", namespace, name)
 	}
 
 	start := time.Now()
-	resp, err := tool.Execution(ctx, plugins.ExecuteToolRequest{
-		Tool:   tool.ToolDefinition.Name,
-		Args:   plugins.NewToolArgs(arguments),
+	resp, err := t.Execution(ctx, tool.ExecuteToolRequest{
+		Tool:   t.ToolDefinition.Name,
+		Args:   tool.NewToolArgs(arguments),
 		CallID: callID,
 	})
 
@@ -83,29 +83,29 @@ func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, nam
 	return resp, err
 }
 
-func (s *ToolsService) ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteToolResponse, error) {
+func (s *ToolsService) ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*tool.ExecuteToolResponse, error) {
 	return s.ExecuteToolWithCallID(ctx, namespace, name, arguments, "")
 }
 
-func (s *ToolsService) GetToolDefinition(namespace, name string) (plugins.ToolDefinition, error) {
+func (s *ToolsService) GetToolDefinition(namespace, name string) (tool.ToolDefinition, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	tool, ok := s.getToolNamespace(namespace, name)
+	t, ok := s.getToolNamespace(namespace, name)
 	if ok {
-		return tool.ToolDefinition, nil
+		return t.ToolDefinition, nil
 	}
 
-	return plugins.ToolDefinition{}, fmt.Errorf("tool definition with namespace %q and name %q not found", namespace, name)
+	return tool.ToolDefinition{}, fmt.Errorf("tool definition with namespace %q and name %q not found", namespace, name)
 }
 
-func (s *ToolsService) GetToolDefinitionsByNamespace(namespace string) ([]plugins.ToolDefinition, error) {
+func (s *ToolsService) GetToolDefinitionsByNamespace(namespace string) ([]tool.ToolDefinition, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	tools, ok := s.namespaces[strings.ToLower(namespace)]
 	if ok {
-		definitions := make([]plugins.ToolDefinition, 0, len(tools))
+		definitions := make([]tool.ToolDefinition, 0, len(tools))
 		for _, tool := range tools {
 			definitions = append(definitions, tool.ToolDefinition)
 		}
@@ -116,11 +116,11 @@ func (s *ToolsService) GetToolDefinitionsByNamespace(namespace string) ([]plugin
 	return nil, fmt.Errorf("no tools with namespace %q found", namespace)
 }
 
-func (s *ToolsService) GetAllToolDefinitions() ([]plugins.ToolDefinition, error) {
+func (s *ToolsService) GetAllToolDefinitions() ([]tool.ToolDefinition, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	definitions := make([]plugins.ToolDefinition, 0)
+	definitions := make([]tool.ToolDefinition, 0)
 	for _, namespace := range s.namespaces {
 		for _, tool := range namespace {
 			definitions = append(definitions, tool.ToolDefinition)
@@ -170,7 +170,7 @@ func (s *ToolsService) ListNamespaces() []NamespaceInfo {
 	out := make([]NamespaceInfo, 0, len(names))
 	for _, ns := range names {
 		tools := s.namespaces[ns]
-		defs := make([]plugins.ToolDefinition, 0, len(tools))
+		defs := make([]tool.ToolDefinition, 0, len(tools))
 		for _, t := range tools {
 			defs = append(defs, t.ToolDefinition)
 		}

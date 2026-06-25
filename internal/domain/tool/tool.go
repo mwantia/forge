@@ -4,17 +4,17 @@ import (
 	"context"
 	"strings"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 )
 
 // ToolsExecution is the function signature for tool call handlers.
-type ToolsExecution = func(ctx context.Context, request plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error)
+type ToolsExecution = func(ctx context.Context, request tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error)
 
 // NamespaceMetadata is the per-namespace data captured at plugin load time.
 type NamespaceMetadata struct {
 	Description string
 	Version     string
-	Plugin      plugins.ToolsPlugin
+	Plugin      tool.ToolsPlugin
 	// Builtin marks namespaces owned by the agent process itself (memory,
 	// sessions). Builtins always sit in a fixed cache-stable section of the
 	// assembled system prompt, ahead of dynamically loaded plugins.
@@ -30,10 +30,10 @@ type NamespaceInfo struct {
 	Namespace   string
 	Description string
 	Version     string
-	Plugin      plugins.ToolsPlugin
+	Plugin      tool.ToolsPlugin
 	Builtin     bool
 	System      string
-	Tools       []plugins.ToolDefinition
+	Tools       []tool.ToolDefinition
 }
 
 // SplitToolCallName splits a fully-qualified "namespace__name" tool call
@@ -43,5 +43,6 @@ func SplitToolCallName(s string) (namespace, name string, ok bool) {
 	if len(parts) != 2 {
 		return "", "", false
 	}
+
 	return strings.ToLower(parts[0]), strings.ToLower(parts[1]), true
 }

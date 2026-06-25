@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 )
 
-func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error) {
+func (s *SessionService) ExecuteTool(ctx context.Context, request tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	args := request.Args.AsMap()
 	switch request.Tool {
 	case "update_session":
@@ -38,7 +38,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		if err != nil {
 			return nil, fmt.Errorf("failed to list sessions: %w", err)
 		}
-		return plugins.ExecuteSuccess(sessions), nil
+		return tool.ExecuteSuccess(sessions), nil
 
 	case "create_session":
 		return s.execCreateSession(ctx, args)
@@ -80,7 +80,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 			msgs = filtered
 		}
 
-		return plugins.ExecuteSuccess(msgs), nil
+		return tool.ExecuteSuccess(msgs), nil
 
 	case "archive_session":
 		sessionID, err := ResolveSessionArg(ctx, args, "session_id")
@@ -92,7 +92,7 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 		if err != nil {
 			return nil, err
 		}
-		return plugins.ExecuteSuccess(res), nil
+		return tool.ExecuteSuccess(res), nil
 
 	case "clone_session":
 		sourceID, ok := ArgString(args, "source_id")
@@ -110,13 +110,13 @@ func (s *SessionService) ExecuteTool(ctx context.Context, request plugins.Execut
 			return nil, err
 		}
 
-		return plugins.ExecuteSuccess(clone), nil
+		return tool.ExecuteSuccess(clone), nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", request.Tool, request.CallID)
 }
 
-func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]any) (*plugins.ExecuteToolResponse, error) {
+func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]any) (*tool.ExecuteToolResponse, error) {
 	sessionID, err := ResolveSessionArg(ctx, args, "session_id")
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]
 	}
 
 	if len(changes) == 0 {
-		return plugins.ExecuteSuccess("no fields provided"), nil
+		return tool.ExecuteSuccess("no fields provided"), nil
 	}
 
 	meta.UpdatedAt = time.Now()
@@ -165,10 +165,10 @@ func (s *SessionService) execUpdateSession(ctx context.Context, args map[string]
 		return nil, err
 	}
 
-	return plugins.ExecuteSuccess(changes), nil
+	return tool.ExecuteSuccess(changes), nil
 }
 
-func (s *SessionService) execCreateSession(ctx context.Context, args map[string]any) (*plugins.ExecuteToolResponse, error) {
+func (s *SessionService) execCreateSession(ctx context.Context, args map[string]any) (*tool.ExecuteToolResponse, error) {
 	callerID := CallerSessionID(ctx)
 
 	s.mu.Lock()
@@ -209,5 +209,5 @@ func (s *SessionService) execCreateSession(ctx context.Context, args map[string]
 		return nil, fmt.Errorf("failed to create sub-session: %w", err)
 	}
 
-	return plugins.ExecuteSuccess(meta), nil
+	return tool.ExecuteSuccess(meta), nil
 }

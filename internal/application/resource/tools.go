@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 )
 
-func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error) {
+func (s *ResourceService) ExecuteTool(ctx context.Context, req tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	args := req.Args.AsMap()
 	switch req.Tool {
 	case "store":
@@ -32,7 +32,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteTo
 		if err != nil {
 			return nil, err
 		}
-		return plugins.ExecuteSuccess(map[string]any{
+		return tool.ExecuteSuccess(map[string]any{
 			"id":         res.ID,
 			"name":       res.Meta.Name,
 			"type":       res.Meta.Type,
@@ -52,7 +52,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteTo
 		if err != nil {
 			return nil, err
 		}
-		return plugins.ExecuteSuccess(map[string]any{
+		return tool.ExecuteSuccess(map[string]any{
 			"id":         res.ID,
 			"name":       res.Meta.Name,
 			"type":       res.Meta.Type,
@@ -109,7 +109,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteTo
 		if err != nil {
 			return nil, err
 		}
-		return plugins.ExecuteSuccess(res), nil
+		return tool.ExecuteSuccess(res), nil
 
 	case "forget":
 		id, ok := argString(args, "id")
@@ -119,7 +119,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteTo
 		if err := s.Forget(ctx, id); err != nil {
 			return nil, err
 		}
-		return plugins.ExecuteSuccess(map[string]any{"id": id}), nil
+		return tool.ExecuteSuccess(map[string]any{"id": id}), nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", req.Tool, req.CallID)

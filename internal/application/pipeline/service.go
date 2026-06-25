@@ -6,11 +6,11 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	approot "github.com/mwantia/forge/internal/application"
 	appsession "github.com/mwantia/forge/internal/application/session"
-	dompipeline "github.com/mwantia/forge/internal/domain/pipeline"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
+	dompipeline "github.com/mwantia/forge/internal/domain/pipeline"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
@@ -33,11 +33,11 @@ type PipelineService struct {
 	config  PipelineConfig                 `fabric:"config=pipeline"`
 	logger  hclog.Logger                   `fabric:"logger=pipeline"`
 
-	sessions  appsession.SessionManager       `fabric:"inject"`
-	tools     domtool.ToolsRegistar           `fabric:"inject"`
-	provider  domprovider.ProviderRegistar    `fabric:"inject"`
-	resources domresource.ResourceRegistar    `fabric:"inject"`
-	approvals domapprovals.ApprovalRegistar   `fabric:"inject"`
+	sessions  appsession.SessionManager     `fabric:"inject"`
+	tools     domtool.ToolsRegistar         `fabric:"inject"`
+	provider  domprovider.ProviderRegistar  `fabric:"inject"`
+	resources domresource.ResourceRegistar  `fabric:"inject"`
+	approvals domapprovals.ApprovalRegistar `fabric:"inject"`
 }
 
 func init() {
@@ -65,10 +65,11 @@ func (s *PipelineService) PostInit(ctx context.Context) error {
 
 	for _, definition := range ToolsDefinitions {
 		captured := definition
-		exec := func(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
+		exec := func(ctx context.Context, req tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 			req.Tool = captured.Name
 			return s.ExecuteTool(ctx, req)
 		}
+
 		if err := s.tools.RegisterTool("builtin", definition, exec); err != nil {
 			return fmt.Errorf("failed to register tool %q under builtin namespace: %w", definition.Name, err)
 		}

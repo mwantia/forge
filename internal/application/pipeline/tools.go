@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	appsession "github.com/mwantia/forge/internal/application/session"
 )
 
-func (s *PipelineService) ExecuteTool(ctx context.Context, request plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error) {
+func (s *PipelineService) ExecuteTool(ctx context.Context, request tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	args := request.Args.AsMap()
 	switch request.Tool {
 	case "commit_session":
@@ -28,7 +28,7 @@ func (s *PipelineService) ExecuteTool(ctx context.Context, request plugins.Execu
 			return nil, fmt.Errorf("commit_session: %w", err)
 		}
 
-		return plugins.ExecuteSuccess(response), nil
+		return tool.ExecuteSuccess(response), nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", request.Tool, request.CallID)

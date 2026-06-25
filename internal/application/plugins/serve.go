@@ -11,8 +11,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	pluginsgrpc "github.com/mwantia/forge-sdk/pkg/grpc"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	"github.com/mwantia/forge/internal/config"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
@@ -237,7 +238,7 @@ func (s *PluginsService) runPlugin(ctx context.Context, logger hclog.Logger, inf
 	}
 
 	if len(info.Config) > 0 {
-		if err := driver.ConfigDriver(ctx, plugins.PluginConfig{ConfigMap: info.Config}); err != nil {
+		if err := driver.ConfigDriver(ctx, base.PluginConfig{ConfigMap: info.Config}); err != nil {
 			client.Kill()
 			return nil, client, fmt.Errorf("failed to configure driver: %w", err)
 		}

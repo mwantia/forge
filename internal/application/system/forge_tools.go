@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
@@ -29,19 +29,19 @@ Use system tools for health checks and capability introspection.`,
 		return fmt.Errorf("failed to register builtin namespace metadata: %w", err)
 	}
 
-	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
+	if err := s.tools.RegisterTool("builtin", tool.ToolDefinition{
 		Name:        "system_status",
 		Description: "Check the live health of forge plugins and providers. Pass an optional plugin name for a targeted check; omit for a full overview.",
-		Annotations: sdkplugins.ToolAnnotations{
+		Annotations: tool.ToolAnnotations{
 			ReadOnly: true,
-			CostHint: sdkplugins.ToolCostCheap,
+			CostHint: tool.ToolCostCheap,
 			System: `Call when the user asks why something isn't working or what is available.
 Do NOT call on every turn. Parse the response and surface each degraded plugin's Action field verbatim as the remediation step.
 Pass "name" for a targeted check after the full status reveals a degraded entry.`,
 		},
-		Parameters: sdkplugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type: "object",
-			Properties: map[string]sdkplugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"name": {Type: "string", Description: "Optional plugin name for a targeted health check. Omit to check all plugins."},
 			},
 		},
@@ -49,36 +49,36 @@ Pass "name" for a targeted check after the full status reveals a degraded entry.
 		return fmt.Errorf("failed to register builtin__system_status: %w", err)
 	}
 
-	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
+	if err := s.tools.RegisterTool("builtin", tool.ToolDefinition{
 		Name:        "agent_info",
 		Description: "Return static forge agent metadata: uptime, loaded plugins, and runtime. Use for capability questions without triggering health checks.",
-		Annotations: sdkplugins.ToolAnnotations{
+		Annotations: tool.ToolAnnotations{
 			ReadOnly: true,
-			CostHint: sdkplugins.ToolCostCheap,
+			CostHint: tool.ToolCostCheap,
 		},
-		Parameters: sdkplugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type:       "object",
-			Properties: map[string]sdkplugins.ToolProperty{},
+			Properties: map[string]tool.ToolProperty{},
 		},
 	}, s.execAgentInfo); err != nil {
 		return fmt.Errorf("failed to register builtin__agent_info: %w", err)
 	}
 
-	if err := s.tools.RegisterTool("builtin", sdkplugins.ToolDefinition{
+	if err := s.tools.RegisterTool("builtin", tool.ToolDefinition{
 		Name:        "plugin_activate",
 		Description: "Load the full tool definitions and system instructions for a plugin namespace.",
-		Annotations: sdkplugins.ToolAnnotations{
+		Annotations: tool.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   sdkplugins.ToolCostCheap,
+			CostHint:   tool.ToolCostCheap,
 			System: `Call when the user's request matches a plugin described in the system prompt but whose tools
 are not yet available. The compact summary shown per plugin is enough to decide whether to activate it.
 Do not attempt to activate a plugin the user has explicitly disabled — surface intent instead.`,
 		},
-		Parameters: sdkplugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type:     "object",
 			Required: []string{"name"},
-			Properties: map[string]sdkplugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"name":    {Type: "string", Description: "Plugin namespace to activate (e.g. \"searxng\", \"consul\")."},
 				"verbose": {Type: "boolean", Description: "When true, request the full operational system prompt. Defaults to false."},
 			},
@@ -90,7 +90,7 @@ Do not attempt to activate a plugin the user has explicitly disabled — surface
 	return nil
 }
 
-func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
+func (s *SystemService) execSystemStatus(ctx context.Context, req tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -98,40 +98,40 @@ func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.Exe
 	if name := req.Args.Get("name").StringOr(""); name != "" {
 		driver, ok := s.plugins.GetDriver(name)
 		if !ok {
-			return sdkplugins.ExecuteErrorf("plugin %q not found", name), nil
+			return tool.ExecuteErrorf("plugin %q not found", name), nil
 		}
 		h, _ := driver.Driver.GetPluginHealth(ctx)
 
-		return sdkplugins.ExecuteSuccess(toHealthEntry(name, driver.Capabilities, h)), nil
+		return tool.ExecuteSuccess(toHealthEntry(name, driver.Capabilities, h)), nil
 	}
 
 	// Full fan-out over all drivers.
 	entries, worst := fanOutHealth(ctx, s.plugins.ListDrivers())
-	return sdkplugins.ExecuteSuccess(map[string]any{
+	return tool.ExecuteSuccess(map[string]any{
 		"status":  worst,
 		"plugins": entries,
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
 	}), nil
 }
 
-func (s *SystemService) execAgentInfo(_ context.Context, _ sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
+func (s *SystemService) execAgentInfo(_ context.Context, _ tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	drivers := s.plugins.ListDrivers()
 	names := make([]string, 0, len(drivers))
 	for _, d := range drivers {
 		names = append(names, d.Info.Name)
 	}
 
-	return sdkplugins.ExecuteSuccess(map[string]any{
+	return tool.ExecuteSuccess(map[string]any{
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
 		"go":      runtime.Version(),
 		"plugins": names,
 	}), nil
 }
 
-func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
+func (s *SystemService) execPluginActivate(ctx context.Context, req tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 	name := strings.ToLower(req.Args.Get("name").StringOr(""))
 	if name == "" {
-		return sdkplugins.ExecuteErrorMsg("name is required"), nil
+		return tool.ExecuteErrorMsg("name is required"), nil
 	}
 	verbose := req.Args.Get("verbose").BoolOr(false)
 
@@ -145,7 +145,7 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 		}
 	}
 	if target == nil {
-		return sdkplugins.ExecuteErrorf("plugin namespace %q not found", name), nil
+		return tool.ExecuteErrorf("plugin namespace %q not found", name), nil
 	}
 
 	// Load session and update its plugin config.
@@ -159,7 +159,7 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 				if strings.ToLower(p.Name) == name {
 					if p.Disabled {
 						// User hard-disabled — emit elevation request instead of enabling.
-						return sdkplugins.ExecuteSuccess(map[string]any{
+						return tool.ExecuteSuccess(map[string]any{
 							"elevation_required": true,
 							"plugin":             name,
 							"message":            fmt.Sprintf("Plugin %q is disabled by the user. Request user approval via builtin__plugin_activate to re-enable.", name),
@@ -199,7 +199,7 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 		tools = append(tools, t.Name)
 	}
 
-	return sdkplugins.ExecuteSuccess(map[string]any{
+	return tool.ExecuteSuccess(map[string]any{
 		"plugin":  name,
 		"system":  systemPrompt,
 		"tools":   tools,

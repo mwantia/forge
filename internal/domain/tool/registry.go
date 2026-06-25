@@ -3,13 +3,13 @@ package tool
 import (
 	"context"
 
-	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 )
 
 // ToolsRegistar is the narrow surface other services use to register and invoke tools.
 type ToolsRegistar interface {
-	RegisterTool(namespace string, tool plugins.ToolDefinition, exec ToolsExecution) error
+	RegisterTool(namespace string, tool tool.ToolDefinition, exec ToolsExecution) error
 
 	// RegisterNamespaceMetadata attaches plugin-level metadata (description,
 	// version, optional ToolsPlugin handle) to a namespace. Called by the
@@ -17,15 +17,15 @@ type ToolsRegistar interface {
 	// session) may skip it.
 	RegisterNamespaceMetadata(namespace string, meta NamespaceMetadata) error
 
-	ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteToolResponse, error)
+	ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*tool.ExecuteToolResponse, error)
 
-	ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteToolResponse, error)
+	ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*tool.ExecuteToolResponse, error)
 
-	GetToolDefinition(namespace string, name string) (plugins.ToolDefinition, error)
+	GetToolDefinition(namespace string, name string) (tool.ToolDefinition, error)
 
-	GetToolDefinitionsByNamespace(namespace string) ([]plugins.ToolDefinition, error)
+	GetToolDefinitionsByNamespace(namespace string) ([]tool.ToolDefinition, error)
 
-	GetAllToolDefinitions() ([]plugins.ToolDefinition, error)
+	GetAllToolDefinitions() ([]tool.ToolDefinition, error)
 
 	// GetAllToolCalls returns all registered tools as ToolCall values using their
 	// fully-qualified "namespace__name" identifier.

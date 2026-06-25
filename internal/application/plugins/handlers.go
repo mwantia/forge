@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 )
 
 // handleListPlugins godoc
@@ -60,7 +60,7 @@ func (s *PluginsService) handleGetPluginCapabilities() gin.HandlerFunc {
 			return
 		}
 		if driver.Capabilities == nil {
-			c.JSON(http.StatusOK, &sdkplugins.DriverCapabilities{})
+			c.JSON(http.StatusOK, &base.DriverCapabilities{})
 			return
 		}
 		c.JSON(http.StatusOK, driver.Capabilities)
@@ -103,8 +103,8 @@ func (s *PluginsService) handleGetPluginHealth() gin.HandlerFunc {
 			resp["action"] = h.Action
 			resp["latency"] = h.Latency.Nanoseconds()
 		} else {
-			resp["status"] = sdkplugins.StatusUnhealthy
-			resp["code"] = sdkplugins.HealthCodeConfigInvalid
+			resp["status"] = base.StatusUnhealthy
+			resp["code"] = base.HealthCodeConfigInvalid
 			resp["message"] = "no health response"
 		}
 		c.JSON(http.StatusOK, resp)

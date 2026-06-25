@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/tool"
 	approot "github.com/mwantia/forge/internal/application"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
@@ -29,7 +29,7 @@ type ToolsService struct {
 
 type ToolsNamespace struct {
 	FullName       string
-	ToolDefinition sdkplugins.ToolDefinition
+	ToolDefinition tool.ToolDefinition
 	Execution      ToolsExecution
 }
 
@@ -79,7 +79,7 @@ func (s *ToolsService) Serve(ctx context.Context) error {
 			continue
 		}
 
-		resp, err := tp.ListTools(ctx, sdkplugins.ListToolsFilter{})
+		resp, err := tp.ListTools(ctx, tool.ListToolsFilter{})
 		if err != nil {
 			s.logger.Warn("Failed to list tools", "driver", driver.Info.Name, "error", err)
 			continue
@@ -99,7 +99,7 @@ func (s *ToolsService) Serve(ctx context.Context) error {
 		for _, def := range resp.Tools {
 			captured := tp
 			capturedDef := def
-			exec := func(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
+			exec := func(ctx context.Context, req tool.ExecuteToolRequest) (*tool.ExecuteToolResponse, error) {
 				req.Tool = capturedDef.Name
 				return captured.Execute(ctx, req)
 			}

@@ -1,17 +1,17 @@
 package resource
 
-import plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+import "github.com/mwantia/forge-sdk/pkg/plugin/tool"
 
 // ToolsDefinitions are registered under the "resource" namespace at Init.
 // LLM-visible names are prefixed: resource__store, resource__recall,
 // resource__forget.
-var ToolsDefinitions = []plugins.ToolDefinition{
+var ToolsDefinitions = []tool.ToolDefinition{
 	{
-		Name: "store",
+		Name:        "store",
 		Description: `Persist a piece of context into long-term memory for retrieval across turns or sessions.`,
-		Tags: []string{"resource", "store"},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostCheap,
+		Tags:        []string{"resource", "store"},
+		Annotations: tool.ToolAnnotations{
+			CostHint: tool.ToolCostCheap,
 			System: `Persist information future turns or sessions may need. Skip transient turn details — those already live in message history.
 
 type values:
@@ -23,9 +23,9 @@ type values:
 Resources are scoped to the current session automatically. Use recall with scope="global" to search across sessions.
 Use tags for fast filtering (e.g. ["preference","ui"]). Named resources (name field) can be updated by storing again with the same name — name is a label, not a unique key.`,
 		},
-		Parameters: plugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type: "object",
-			Properties: map[string]plugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"content": {
 					Type:        "string",
 					Description: "The text content to store.",
@@ -63,16 +63,16 @@ Use tags for fast filtering (e.g. ["preference","ui"]). Named resources (name fi
 		Name:        "commit",
 		Description: `Update the content of an existing resource, creating a new versioned revision and advancing HEAD.`,
 		Tags:        []string{"resource", "commit"},
-		Annotations: plugins.ToolAnnotations{
-			CostHint: plugins.ToolCostCheap,
+		Annotations: tool.ToolAnnotations{
+			CostHint: tool.ToolCostCheap,
 			System: `Use when the user asks to update, revise, or overwrite an existing stored resource. Requires the resource ID from a prior store or recall result.
 
 The previous content is preserved in the revision chain and can be retrieved via history, diff, or revert. HEAD always points to the latest revision.
 Provide a short commit_message so the history list is human-readable (e.g. "updated auth decision after team review").`,
 		},
-		Parameters: plugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type: "object",
-			Properties: map[string]plugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"id": {
 					Type:        "string",
 					Description: "The ID of the resource to update (returned by store or visible in recall results).",
@@ -99,10 +99,10 @@ scope controls session scoping:
 
 Use type to filter by resource category. Combine with query for semantic or substring search.`,
 		Tags: []string{"resource", "recall"},
-		Annotations: plugins.ToolAnnotations{
+		Annotations: tool.ToolAnnotations{
 			ReadOnly:   true,
 			Idempotent: true,
-			CostHint:   plugins.ToolCostCheap,
+			CostHint:   tool.ToolCostCheap,
 			System: `Search over previously stored resources. Reach for this when the user references prior knowledge ("the thing we decided last week", "my preferences") that is not in the current message history.
 
 filter is a list of {key, op, value} objects (AND semantics). Valid keys: name, type, session, description, or any key in extra.
@@ -112,9 +112,9 @@ filter is a list of {key, op, value} objects (AND semantics). Valid keys: name, 
 tags is an AND filter: resource must carry all listed tags. created_after / created_before accept RFC3339 timestamps.
 Prefer scope="session" unless the user explicitly asks for global results.`,
 		},
-		Parameters: plugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type: "object",
-			Properties: map[string]plugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"query": {
 					Type:        "string",
 					Description: "Content text search. Uses semantic search when embed_model is configured, otherwise substring. Empty means no content filter.",
@@ -156,15 +156,15 @@ Prefer scope="session" unless the user explicitly asks for global results.`,
 		Name:        "forget",
 		Description: `Delete a previously stored resource by its ID.`,
 		Tags:        []string{"resource", "forget"},
-		Annotations: plugins.ToolAnnotations{
+		Annotations: tool.ToolAnnotations{
 			Idempotent: true,
-			CostHint:   plugins.ToolCostCheap,
+			CostHint:   tool.ToolCostCheap,
 			System: `Use when the user asks to remove a stored memory, or when a prior recall surfaced information that is no longer correct.
 Pair with recall first to find the right ID; do not loop forget over many IDs without confirmation.`,
 		},
-		Parameters: plugins.ToolParameters{
+		Parameters: tool.ToolParameters{
 			Type: "object",
-			Properties: map[string]plugins.ToolProperty{
+			Properties: map[string]tool.ToolProperty{
 				"id": {
 					Type:        "string",
 					Description: "The unique ID of the resource to delete (returned by store or visible in recall results).",

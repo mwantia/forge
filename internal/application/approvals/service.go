@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	approot "github.com/mwantia/forge/internal/application"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
@@ -20,7 +20,7 @@ const defaultTTL = 5 * time.Minute
 
 type pendingEntry struct {
 	rec      *domapprovals.ApprovalRecord
-	decision chan sdkplugins.ApprovalDecision
+	decision chan base.ApprovalDecision
 }
 
 type ApprovalService struct {
@@ -65,7 +65,7 @@ func (s *ApprovalService) Cleanup(context.Context) error {
 	return nil
 }
 
-func (s *ApprovalService) Create(ctx context.Context, req sdkplugins.ApprovalRequest, meta domapprovals.ApprovalMeta) (*domapprovals.ApprovalRecord, error) {
+func (s *ApprovalService) Create(ctx context.Context, req base.ApprovalRequest, meta domapprovals.ApprovalMeta) (*domapprovals.ApprovalRecord, error) {
 	id, err := newID()
 	if err != nil {
 		return nil, fmt.Errorf("generate approval id: %w", err)
@@ -94,7 +94,7 @@ func (s *ApprovalService) Create(ctx context.Context, req sdkplugins.ApprovalReq
 		ToolArgs:  meta.ToolArgs,
 	}
 
-	decisionCh := make(chan sdkplugins.ApprovalDecision, 1)
+	decisionCh := make(chan base.ApprovalDecision, 1)
 	entry := &pendingEntry{
 		rec:      rec,
 		decision: decisionCh,
@@ -118,7 +118,7 @@ func (s *ApprovalService) Create(ctx context.Context, req sdkplugins.ApprovalReq
 			s.mu.Unlock()
 
 			select {
-			case decisionCh <- sdkplugins.ApprovalDecision{Allow: false, Reason: "timeout"}:
+			case decisionCh <- base.ApprovalDecision{Allow: false, Reason: "timeout"}:
 			default:
 			}
 
@@ -162,7 +162,7 @@ func (s *ApprovalService) Create(ctx context.Context, req sdkplugins.ApprovalReq
 	}
 }
 
-func (s *ApprovalService) Respond(id string, decision sdkplugins.ApprovalDecision) error {
+func (s *ApprovalService) Respond(id string, decision base.ApprovalDecision) error {
 	s.mu.Lock()
 	entry, ok := s.records[id]
 

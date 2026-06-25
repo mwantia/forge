@@ -4,6 +4,7 @@ import (
 	"time"
 
 	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 )
 
 // PluginType identifies the role a plugin serves.
@@ -37,7 +38,7 @@ type PluginDriverInfo struct {
 // PluginDriver is a live, connected plugin subprocess with its metadata.
 type PluginDriver struct {
 	Info         PluginDriverInfo
-	Capabilities *plugins.DriverCapabilities
+	Capabilities *base.DriverCapabilities
 	Driver       plugins.Driver
 	Cleanup      PluginDriverCleanup
 }

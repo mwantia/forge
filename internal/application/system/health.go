@@ -6,26 +6,26 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/base"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 )
 
 type pluginHealthResponse struct {
-	Name    string                  `json:"name"`
-	Types   []string                `json:"types,omitempty"`
-	Status  sdkplugins.PluginStatus `json:"status"`
-	Code    string                  `json:"code"`
-	Message string                  `json:"message"`
-	Action  string                  `json:"action,omitempty"`
-	Latency int64                   `json:"latency"`
+	Name    string            `json:"name"`
+	Types   []string          `json:"types,omitempty"`
+	Status  base.PluginStatus `json:"status"`
+	Code    string            `json:"code"`
+	Message string            `json:"message"`
+	Action  string            `json:"action,omitempty"`
+	Latency int64             `json:"latency"`
 }
 
 type systemHealthResponse struct {
-	Status  sdkplugins.PluginStatus `json:"status"`
-	Plugins []pluginHealthResponse  `json:"plugins"`
+	Status  base.PluginStatus      `json:"status"`
+	Plugins []pluginHealthResponse `json:"plugins"`
 }
 
-func toHealthEntry(name string, caps *sdkplugins.DriverCapabilities, h *sdkplugins.PluginHealth) pluginHealthResponse {
+func toHealthEntry(name string, caps *base.DriverCapabilities, h *base.PluginHealth) pluginHealthResponse {
 	var types []string
 	if caps != nil {
 		types = caps.Types
@@ -34,8 +34,8 @@ func toHealthEntry(name string, caps *sdkplugins.DriverCapabilities, h *sdkplugi
 		return pluginHealthResponse{
 			Name:    name,
 			Types:   types,
-			Status:  sdkplugins.StatusUnhealthy,
-			Code:    sdkplugins.HealthCodeConfigInvalid,
+			Status:  base.StatusUnhealthy,
+			Code:    base.HealthCodeConfigInvalid,
 			Message: "no health response",
 		}
 	}
@@ -50,11 +50,11 @@ func toHealthEntry(name string, caps *sdkplugins.DriverCapabilities, h *sdkplugi
 	}
 }
 
-func worstOf(a, b sdkplugins.PluginStatus) sdkplugins.PluginStatus {
-	rank := map[sdkplugins.PluginStatus]int{
-		sdkplugins.StatusHealthy:   0,
-		sdkplugins.StatusDegraded:  1,
-		sdkplugins.StatusUnhealthy: 2,
+func worstOf(a, b base.PluginStatus) base.PluginStatus {
+	rank := map[base.PluginStatus]int{
+		base.StatusHealthy:   0,
+		base.StatusDegraded:  1,
+		base.StatusUnhealthy: 2,
 	}
 	if rank[b] > rank[a] {
 		return b
@@ -62,11 +62,11 @@ func worstOf(a, b sdkplugins.PluginStatus) sdkplugins.PluginStatus {
 	return a
 }
 
-func fanOutHealth(ctx context.Context, drivers []*domplugin.PluginDriver) ([]pluginHealthResponse, sdkplugins.PluginStatus) {
+func fanOutHealth(ctx context.Context, drivers []*domplugin.PluginDriver) ([]pluginHealthResponse, base.PluginStatus) {
 	type result struct {
 		name   string
-		caps   *sdkplugins.DriverCapabilities
-		health *sdkplugins.PluginHealth
+		caps   *base.DriverCapabilities
+		health *base.PluginHealth
 	}
 
 	ch := make(chan result, len(drivers))
@@ -78,7 +78,7 @@ func fanOutHealth(ctx context.Context, drivers []*domplugin.PluginDriver) ([]plu
 	}
 
 	entries := make([]pluginHealthResponse, 0, len(drivers))
-	worst := sdkplugins.StatusHealthy
+	worst := base.StatusHealthy
 	for range drivers {
 		r := <-ch
 		e := toHealthEntry(r.name, r.caps, r.health)
