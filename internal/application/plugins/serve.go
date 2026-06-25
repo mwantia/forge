@@ -11,8 +11,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/mwantia/forge-sdk/pkg/plugins"
-	pluginsgrpc "github.com/mwantia/forge-sdk/pkg/plugins/grpc"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	pluginsgrpc "github.com/mwantia/forge-sdk/pkg/grpc"
 	"github.com/mwantia/forge/internal/config"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"

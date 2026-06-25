@@ -6,7 +6,7 @@ import (
 	"maps"
 	"strings"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
 
@@ -20,7 +20,7 @@ func modelType(tmpl *ProviderModelTemplate) string {
 	return tmpl.Type
 }
 
-func (s *ProviderService) getProvider(name string) (sdkplugins.ProviderPlugin, error) {
+func (s *ProviderService) getProvider(name string) (provider.ProviderPlugin, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -35,10 +35,10 @@ func (s *ProviderService) getProvider(name string) (sdkplugins.ProviderPlugin, e
 // It strips the provider prefix from base_model (e.g. "ollama/glm-5.1" → "glm-5.1").
 // The system prompt is returned as a raw template; rendering with session-scoped
 // variables happens in the pipeline layer before the prompt is sent to the LLM.
-func (s *ProviderService) resolveModel(providerName, modelName string) *sdkplugins.Model {
+func (s *ProviderService) resolveModel(providerName, modelName string) *provider.Model {
 	for _, tmpl := range s.configs.Models {
 		if tmpl.Name == modelName {
-			m := &sdkplugins.Model{
+			m := &provider.Model{
 				ModelName:          strings.TrimPrefix(tmpl.BaseModel, providerName+"/"),
 				System:             tmpl.System,
 				CostPerInputToken:  tmpl.CostPerInputToken,
@@ -53,17 +53,17 @@ func (s *ProviderService) resolveModel(providerName, modelName string) *sdkplugi
 			return m
 		}
 	}
-	return &sdkplugins.Model{ModelName: modelName}
+	return &provider.Model{ModelName: modelName}
 }
 
-func (s *ProviderService) resolveAlias(modelName string) (string, *sdkplugins.Model, error) {
+func (s *ProviderService) resolveAlias(modelName string) (string, *provider.Model, error) {
 	return s.resolveAliasOfType(modelName, "")
 }
 
 // resolveAliasOfType resolves a forge/<alias> reference and (optionally) asserts
 // that the alias is declared with the given model type. Pass an empty wantType
 // to skip the assertion.
-func (s *ProviderService) resolveAliasOfType(modelName, wantType string) (string, *sdkplugins.Model, error) {
+func (s *ProviderService) resolveAliasOfType(modelName, wantType string) (string, *provider.Model, error) {
 	for _, tmpl := range s.configs.Models {
 		if tmpl.Name != modelName {
 			continue
@@ -81,7 +81,7 @@ func (s *ProviderService) resolveAliasOfType(modelName, wantType string) (string
 	return "", nil, fmt.Errorf("model alias %q not found", modelName)
 }
 
-func (s *ProviderService) Chat(ctx context.Context, providerName, modelName string, messages []sdkplugins.ChatMessage, tools []sdkplugins.ToolCall) (sdkplugins.ChatStream, error) {
+func (s *ProviderService) Chat(ctx context.Context, providerName, modelName string, messages []provider.ChatMessage, tools []provider.ToolCall) (provider.ChatStream, error) {
 	if providerName == "forge" {
 		realProvider, model, err := s.resolveAliasOfType(modelName, ModelTypeChat)
 		if err != nil {
@@ -119,13 +119,13 @@ func (s *ProviderService) Embed(ctx context.Context, providerName, modelName, co
 	return p.Embed(ctx, content, s.resolveModel(providerName, modelName))
 }
 
-func (s *ProviderService) ListAllModels(ctx context.Context) (map[string][]*sdkplugins.Model, []*ProviderModelTemplate, error) {
+func (s *ProviderService) ListAllModels(ctx context.Context) (map[string][]*provider.Model, []*ProviderModelTemplate, error) {
 	s.mu.RLock()
-	providers := make(map[string]sdkplugins.ProviderPlugin, len(s.providers))
+	providers := make(map[string]provider.ProviderPlugin, len(s.providers))
 	maps.Copy(providers, s.providers)
 	s.mu.RUnlock()
 
-	result := make(map[string][]*sdkplugins.Model, len(providers))
+	result := make(map[string][]*provider.Model, len(providers))
 	for name, p := range providers {
 		models, err := p.ListModels(ctx)
 		if err != nil {
@@ -137,9 +137,9 @@ func (s *ProviderService) ListAllModels(ctx context.Context) (map[string][]*sdkp
 	return result, s.configs.Models, nil
 }
 
-func (s *ProviderService) ListModels(ctx context.Context, providerName string) ([]*sdkplugins.Model, error) {
+func (s *ProviderService) ListModels(ctx context.Context, providerName string) ([]*provider.Model, error) {
 	if providerName == "forge" {
-		models := make([]*sdkplugins.Model, 0, len(s.configs.Models))
+		models := make([]*provider.Model, 0, len(s.configs.Models))
 		for _, tmpl := range s.configs.Models {
 			realProvider, _, ok := strings.Cut(tmpl.BaseModel, "/")
 			if !ok {
@@ -156,7 +156,7 @@ func (s *ProviderService) ListModels(ctx context.Context, providerName string) (
 	return p.ListModels(ctx)
 }
 
-func (s *ProviderService) GetModel(ctx context.Context, providerName, modelName string) (*sdkplugins.Model, error) {
+func (s *ProviderService) GetModel(ctx context.Context, providerName, modelName string) (*provider.Model, error) {
 	if providerName == "forge" {
 		_, model, err := s.resolveAlias(modelName)
 		if err != nil {
@@ -171,13 +171,13 @@ func (s *ProviderService) GetModel(ctx context.Context, providerName, modelName 
 	return p.GetModel(ctx, modelName)
 }
 
-func (s *ProviderService) CreateLocalModel(ctx context.Context, providerName string, tmpl *ProviderModelTemplate) (*sdkplugins.Model, error) {
+func (s *ProviderService) CreateLocalModel(ctx context.Context, providerName string, tmpl *ProviderModelTemplate) (*provider.Model, error) {
 	p, err := s.getProvider(providerName)
 	if err != nil {
 		return nil, err
 	}
 
-	sdkTmpl := &sdkplugins.ModelTemplate{
+	sdkTmpl := &provider.ModelTemplate{
 		BaseModel: tmpl.BaseModel,
 		System:    tmpl.System,
 	}

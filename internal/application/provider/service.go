@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	approot "github.com/mwantia/forge/internal/application"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
@@ -18,7 +18,7 @@ type ProviderService struct {
 	approot.UnimplementedService
 
 	mu        sync.RWMutex
-	providers map[string]sdkplugins.ProviderPlugin
+	providers map[string]provider.ProviderPlugin
 
 	plugins domplugin.PluginsRegistry    `fabric:"inject"`
 	metrics inframetrics.MetricsRegistar `fabric:"inject"`
@@ -42,7 +42,7 @@ func (s *ProviderService) PostInit(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.providers = make(map[string]sdkplugins.ProviderPlugin)
+	s.providers = make(map[string]provider.ProviderPlugin)
 
 	if err := s.metrics.Register(ProvidersTotal); err != nil {
 		return fmt.Errorf("failed to register metrics: %w", err)

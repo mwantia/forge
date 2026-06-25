@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 )
 

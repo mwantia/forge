@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	approot "github.com/mwantia/forge/internal/application"
 	domapprovals "github.com/mwantia/forge/internal/domain/approvals"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"

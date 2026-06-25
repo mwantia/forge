@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/mwantia/forge-sdk/pkg/contenthash"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 )
 
 // MessageObj is one immutable conversation turn. Identity = sha256 of its
@@ -38,14 +38,14 @@ func (m *MessageObj) Hash() (string, error) { return contenthash.Hash(m) }
 // MessageMeta is the sidecar provenance record for a MessageObj. Keyed by
 // the message hash, never folded into the hashed object.
 type MessageMeta struct {
-	Hash        string                 `json:"hash"`
-	SessionID   string                 `json:"session_id,omitempty"`
-	ContextHash string                 `json:"context_hash,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
+	Hash        string    `json:"hash"`
+	SessionID   string    `json:"session_id,omitempty"`
+	ContextHash string    `json:"context_hash,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 	// Usage is the provider-reported token consumption for the turn that
 	// produced this message. Populated for assistant messages; nil for
 	// user/tool messages where no provider call was made.
-	Usage *sdkplugins.TokenUsage `json:"usage,omitempty"`
+	Usage *provider.TokenUsage `json:"usage,omitempty"`
 }
 
 // PromptContext records the exact prompt handed to a provider on one turn.

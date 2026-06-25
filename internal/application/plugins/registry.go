@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 )
 

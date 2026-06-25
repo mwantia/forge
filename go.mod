@@ -13,7 +13,6 @@ require (
 	github.com/mwantia/forge-plugin-discord v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-nomad v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-openai v0.0.0-00010101000000-000000000000
-	github.com/mwantia/forge-plugin-plane v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-searxng v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-skills v0.0.0-00010101000000-000000000000
 	github.com/mwantia/forge-plugin-unifi v0.0.0-00010101000000-000000000000
@@ -140,6 +139,8 @@ require (
 
 replace github.com/mwantia/forge-sdk => ../sdk
 
+replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane
+
 replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
 
 replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills
@@ -147,8 +148,6 @@ replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-
 replace github.com/mwantia/forge-plugin-searxng => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/searxng
 
 replace github.com/mwantia/forge-plugin-unifi => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/unifi
-
-replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane
 
 replace github.com/mwantia/forge-plugin-consul => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/consul
 

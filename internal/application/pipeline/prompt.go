@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
@@ -84,7 +84,7 @@ func buildToolsData(ctx context.Context, registar domtool.ToolsRegistar, plugins
 // filterToolCallsByPlugins removes tool calls whose namespace is not enabled.
 // Builtin namespaces always bypass the filter. Only plugins with Enabled=true
 // (and Disabled=false) are allowed through.
-func filterToolCallsByPlugins(calls []sdkplugins.ToolCall, builtinNamespaces map[string]struct{}, plugins []appsession.PluginConfig) []sdkplugins.ToolCall {
+func filterToolCallsByPlugins(calls []provider.ToolCall, builtinNamespaces map[string]struct{}, plugins []appsession.PluginConfig) []provider.ToolCall {
 	allowed := make(map[string]struct{}, len(plugins))
 	for _, p := range plugins {
 		if p.Enabled && !p.Disabled {

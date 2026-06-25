@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 )
 
-func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRequest) (*plugins.ExecuteResponse, error) {
+func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error) {
 	args := req.Args.AsMap()
 	switch req.Tool {
 	case "store":
@@ -32,12 +32,12 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		if err != nil {
 			return nil, err
 		}
-		return &plugins.ExecuteResponse{Result: map[string]any{
+		return plugins.ExecuteSuccess(map[string]any{
 			"id":         res.ID,
 			"name":       res.Meta.Name,
 			"type":       res.Meta.Type,
 			"created_at": res.Meta.CreatedAt,
-		}}, nil
+		}), nil
 
 	case "commit":
 		id, ok := argString(args, "id")
@@ -52,12 +52,12 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		if err != nil {
 			return nil, err
 		}
-		return &plugins.ExecuteResponse{Result: map[string]any{
+		return plugins.ExecuteSuccess(map[string]any{
 			"id":         res.ID,
 			"name":       res.Meta.Name,
 			"type":       res.Meta.Type,
 			"updated_at": res.Meta.UpdatedAt,
-		}}, nil
+		}), nil
 
 	case "recall":
 		q := domresource.RecallQuery{
@@ -109,7 +109,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		if err != nil {
 			return nil, err
 		}
-		return &plugins.ExecuteResponse{Result: res}, nil
+		return plugins.ExecuteSuccess(res), nil
 
 	case "forget":
 		id, ok := argString(args, "id")
@@ -119,7 +119,7 @@ func (s *ResourceService) ExecuteTool(ctx context.Context, req plugins.ExecuteRe
 		if err := s.Forget(ctx, id); err != nil {
 			return nil, err
 		}
-		return &plugins.ExecuteResponse{Result: map[string]any{"id": id}}, nil
+		return plugins.ExecuteSuccess(map[string]any{"id": id}), nil
 	}
 
 	return nil, fmt.Errorf("unknown tool execution: %s (%s)", req.Tool, req.CallID)

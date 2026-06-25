@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	"github.com/mwantia/forge/internal/infrastructure/storage/dag"
 )
 
@@ -120,7 +120,7 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 			}
 		}
 
-		messages := make([]sdkplugins.ChatMessage, 0, len(pc.MessageHashes))
+		messages := make([]provider.ChatMessage, 0, len(pc.MessageHashes))
 		for _, mh := range pc.MessageHashes {
 			obj, err := s.sessions.GetMessageObj(ctx, mh)
 			if err != nil {
@@ -133,7 +133,7 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 				content = rendered
 			}
 
-			messages = append(messages, sdkplugins.ChatMessage{
+			messages = append(messages, provider.ChatMessage{
 				Role:    obj.Role,
 				Content: content,
 			})

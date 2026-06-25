@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	domsession "github.com/mwantia/forge/internal/domain/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
@@ -90,7 +90,7 @@ Do not attempt to activate a plugin the user has explicitly disabled — surface
 	return nil
 }
 
-func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -98,42 +98,40 @@ func (s *SystemService) execSystemStatus(ctx context.Context, req sdkplugins.Exe
 	if name := req.Args.Get("name").StringOr(""); name != "" {
 		driver, ok := s.plugins.GetDriver(name)
 		if !ok {
-			return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": fmt.Sprintf("plugin %q not found", name)}, IsError: true}, nil
+			return sdkplugins.ExecuteErrorf("plugin %q not found", name), nil
 		}
 		h, _ := driver.Driver.GetPluginHealth(ctx)
 
-		return &sdkplugins.ExecuteResponse{
-			Result: toHealthEntry(name, driver.Capabilities, h),
-		}, nil
+		return sdkplugins.ExecuteSuccess(toHealthEntry(name, driver.Capabilities, h)), nil
 	}
 
 	// Full fan-out over all drivers.
 	entries, worst := fanOutHealth(ctx, s.plugins.ListDrivers())
-	return &sdkplugins.ExecuteResponse{Result: map[string]any{
+	return sdkplugins.ExecuteSuccess(map[string]any{
 		"status":  worst,
 		"plugins": entries,
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
-	}}, nil
+	}), nil
 }
 
-func (s *SystemService) execAgentInfo(_ context.Context, _ sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+func (s *SystemService) execAgentInfo(_ context.Context, _ sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
 	drivers := s.plugins.ListDrivers()
 	names := make([]string, 0, len(drivers))
 	for _, d := range drivers {
 		names = append(names, d.Info.Name)
 	}
 
-	return &sdkplugins.ExecuteResponse{Result: map[string]any{
+	return sdkplugins.ExecuteSuccess(map[string]any{
 		"uptime":  time.Since(startTime).Round(time.Second).String(),
 		"go":      runtime.Version(),
 		"plugins": names,
-	}}, nil
+	}), nil
 }
 
-func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
 	name := strings.ToLower(req.Args.Get("name").StringOr(""))
 	if name == "" {
-		return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": "name is required"}, IsError: true}, nil
+		return sdkplugins.ExecuteErrorMsg("name is required"), nil
 	}
 	verbose := req.Args.Get("verbose").BoolOr(false)
 
@@ -147,7 +145,7 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 		}
 	}
 	if target == nil {
-		return &sdkplugins.ExecuteResponse{Result: map[string]any{"error": fmt.Sprintf("plugin namespace %q not found", name)}, IsError: true}, nil
+		return sdkplugins.ExecuteErrorf("plugin namespace %q not found", name), nil
 	}
 
 	// Load session and update its plugin config.
@@ -161,11 +159,11 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 				if strings.ToLower(p.Name) == name {
 					if p.Disabled {
 						// User hard-disabled — emit elevation request instead of enabling.
-						return &sdkplugins.ExecuteResponse{Result: map[string]any{
+						return sdkplugins.ExecuteSuccess(map[string]any{
 							"elevation_required": true,
 							"plugin":             name,
 							"message":            fmt.Sprintf("Plugin %q is disabled by the user. Request user approval via builtin__plugin_activate to re-enable.", name),
-						}}, nil
+						}), nil
 					}
 					meta.Plugins[i].Enabled = true
 					if verbose {
@@ -201,10 +199,10 @@ func (s *SystemService) execPluginActivate(ctx context.Context, req sdkplugins.E
 		tools = append(tools, t.Name)
 	}
 
-	return &sdkplugins.ExecuteResponse{Result: map[string]any{
+	return sdkplugins.ExecuteSuccess(map[string]any{
 		"plugin":  name,
 		"system":  systemPrompt,
 		"tools":   tools,
 		"message": fmt.Sprintf("Plugin %q activated. Full tool schemas will be available on the next turn.", name),
-	}}, nil
+	}), nil
 }

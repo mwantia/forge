@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 )
 
 // handleListPlugins godoc

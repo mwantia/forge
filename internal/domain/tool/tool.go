@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 )
 
 // ToolsExecution is the function signature for tool call handlers.
-type ToolsExecution = func(ctx context.Context, request plugins.ExecuteRequest) (*plugins.ExecuteResponse, error)
+type ToolsExecution = func(ctx context.Context, request plugins.ExecuteToolRequest) (*plugins.ExecuteToolResponse, error)
 
 // NamespaceMetadata is the per-namespace data captured at plugin load time.
 type NamespaceMetadata struct {

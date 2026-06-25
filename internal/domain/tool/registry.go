@@ -3,7 +3,8 @@ package tool
 import (
 	"context"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 )
 
 // ToolsRegistar is the narrow surface other services use to register and invoke tools.
@@ -16,9 +17,9 @@ type ToolsRegistar interface {
 	// session) may skip it.
 	RegisterNamespaceMetadata(namespace string, meta NamespaceMetadata) error
 
-	ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteResponse, error)
+	ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteToolResponse, error)
 
-	ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteResponse, error)
+	ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteToolResponse, error)
 
 	GetToolDefinition(namespace string, name string) (plugins.ToolDefinition, error)
 
@@ -28,7 +29,7 @@ type ToolsRegistar interface {
 
 	// GetAllToolCalls returns all registered tools as ToolCall values using their
 	// fully-qualified "namespace__name" identifier.
-	GetAllToolCalls() ([]plugins.ToolCall, error)
+	GetAllToolCalls() ([]provider.ToolCall, error)
 
 	// ListNamespaces returns a deterministic snapshot of every registered
 	// namespace, sorted ascending by namespace name.

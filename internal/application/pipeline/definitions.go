@@ -1,6 +1,6 @@
 package pipeline
 
-import "github.com/mwantia/forge-sdk/pkg/plugins"
+import plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 
 var ToolsDefinitions = []plugins.ToolDefinition{
 	{

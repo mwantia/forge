@@ -3,7 +3,7 @@ package plugin
 import (
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 )
 
 // PluginType identifies the role a plugin serves.

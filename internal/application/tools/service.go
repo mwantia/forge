@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	approot "github.com/mwantia/forge/internal/application"
 	domplugin "github.com/mwantia/forge/internal/domain/plugin"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
@@ -99,7 +99,7 @@ func (s *ToolsService) Serve(ctx context.Context) error {
 		for _, def := range resp.Tools {
 			captured := tp
 			capturedDef := def
-			exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+			exec := func(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
 				req.Tool = capturedDef.Name
 				return captured.Execute(ctx, req)
 			}

@@ -1,6 +1,6 @@
 package session
 
-import "github.com/mwantia/forge-sdk/pkg/plugins"
+import plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 
 // ToolsDefinitions are registered under the "builtin" namespace at PostInit.
 var ToolsDefinitions = []plugins.ToolDefinition{

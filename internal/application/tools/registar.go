@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
 )
@@ -59,22 +60,22 @@ func (s *ToolsService) RegisterTool(namespace string, definition plugins.ToolDef
 	return nil
 }
 
-func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteResponse, error) {
+func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, name string, arguments map[string]any, callID string) (*plugins.ExecuteToolResponse, error) {
 	tool, ok := s.getToolNamespace(namespace, name)
 	if !ok {
 		return nil, fmt.Errorf("tool with namespace %q and name %q not found", namespace, name)
 	}
 
 	start := time.Now()
-	resp, err := tool.Execution(ctx, plugins.ExecuteRequest{
+	resp, err := tool.Execution(ctx, plugins.ExecuteToolRequest{
 		Tool:   tool.ToolDefinition.Name,
-		Args:   plugins.NewArgs(arguments),
+		Args:   plugins.NewToolArgs(arguments),
 		CallID: callID,
 	})
 
 	ToolsExecutionDuration.WithLabelValues(namespace, name).Observe(time.Since(start).Seconds())
 	status := inframetrics.ErrToStatusLabel(err)
-	if err == nil && resp != nil && resp.IsError {
+	if err == nil && resp != nil && !resp.Success {
 		status = "error"
 	}
 	ToolsExecutionsTotal.WithLabelValues(namespace, name, status).Inc()
@@ -82,7 +83,7 @@ func (s *ToolsService) ExecuteToolWithCallID(ctx context.Context, namespace, nam
 	return resp, err
 }
 
-func (s *ToolsService) ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteResponse, error) {
+func (s *ToolsService) ExecuteTool(ctx context.Context, namespace, name string, arguments map[string]any) (*plugins.ExecuteToolResponse, error) {
 	return s.ExecuteToolWithCallID(ctx, namespace, name, arguments, "")
 }
 
@@ -191,12 +192,12 @@ func (s *ToolsService) ListNamespaces() []NamespaceInfo {
 	return out
 }
 
-func (s *ToolsService) GetAllToolCalls() ([]plugins.ToolCall, error) {
-	calls := make([]plugins.ToolCall, 0)
+func (s *ToolsService) GetAllToolCalls() ([]provider.ToolCall, error) {
+	calls := make([]provider.ToolCall, 0)
 	for _, namespace := range s.namespaces {
 
 		for _, tool := range namespace {
-			calls = append(calls, plugins.ToolCall{
+			calls = append(calls, provider.ToolCall{
 				Name:        tool.FullName,
 				Description: tool.ToolDefinition.Description,
 				Parameters:  tool.ToolDefinition.Parameters,

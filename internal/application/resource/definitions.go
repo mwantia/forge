@@ -1,6 +1,6 @@
 package resource
 
-import "github.com/mwantia/forge-sdk/pkg/plugins"
+import plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 
 // ToolsDefinitions are registered under the "resource" namespace at Init.
 // LLM-visible names are prefixed: resource__store, resource__recall,

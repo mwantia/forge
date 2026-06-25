@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 )
 
 type ApprovalStatus string

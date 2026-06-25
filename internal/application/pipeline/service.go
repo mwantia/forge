@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/mwantia/fabric/v2/pkg/container"
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	approot "github.com/mwantia/forge/internal/application"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	dompipeline "github.com/mwantia/forge/internal/domain/pipeline"
@@ -65,7 +65,7 @@ func (s *PipelineService) PostInit(ctx context.Context) error {
 
 	for _, definition := range ToolsDefinitions {
 		captured := definition
-		exec := func(ctx context.Context, req sdkplugins.ExecuteRequest) (*sdkplugins.ExecuteResponse, error) {
+		exec := func(ctx context.Context, req sdkplugins.ExecuteToolRequest) (*sdkplugins.ExecuteToolResponse, error) {
 			req.Tool = captured.Name
 			return s.ExecuteTool(ctx, req)
 		}

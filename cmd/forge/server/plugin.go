@@ -3,8 +3,8 @@ package server
 import (
 	"fmt"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
-	"github.com/mwantia/forge-sdk/pkg/plugins/grpc"
+	"github.com/mwantia/forge-sdk/pkg/grpc"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 	"github.com/spf13/cobra"
 )
 

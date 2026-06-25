@@ -35,8 +35,8 @@ type ResourceMeta struct {
 	Tags        []string       `json:"tags,omitempty"`
 	Description string         `json:"description,omitempty"`
 	Session     string         `json:"session,omitempty"`
-	CreatedAt   time.Time      `json:"created_at,omitempty"`
-	UpdatedAt   time.Time      `json:"updated_at,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 	Extra       map[string]any `json:"extra,omitempty"`
 }
 

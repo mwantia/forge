@@ -3,7 +3,7 @@ package session
 import (
 	"time"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 )
 
 // SessionQuery describes filters and pagination for listing sessions.
@@ -64,14 +64,14 @@ type SessionMetadata struct {
 // Message is the session-layer projection of a dag.MessageObj plus its
 // MessageMeta sidecar. Identity is the content hash.
 type Message struct {
-	Hash        string                 `json:"hash"`
-	ParentHash  string                 `json:"parent_hash,omitempty"`
-	Role        string                 `json:"role"`
-	Content     string                 `json:"content"`
-	ToolCalls   []MessageToolCall      `json:"tool_calls,omitempty"`
-	CreatedAt   time.Time              `json:"created_at"`
-	ContextHash string                 `json:"context_hash,omitempty"`
-	Usage       *sdkplugins.TokenUsage `json:"usage,omitempty"`
+	Hash        string               `json:"hash"`
+	ParentHash  string               `json:"parent_hash,omitempty"`
+	Role        string               `json:"role"`
+	Content     string               `json:"content"`
+	ToolCalls   []MessageToolCall    `json:"tool_calls,omitempty"`
+	CreatedAt   time.Time            `json:"created_at"`
+	ContextHash string               `json:"context_hash,omitempty"`
+	Usage       *provider.TokenUsage `json:"usage,omitempty"`
 }
 
 // MessageToolCall is the session-layer representation of a tool call or result.

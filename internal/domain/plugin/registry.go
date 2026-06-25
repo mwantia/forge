@@ -3,7 +3,7 @@ package plugin
 import (
 	"context"
 
-	"github.com/mwantia/forge-sdk/pkg/plugins"
+	plugins "github.com/mwantia/forge-sdk/pkg/plugin"
 )
 
 // PluginsRegistry is the narrow surface for looking up loaded plugin drivers.

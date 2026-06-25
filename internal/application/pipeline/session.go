@@ -1,7 +1,7 @@
 package pipeline
 
 import (
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	appsession "github.com/mwantia/forge/internal/application/session"
 )
 
@@ -14,8 +14,8 @@ import (
 type Session struct {
 	SessionID string
 	Metadata  *appsession.SessionMetadata
-	Messages  []sdkplugins.ChatMessage
-	ToolCalls []sdkplugins.ToolCall
+	Messages  []provider.ChatMessage
+	ToolCalls []provider.ToolCall
 	Plugins   []string
 
 	// Ref is the session branch to advance during this commit. Empty

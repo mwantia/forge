@@ -3,11 +3,11 @@ package ui
 import (
 	"context"
 
-	sdkplugins "github.com/mwantia/forge-sdk/pkg/plugins"
+	"github.com/mwantia/forge-sdk/pkg/plugin/provider"
 	apppipeline "github.com/mwantia/forge/internal/application/pipeline"
 	appsession "github.com/mwantia/forge/internal/application/session"
-	domsession "github.com/mwantia/forge/internal/domain/session"
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
+	domsession "github.com/mwantia/forge/internal/domain/session"
 	domtool "github.com/mwantia/forge/internal/domain/tool"
 )
 
@@ -36,9 +36,8 @@ type namespaceLister interface {
 // modelLister is the narrow surface UIService needs from ProviderRegistar.
 type modelLister interface {
 	ListModelsByType(ctx context.Context, kind string) ([]*domprovider.ProviderModelTemplate, error)
-	GetModel(ctx context.Context, providerName, modelName string) (*sdkplugins.Model, error)
+	GetModel(ctx context.Context, providerName, modelName string) (*provider.Model, error)
 }
-
 
 // pipelineCommitter aliases the pipeline package interface to avoid re-declaring it.
 type pipelineCommitter = apppipeline.PipelineCommitter
