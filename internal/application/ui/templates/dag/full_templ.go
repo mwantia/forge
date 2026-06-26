@@ -50,7 +50,7 @@ func Full(meta *appsession.SessionMetadata, nodes []Node, edges []Edge) templ.Co
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = layout.Topbar(meta.Name, "", "").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = layout.Topbar(layout.Crumb{Label: "sessions", Href: "/ui/sessions"}, layout.Crumb{Label: meta.Name}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

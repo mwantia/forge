@@ -1,88 +1,10 @@
 package tmplsessions
 
-import "encoding/json"
+import "github.com/mwantia/forge/internal/application/ui/templates/layout"
 
-// PluginPicker renders a dropdown+badge selector for choosing plugins.
-// Selected plugins are submitted as repeated "plugins" form fields.
-// availablePlugins is the list of plugin namespace names offered in the dropdown.
+// PluginPicker renders a multi-select dropdown for choosing plugins.
+// Selected plugins are submitted as repeated "plugins" form fields
+// and also dispatched via 'multiselect-change' for client-side filtering.
 templ PluginPicker(availablePlugins []string) {
-	<div
-		x-data={ pluginPickerData(availablePlugins) }
-		@click.outside="open = false"
-		class="relative"
-	>
-		<!-- Input area: badges + search field -->
-		<div
-			class="flex flex-wrap items-center gap-1.5 min-h-[2.25rem] w-full bg-bg-1 border border-line rounded-md px-2.5 py-1.5 cursor-text focus-within:border-line-strong transition-colors"
-			@click="$refs.search.focus()"
-		>
-			<!-- Selected badges -->
-			<template x-for="p in selected" :key="p">
-				<span class="flex items-center gap-1 font-mono text-[11px] bg-bg-2 border border-ok/30 text-ok rounded px-2 py-0.5 shrink-0">
-					<span x-text="p"></span>
-					<button
-						type="button"
-						@click.stop="remove(p)"
-						class="text-ink-4 hover:text-rem transition-colors leading-none"
-						:title="'Remove ' + p"
-					>×</button>
-					<input type="hidden" name="plugins" :value="p"/>
-				</span>
-			</template>
-			<!-- Search / trigger input -->
-			<input
-				x-ref="search"
-				x-model="search"
-				type="text"
-				@focus="open = true"
-				@input="open = true"
-				@keydown.escape="open = false"
-				@keydown.enter.prevent="filtered.length === 1 && add(filtered[0])"
-				placeholder="Add plugin…"
-				class="flex-1 min-w-24 bg-transparent text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none"
-			/>
-		</div>
-		<!-- Dropdown -->
-		<div
-			x-show="open && filtered.length > 0"
-			x-transition:enter="transition ease-out duration-75"
-			x-transition:enter-start="opacity-0 -translate-y-1"
-			x-transition:enter-end="opacity-100 translate-y-0"
-			class="absolute left-0 right-0 mt-1 bg-bg-1 border border-line rounded-md shadow-lg z-20 overflow-hidden"
-		>
-			<ul class="max-h-48 overflow-y-auto py-1">
-				<template x-for="p in filtered" :key="p">
-					<li>
-						<button
-							type="button"
-							@click="add(p)"
-							class="w-full text-left px-3 py-1.5 font-mono text-ui-ctrl text-ink-2 hover:bg-bg-2 hover:text-ink transition-colors flex items-center gap-2"
-						>
-							<span class="text-[8px] text-ok leading-none">●</span>
-							<span x-text="p"></span>
-						</button>
-					</li>
-				</template>
-			</ul>
-		</div>
-	</div>
-}
-
-func pluginPickerData(available []string) string {
-	if available == nil {
-		available = []string{}
-	}
-	b, _ := json.Marshal(available)
-	return `{
-		available: ` + string(b) + `,
-		selected: [],
-		open: false,
-		search: '',
-		get filtered() {
-			const s = this.search.toLowerCase();
-			return this.available.filter(p => !this.selected.includes(p) && (!s || p.includes(s)));
-		},
-		add(p) { this.selected.push(p); this.search = ''; this.open = false; this.$dispatch('plugin-filter', { selected: this.selected }); },
-		remove(p) { this.selected = this.selected.filter(s => s !== p); this.$dispatch('plugin-filter', { selected: this.selected }); }
-	}`
+	@layout.MultiSelect(availablePlugins, []string{}, "plugins", "Add plugin…")
 }

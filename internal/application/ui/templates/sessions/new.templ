@@ -7,7 +7,7 @@ import (
 
 templ New(models []*domprovider.ProviderModelTemplate, availablePlugins []string) {
 	@layout.Base("New Session") {
-		@layout.TopbarSimple()
+		@layout.Topbar(layout.Crumb{Label: "sessions", Href: "/ui/sessions"}, layout.Crumb{Label: "new"})
 		<main class="flex-1 overflow-auto [scrollbar-gutter:stable]">
 			<div class="max-w-xl mx-auto px-6 py-10">
 				<div class="mb-8">
