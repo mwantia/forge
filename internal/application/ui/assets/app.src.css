@@ -144,6 +144,13 @@
   }
 }
 
+@layer utilities {
+  /* Commit bar bottom padding: base 0.75rem + gesture-nav / notch safe area. */
+  .pb-safe {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* ── Wide-mode — html.forge-wide removes fixed-width caps on chat content ── */
 .forge-thread-wrap { max-width: 720px; margin-left: auto; margin-right: auto; }
 html.forge-wide .forge-thread-wrap { max-width: none; margin-left: 0; margin-right: 0; }

@@ -5,7 +5,7 @@
   "start_url": "/ui/sessions",
   "scope": "/ui/",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#0b0c0f",
   "theme_color": "#e8a531",
   "categories": ["productivity", "developer"],

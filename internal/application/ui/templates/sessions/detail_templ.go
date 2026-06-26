@@ -239,7 +239,7 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				return templ_7745c5c3_Err
 			}
 			if meta.ArchivedAt == nil {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"sticky bottom-0\"><div class=\"h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none\"></div><div class=\"bg-bg px-4 pb-3\"><div class=\"forge-thread-wrap\"><form id=\"composer-form\" hx-post=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"sticky bottom-0\"><div class=\"h-10 bg-gradient-to-t from-bg to-transparent pointer-events-none\"></div><div class=\"bg-bg px-4 pb-safe\"><div class=\"forge-thread-wrap\"><form id=\"composer-form\" hx-post=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
