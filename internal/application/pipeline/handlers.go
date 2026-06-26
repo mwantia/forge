@@ -23,6 +23,7 @@ type commitRequest struct {
 	Content   string `json:"content"    binding:"required"`
 	Mode      string `json:"mode,omitempty"`
 	Language  string `json:"language,omitempty"`
+	Recall    *bool  `json:"recall"` // nil = true (enabled by default)
 }
 
 // handleCommit godoc
@@ -82,7 +83,9 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			output = rawOverride()
 		}
 
-		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, resolvedLanguage, output)
+		recall := req.Recall == nil || *req.Recall
+
+		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, resolvedLanguage, output, recall)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -258,6 +261,14 @@ func (s *PipelineService) handlePreview() gin.HandlerFunc {
 		// Render the full history — system is at history[0] (or absent for a
 		// session that has never been committed; preview still works, just empty).
 		chatMessages := buildChatMessages(history, scoped, s.logger)
+
+		// Mirror the recall hint injection that preparePipelineRun applies,
+		// so /preview accurately reflects what the provider will receive.
+		if len(chatMessages) > 0 && chatMessages[0].Role == "system" {
+			if block := s.buildRecallHint(c.Request.Context(), history); block != "" {
+				chatMessages[0].Content += "\n\n" + block
+			}
+		}
 
 		if req.Content != "" {
 			rendered := req.Content

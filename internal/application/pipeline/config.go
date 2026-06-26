@@ -5,11 +5,65 @@ import (
 	"time"
 )
 
+const (
+	DefaultPipelineRecallBudget    = 3
+	DefaultPipelineRecallThreshold = 0.35
+	DefaultPipelineRecallMinLength = 15
+)
+
 type PipelineConfig struct {
 	MaxToolIterations int                   `hcl:"max_tool_iterations,optional"`
 	System            string                `hcl:"system,optional"`
 	Output            *PipelineOutputConfig `hcl:"output,block"`
 	Retry             *PipelineRetryConfig  `hcl:"retry,block"`
+	Recall            *PipelineRecallConfig `hcl:"recall,block"`
+}
+
+// PipelineRecallConfig controls the automatic per-commit recall hint injected
+// into the system prompt. Budget=0 disables the pipeline entirely.
+type PipelineRecallConfig struct {
+	Budget    *int     `hcl:"budget,optional"`     // max messages that consume budget (default 3, -1 = disabled)
+	Threshold *float64 `hcl:"threshold,optional"`  // minimum score gate (default 0.1; 0 = no gate, agent decides)
+	MinLength *int     `hcl:"min_length,optional"` // minimum rune count for pre-filter (default 15)
+}
+
+func (r *PipelineRecallConfig) GetBudget() int {
+	if r == nil || r.Budget == nil {
+		return DefaultPipelineRecallBudget
+	}
+
+	budget := *r.Budget
+	if budget < 0 {
+		return 0
+	}
+
+	return budget
+}
+
+func (r *PipelineRecallConfig) GetThreshold() float64 {
+	if r == nil || r.Threshold == nil {
+		return DefaultPipelineRecallThreshold
+	}
+
+	threshold := *r.Threshold
+	if threshold < 0 {
+		return 0
+	}
+
+	return threshold
+}
+
+func (r *PipelineRecallConfig) GetMinLength() int {
+	if r == nil || r.MinLength == nil {
+		return DefaultPipelineRecallMinLength
+	}
+
+	minLength := *r.MinLength
+	if minLength < 0 {
+		return 0
+	}
+
+	return minLength
 }
 
 // RetryConfig governs transient-failure recovery for provider chat calls

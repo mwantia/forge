@@ -22,7 +22,8 @@ type PipelineCommitter interface {
 	// CommitEvents starts a pipeline turn and returns a channel of typed events.
 	// mode overrides the session's stored mode for this turn only (empty = use session mode).
 	// language is the BCP 47 response language for this turn (empty = "en").
-	CommitEvents(ctx context.Context, sessionID, ref, content, mode, language string) (<-chan PipelineEvent, error)
+	// recall controls whether the automatic recall hint pipeline runs for this turn.
+	CommitEvents(ctx context.Context, sessionID, ref, content, mode, language string, recall bool) (<-chan PipelineEvent, error)
 }
 
 // PipelineRenderer renders a raw template string through a session's scoped
