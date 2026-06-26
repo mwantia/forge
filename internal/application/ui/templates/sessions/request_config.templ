@@ -2,7 +2,7 @@ package tmplsessions
 
 templ RequestConfigDropdown(currentMode string) {
 	<div
-		x-data={ "{ open: false, language: 'en', mode: '" + currentMode + "' }" }
+		x-data={ "{ open: false, language: 'en', mode: '" + currentMode + "', recall: true }" }
 		@click.outside="open = false"
 		@keydown.escape.window="open = false"
 		class="relative"
@@ -10,6 +10,7 @@ templ RequestConfigDropdown(currentMode string) {
 		<!-- Hidden inputs — bound to Alpine state, submitted with the form -->
 		<input type="hidden" name="language" :value="language"/>
 		<input type="hidden" name="mode" :value="mode"/>
+		<input type="hidden" name="recall" :value="recall ? 'true' : 'false'"/>
 		<!-- Dropdown panel — opens upward -->
 		<div
 			x-show="open"
@@ -83,14 +84,24 @@ templ RequestConfigDropdown(currentMode string) {
 			}
 			<!-- divider -->
 			<div class="h-px bg-line-soft my-1"></div>
-			<!-- ── RECALL (stub — not yet implemented) ── -->
-			<div class="flex items-center gap-2.5 px-3.5 pt-2 pb-3">
+			<!-- ── RECALL ── -->
+			<div
+				@click="recall = !recall"
+				class="flex items-center gap-2.5 px-3.5 pt-2 pb-3 cursor-pointer hover:bg-bg-2 transition-colors duration-75"
+			>
 				<div class="flex-1">
-					<div class="text-ui-label text-ink-3 font-medium leading-none mb-1">recall</div>
+					<div class="text-ui-label font-medium leading-none mb-1" :class="recall ? 'text-ink' : 'text-ink-3'">recall</div>
 					<div class="text-[10px] text-ink-4">Memory retrieval</div>
 				</div>
-				<div class="relative w-[34px] h-[19px] rounded-full border border-line bg-bg-2 opacity-40 cursor-not-allowed shrink-0">
-					<div class="absolute top-[3px] left-[2px] w-[13px] h-[13px] rounded-full bg-ink-4"></div>
+				<!-- Toggle pill -->
+				<div
+					class="relative w-[34px] h-[19px] rounded-full border shrink-0 transition-colors duration-150"
+					:class="recall ? 'bg-accent-soft border-accent-line' : 'bg-bg-2 border-line'"
+				>
+					<div
+						class="absolute top-[3px] w-[13px] h-[13px] rounded-full transition-all duration-150"
+						:class="recall ? 'left-[16px] bg-accent' : 'left-[2px] bg-ink-4'"
+					></div>
 				</div>
 			</div>
 		</div>
@@ -103,6 +114,12 @@ templ RequestConfigDropdown(currentMode string) {
 			<span class="text-accent font-semibold" x-text="language">en</span>
 			<span class="text-line">·</span>
 			<span class="text-ink-3" x-text="mode">{ currentMode }</span>
+			<span class="text-line">·</span>
+			<span
+				class="text-[11px] transition-colors"
+				:class="recall ? 'text-accent' : 'text-ink-4'"
+				title="Recall memory retrieval"
+			>↻</span>
 			<span class="text-ink-4 text-[9px] ml-0.5">▾</span>
 		</button>
 	</div>

@@ -34,15 +34,15 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ open: false, language: 'en', mode: '" + currentMode + "' }")
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue("{ open: false, language: 'en', mode: '" + currentMode + "', recall: true }")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 5, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 5, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" @click.outside=\"open = false\" @keydown.escape.window=\"open = false\" class=\"relative\"><!-- Hidden inputs — bound to Alpine state, submitted with the form --><input type=\"hidden\" name=\"language\" :value=\"language\"> <input type=\"hidden\" name=\"mode\" :value=\"mode\"><!-- Dropdown panel — opens upward --><div x-show=\"open\" x-cloak x-transition:enter=\"transition ease-out duration-[130ms]\" x-transition:enter-start=\"opacity-0 translate-y-1\" x-transition:enter-end=\"opacity-100 translate-y-0\" x-transition:leave=\"transition ease-in duration-75\" x-transition:leave-start=\"opacity-100 translate-y-0\" x-transition:leave-end=\"opacity-0 translate-y-1\" class=\"absolute right-0 w-[244px] bg-bg-1 border border-line rounded-[10px] overflow-hidden z-50\" style=\"bottom:calc(100% + 8px);box-shadow:0 -8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.025)\"><!-- ── LANGUAGE ── --><div class=\"px-3.5 pt-2.5 pb-1\"><span class=\"text-[9px] tracking-[0.14em] text-ink-4 font-semibold uppercase\">Language</span></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" @click.outside=\"open = false\" @keydown.escape.window=\"open = false\" class=\"relative\"><!-- Hidden inputs — bound to Alpine state, submitted with the form --><input type=\"hidden\" name=\"language\" :value=\"language\"> <input type=\"hidden\" name=\"mode\" :value=\"mode\"> <input type=\"hidden\" name=\"recall\" :value=\"recall ? 'true' : 'false'\"><!-- Dropdown panel — opens upward --><div x-show=\"open\" x-cloak x-transition:enter=\"transition ease-out duration-[130ms]\" x-transition:enter-start=\"opacity-0 translate-y-1\" x-transition:enter-end=\"opacity-100 translate-y-0\" x-transition:leave=\"transition ease-in duration-75\" x-transition:leave-start=\"opacity-100 translate-y-0\" x-transition:leave-end=\"opacity-0 translate-y-1\" class=\"absolute right-0 w-[244px] bg-bg-1 border border-line rounded overflow-hidden z-50\" style=\"bottom:calc(100% + 8px);box-shadow:0 -8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.025)\"><!-- ── LANGUAGE ── --><div class=\"px-3.5 pt-2.5 pb-1\"><span class=\"text-[9px] tracking-[0.14em] text-ink-4 font-semibold uppercase\">Language</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -57,7 +57,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue("language='" + lang.code + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 35, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 36, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
@@ -70,7 +70,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue("language==='" + lang.code + "'?'bg-bg-2':''")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 36, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 37, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -83,7 +83,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("language==='" + lang.code + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 40, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 41, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -96,7 +96,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue("language!=='" + lang.code + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 44, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 45, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -109,7 +109,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue("language==='" + lang.code + "'?'text-ink font-medium':'text-ink-4'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 48, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 49, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -122,7 +122,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(lang.code)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 50, Col: 17}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 51, Col: 17}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -135,7 +135,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(lang.label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 51, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 52, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -161,7 +161,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue("mode='" + m.name + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 65, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 66, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 			if templ_7745c5c3_Err != nil {
@@ -174,7 +174,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue("mode==='" + m.name + "'?'bg-bg-2':''")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 66, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 67, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 			if templ_7745c5c3_Err != nil {
@@ -187,7 +187,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue("mode==='" + m.name + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 70, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 71, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -200,7 +200,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue("mode!=='" + m.name + "'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 74, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 75, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -213,7 +213,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue("mode==='" + m.name + "'?'text-ink font-medium':'text-ink-3'")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 78, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 79, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 			if templ_7745c5c3_Err != nil {
@@ -226,7 +226,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(m.name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 80, Col: 14}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 81, Col: 14}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -239,7 +239,7 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(m.desc)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 81, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 82, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -250,20 +250,20 @@ func RequestConfigDropdown(currentMode string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<!-- divider --><div class=\"h-px bg-line-soft my-1\"></div><!-- ── RECALL (stub — not yet implemented) ── --><div class=\"flex items-center gap-2.5 px-3.5 pt-2 pb-3\"><div class=\"flex-1\"><div class=\"text-ui-label text-ink-3 font-medium leading-none mb-1\">recall</div><div class=\"text-[10px] text-ink-4\">Memory retrieval</div></div><div class=\"relative w-[34px] h-[19px] rounded-full border border-line bg-bg-2 opacity-40 cursor-not-allowed shrink-0\"><div class=\"absolute top-[3px] left-[2px] w-[13px] h-[13px] rounded-full bg-ink-4\"></div></div></div></div><!-- ── Trigger button — matches btn-accent height ── --><button type=\"button\" @click=\"open = !open\" class=\"inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-line bg-bg-2 font-mono text-ui-ctrl cursor-pointer hover:bg-bg-3 hover:border-line-strong transition-colors\"><span class=\"text-accent font-semibold\" x-text=\"language\">en</span> <span class=\"text-line\">·</span> <span class=\"text-ink-3\" x-text=\"mode\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<!-- divider --><div class=\"h-px bg-line-soft my-1\"></div><!-- ── RECALL ── --><div @click=\"recall = !recall\" class=\"flex items-center gap-2.5 px-3.5 pt-2 pb-3 cursor-pointer hover:bg-bg-2 transition-colors duration-75\"><div class=\"flex-1\"><div class=\"text-ui-label font-medium leading-none mb-1\" :class=\"recall ? 'text-ink' : 'text-ink-3'\">recall</div><div class=\"text-[10px] text-ink-4\">Memory retrieval</div></div><!-- Toggle pill --><div class=\"relative w-[34px] h-[19px] rounded-full border shrink-0 transition-colors duration-150\" :class=\"recall ? 'bg-accent-soft border-accent-line' : 'bg-bg-2 border-line'\"><div class=\"absolute top-[3px] w-[13px] h-[13px] rounded-full transition-all duration-150\" :class=\"recall ? 'left-[16px] bg-accent' : 'left-[2px] bg-ink-4'\"></div></div></div></div><!-- ── Trigger button — matches btn-accent height ── --><button type=\"button\" @click=\"open = !open\" class=\"inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-line bg-bg-2 font-mono text-ui-ctrl cursor-pointer hover:bg-bg-3 hover:border-line-strong transition-colors\"><span class=\"text-accent font-semibold\" x-text=\"language\">en</span> <span class=\"text-line\">·</span> <span class=\"text-ink-3\" x-text=\"mode\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(currentMode)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 105, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/request_config.templ`, Line: 116, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <span class=\"text-ink-4 text-[9px] ml-0.5\">▾</span></button></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <span class=\"text-line\">·</span> <span class=\"text-[11px] transition-colors\" :class=\"recall ? 'text-accent' : 'text-ink-4'\" title=\"Recall memory retrieval\">↻</span> <span class=\"text-ink-4 text-[9px] ml-0.5\">▾</span></button></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
