@@ -6,9 +6,19 @@ import (
 )
 
 const (
-	DefaultPipelineRecallBudget    = 3
-	DefaultPipelineRecallThreshold = 0.35
-	DefaultPipelineRecallMinLength = 15
+	DefaultPipelineRecallBudget           = 3
+	DefaultPipelineRecallThreshold        = 0.35
+	DefaultPipelineRecallMinLength        = 15
+	DefaultPipelineRetryAttempts          = 3
+	DefaultPipelineBackoffBase            = 250
+	DefaultPipelineBackoffMax             = 5000
+	DefaultPipelineOutputMode             = "block"
+	DefaultPipelineOutputCodeFence        = "atomic"
+	DefaultPipelineOutputMaxChunkBytes    = 0
+	DefaultPipelinePacingEnabled          = false
+	DefaultPipelinePacingCPS              = 60
+	DefaultPipelinePacingJitter           = 1
+	DefaultPipelinePacingPunctuationPause = 0
 )
 
 type PipelineConfig struct {
@@ -19,20 +29,18 @@ type PipelineConfig struct {
 	Recall            *PipelineRecallConfig `hcl:"recall,block"`
 }
 
-// PipelineRecallConfig controls the automatic per-commit recall hint injected
-// into the system prompt. Budget=0 disables the pipeline entirely.
 type PipelineRecallConfig struct {
 	Budget    *int     `hcl:"budget,optional"`     // max messages that consume budget (default 3, -1 = disabled)
 	Threshold *float64 `hcl:"threshold,optional"`  // minimum score gate (default 0.1; 0 = no gate, agent decides)
 	MinLength *int     `hcl:"min_length,optional"` // minimum rune count for pre-filter (default 15)
 }
 
-func (r *PipelineRecallConfig) GetBudget() int {
-	if r == nil || r.Budget == nil {
+func (c *PipelineRecallConfig) GetBudget() int {
+	if c == nil || c.Budget == nil {
 		return DefaultPipelineRecallBudget
 	}
 
-	budget := *r.Budget
+	budget := *c.Budget
 	if budget < 0 {
 		return 0
 	}
@@ -40,12 +48,12 @@ func (r *PipelineRecallConfig) GetBudget() int {
 	return budget
 }
 
-func (r *PipelineRecallConfig) GetThreshold() float64 {
-	if r == nil || r.Threshold == nil {
+func (c *PipelineRecallConfig) GetThreshold() float64 {
+	if c == nil || c.Threshold == nil {
 		return DefaultPipelineRecallThreshold
 	}
 
-	threshold := *r.Threshold
+	threshold := *c.Threshold
 	if threshold < 0 {
 		return 0
 	}
@@ -53,12 +61,12 @@ func (r *PipelineRecallConfig) GetThreshold() float64 {
 	return threshold
 }
 
-func (r *PipelineRecallConfig) GetMinLength() int {
-	if r == nil || r.MinLength == nil {
+func (c *PipelineRecallConfig) GetMinLength() int {
+	if c == nil || c.MinLength == nil {
 		return DefaultPipelineRecallMinLength
 	}
 
-	minLength := *r.MinLength
+	minLength := *c.MinLength
 	if minLength < 0 {
 		return 0
 	}
@@ -66,12 +74,22 @@ func (r *PipelineRecallConfig) GetMinLength() int {
 	return minLength
 }
 
-// RetryConfig governs transient-failure recovery for provider chat calls
-// inside the dispatch loop. A retry only happens when no content has been
-// streamed to the client yet (otherwise replaying would duplicate tokens).
 type PipelineRetryConfig struct {
-	Attempts int                    `hcl:"attempts,optional"` // total attempts incl. first try (default 3)
+	Attempts *int                   `hcl:"attempts,optional"` // total attempts incl. first try (default 3)
 	Backoff  *PipelineBackoffConfig `hcl:"backoff,block"`
+}
+
+func (c *PipelineRetryConfig) GetAttempts() int {
+	if c == nil || c.Attempts == nil {
+		return DefaultPipelineRetryAttempts
+	}
+
+	attempts := *c.Attempts
+	if attempts < 0 {
+		return 0
+	}
+
+	return attempts
 }
 
 type PipelineBackoffConfig struct {
@@ -79,51 +97,128 @@ type PipelineBackoffConfig struct {
 	Max  string `hcl:"max,optional"`  // duration string; cap on per-attempt wait (default "5s")
 }
 
-func (c *PipelineBackoffConfig) Resolve() (time.Duration, time.Duration, error) {
-	base := 250 * time.Millisecond
-	max := 5 * time.Second
-
-	if c != nil {
-		if c.Base != "" {
-			duration, err := time.ParseDuration(c.Base)
-			if err != nil {
-				return base, max, fmt.Errorf("failed to parse 'base' duration: %w", err)
-			}
-
-			if duration > 0 {
-				base = duration
-			}
-		}
-		if c.Max != "" {
-			duration, err := time.ParseDuration(c.Max)
-			if err != nil {
-				return base, max, fmt.Errorf("failed to parse 'max' duration: %w", err)
-			}
-
-			if duration > 0 {
-				max = duration
-			}
-		}
+func (c *PipelineBackoffConfig) GetBase() (time.Duration, error) {
+	if c == nil || c.Base == "" {
+		return DefaultPipelineBackoffBase * time.Millisecond, nil
 	}
 
-	return base, max, nil
+	duration, err := time.ParseDuration(c.Base)
+	if err != nil {
+		return duration, fmt.Errorf("failed to parse 'base' duration: %w", err)
+	}
+
+	if duration < 0 {
+		return 0, nil
+	}
+
+	return duration, err
 }
 
-// OutputConfig controls how the server chunks and paces pipeline output.
-// Rendering is always a per-channel concern; this block only dictates
-// what boundaries are emitted and how fast.
+func (c *PipelineBackoffConfig) GetMax() (time.Duration, error) {
+	if c == nil || c.Max == "" {
+		return DefaultPipelineBackoffMax * time.Millisecond, nil
+	}
+
+	duration, err := time.ParseDuration(c.Max)
+	if err != nil {
+		return duration, fmt.Errorf("failed to parse 'base' duration: %w", err)
+	}
+
+	if duration < 0 {
+		return 0, nil
+	}
+
+	return duration, err
+}
+
 type PipelineOutputConfig struct {
 	Mode          string                `hcl:"mode,optional"`            // token | sentence | block | final
 	CodeFence     string                `hcl:"code_fence,optional"`      // atomic | split
-	MaxChunkBytes int                   `hcl:"max_chunk_bytes,optional"` // 0 = no cap
+	MaxChunkBytes *int                  `hcl:"max_chunk_bytes,optional"` // 0 = no cap
 	Pacing        *PipelinePacingConfig `hcl:"pacing,block"`
 }
 
+func (c *PipelineOutputConfig) GetMode() string {
+	if c == nil || c.Mode == "" {
+		return DefaultPipelineOutputMode
+	}
+
+	return c.Mode
+}
+
+func (c *PipelineOutputConfig) GetCodeFence() string {
+	if c == nil || c.CodeFence == "" {
+		return DefaultPipelineOutputCodeFence
+	}
+
+	return c.CodeFence
+}
+
+func (c *PipelineOutputConfig) GetMaxChunkBytes() int {
+	if c == nil || c.MaxChunkBytes == nil {
+		return DefaultPipelineOutputMaxChunkBytes
+	}
+
+	maxChunkBytes := *c.MaxChunkBytes
+	if maxChunkBytes < 0 {
+		return 0
+	}
+
+	return maxChunkBytes
+}
+
 type PipelinePacingConfig struct {
-	Enabled            bool    `hcl:"enabled,optional"`
-	CPS                int     `hcl:"cps,optional"`
-	Jitter             float64 `hcl:"jitter,optional"`
-	PunctuationPauseMs int     `hcl:"punctuation_pause_ms,optional"`
+	Enabled          *bool    `hcl:"enabled,optional"`
+	CPS              *int     `hcl:"cps,optional"`
+	Jitter           *float64 `hcl:"jitter,optional"`
+	PunctuationPause *int     `hcl:"punctuation_pause,optional"`
+}
+
+func (c *PipelinePacingConfig) GetEnabled() bool {
+	if c == nil || c.Enabled == nil {
+		return DefaultPipelinePacingEnabled
+	}
+
+	return *c.Enabled
+}
+
+func (c *PipelinePacingConfig) GetCPS() int {
+	if c == nil || c.CPS == nil {
+		return DefaultPipelinePacingCPS
+	}
+
+	cps := *c.CPS
+	if cps < 0 {
+		return 0
+	}
+
+	return cps
+}
+
+func (c *PipelinePacingConfig) GetJitter() float64 {
+	if c == nil || c.Jitter == nil {
+		return DefaultPipelinePacingJitter
+	}
+
+	jitter := *c.Jitter
+	if jitter < 0 {
+		return 0
+	}
+
+	return jitter
+}
+
+func (c *PipelinePacingConfig) GetPunctuationPause() int {
+	if c == nil || c.PunctuationPause == nil {
+		return DefaultPipelinePacingPunctuationPause
+	}
+
+	punctuationPause := *c.PunctuationPause
+	if punctuationPause < 0 {
+		return 0
+	}
+
+	return punctuationPause
 }
 
 // Output modes.
@@ -140,66 +235,51 @@ const (
 	CodeFenceSplit  = "split"
 )
 
-// resolvedOutput is the per-request effective output policy.
+// ResolveOutputPolicy is the per-request effective output policy.
 // Derived from OutputConfig with defaults and any request-level overrides.
-type resolvedOutput struct {
+type ResolveOutputPolicy struct {
 	Mode          string
 	CodeFence     string
 	MaxChunkBytes int
-	Pacing        resolvedPacing
+	Pacing        ResolvePolicyPacing
 }
 
-type resolvedPacing struct {
-	Enabled            bool
-	CPS                int
-	Jitter             float64
-	PunctuationPauseMs int
+type ResolvePolicyPacing struct {
+	Enabled          bool
+	CPS              int
+	Jitter           float64
+	PunctuationPause int
 }
 
-// resolve applies defaults to an OutputConfig and returns the effective policy.
-// A nil receiver yields the default policy.
-func (o *PipelineOutputConfig) resolve() resolvedOutput {
-	out := resolvedOutput{
-		Mode:      OutputModeBlock,
-		CodeFence: CodeFenceAtomic,
+const (
+	DefaultResolveOutputPolicyMode      = "block"
+	DefaultResolveOutputPolicyCodeFence = "atomic"
+)
+
+func (c *PipelineOutputConfig) ResolveOutputPolicy() ResolveOutputPolicy {
+	if c == nil {
+		return RawOverwriteOutputPolicy()
 	}
-	if o == nil {
-		return out
+
+	policy := ResolveOutputPolicy{
+		Mode:          c.GetMode(),
+		CodeFence:     c.GetCodeFence(),
+		MaxChunkBytes: c.GetMaxChunkBytes(),
 	}
-	if o.Mode != "" {
-		out.Mode = o.Mode
-	}
-	if o.CodeFence != "" {
-		out.CodeFence = o.CodeFence
-	}
-	if o.MaxChunkBytes > 0 {
-		out.MaxChunkBytes = o.MaxChunkBytes
-	}
-	if o.Pacing != nil && o.Pacing.Enabled {
-		out.Pacing = resolvedPacing{
-			Enabled:            true,
-			CPS:                o.Pacing.CPS,
-			Jitter:             o.Pacing.Jitter,
-			PunctuationPauseMs: o.Pacing.PunctuationPauseMs,
-		}
-		if out.Pacing.CPS <= 0 {
-			out.Pacing.CPS = 60
-		}
-		if out.Pacing.Jitter < 0 {
-			out.Pacing.Jitter = 0
-		}
-		if out.Pacing.Jitter > 1 {
-			out.Pacing.Jitter = 1
+	if c.Pacing != nil && c.Pacing.GetEnabled() {
+		policy.Pacing = ResolvePolicyPacing{
+			CPS:              c.Pacing.GetCPS(),
+			Jitter:           c.Pacing.GetJitter(),
+			PunctuationPause: c.Pacing.GetPunctuationPause(),
 		}
 	}
-	return out
+
+	return policy
 }
 
-// rawOverride returns the policy used when a request sets ?raw=true:
-// token-mode, no pacing, no code-fence protection.
-func rawOverride() resolvedOutput {
-	return resolvedOutput{
-		Mode:      OutputModeToken,
-		CodeFence: CodeFenceSplit,
+func RawOverwriteOutputPolicy() ResolveOutputPolicy {
+	return ResolveOutputPolicy{
+		Mode:      DefaultResolveOutputPolicyMode,
+		CodeFence: DefaultResolveOutputPolicyCodeFence,
 	}
 }

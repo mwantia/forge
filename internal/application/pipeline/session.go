@@ -28,5 +28,5 @@ type Session struct {
 	ContextHash string
 
 	// Output is the resolved per-request chunking/pacing policy.
-	Output resolvedOutput
+	Policy ResolveOutputPolicy
 }
