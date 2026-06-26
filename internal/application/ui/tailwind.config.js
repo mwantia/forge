@@ -32,8 +32,8 @@ export const theme = {
       'rem-soft': 'rgba(210,122,120,0.10)',
     },
     fontFamily: {
-      sans: ['Inter', 'system-ui', 'sans-serif'],
-      mono: ['"JetBrains Mono"', '"SFMono-Regular"', 'Menlo', 'monospace'],
+      sans: ['"JetBrains Mono"', 'Inter', 'system-ui', 'sans-serif'],
+      mono: ['"JetBrains Mono"', '"SFMono-Regular"', 'Menlo', 'ui-monospace', 'monospace'],
     },
     borderRadius: {
       '2px': '2px',

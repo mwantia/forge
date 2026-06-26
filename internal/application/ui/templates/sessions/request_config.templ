@@ -1,0 +1,109 @@
+package tmplsessions
+
+templ RequestConfigDropdown(currentMode string) {
+	<div
+		x-data={ "{ open: false, language: 'en', mode: '" + currentMode + "' }" }
+		@click.outside="open = false"
+		@keydown.escape.window="open = false"
+		class="relative"
+	>
+		<!-- Hidden inputs — bound to Alpine state, submitted with the form -->
+		<input type="hidden" name="language" :value="language"/>
+		<input type="hidden" name="mode" :value="mode"/>
+		<!-- Dropdown panel — opens upward -->
+		<div
+			x-show="open"
+			x-cloak
+			x-transition:enter="transition ease-out duration-[130ms]"
+			x-transition:enter-start="opacity-0 translate-y-1"
+			x-transition:enter-end="opacity-100 translate-y-0"
+			x-transition:leave="transition ease-in duration-75"
+			x-transition:leave-start="opacity-100 translate-y-0"
+			x-transition:leave-end="opacity-0 translate-y-1"
+			class="absolute right-0 w-[244px] bg-bg-1 border border-line rounded overflow-hidden z-50"
+			style="bottom:calc(100% + 8px);box-shadow:0 -8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.025)"
+		>
+			<!-- ── LANGUAGE ── -->
+			<div class="px-3.5 pt-2.5 pb-1">
+				<span class="text-[9px] tracking-[0.14em] text-ink-4 font-semibold uppercase">Language</span>
+			</div>
+			for _, lang := range []struct{ code, label string }{
+				{"en", "English"}, {"de", "Deutsch"}, {"fr", "Français"},
+				{"es", "Español"}, {"it", "Italiano"}, {"nl", "Nederlands"},
+			} {
+				<div
+					@click={ "language='" + lang.code + "'" }
+					:class={ "language==='" + lang.code + "'?'bg-bg-2':''" }
+					class="flex items-center gap-2 px-3.5 py-1.5 cursor-pointer hover:bg-bg-2 transition-colors duration-75"
+				>
+					<span
+						x-show={ "language==='" + lang.code + "'" }
+						class="w-3.5 text-[11px] text-accent shrink-0 leading-none"
+					>✓</span>
+					<span
+						x-show={ "language!=='" + lang.code + "'" }
+						class="w-3.5 shrink-0"
+					></span>
+					<span
+						:class={ "language==='" + lang.code + "'?'text-ink font-medium':'text-ink-4'" }
+						class="w-6 text-ui-label shrink-0"
+					>{ lang.code }</span>
+					<span class="text-[11px] text-ink-4 flex-1">{ lang.label }</span>
+				</div>
+			}
+			<!-- divider -->
+			<div class="h-px bg-line-soft my-1"></div>
+			<!-- ── MODE ── -->
+			<div class="px-3.5 pt-1.5 pb-1">
+				<span class="text-[9px] tracking-[0.14em] text-ink-4 font-semibold uppercase">Mode</span>
+			</div>
+			for _, m := range []struct{ name, desc string }{
+				{"chat", "conversational"}, {"plan", "step-by-step"},
+				{"research", "deep analysis"}, {"code", "code-focused"},
+			} {
+				<div
+					@click={ "mode='" + m.name + "'" }
+					:class={ "mode==='" + m.name + "'?'bg-bg-2':''" }
+					class="flex items-center gap-2 px-3.5 py-1.5 cursor-pointer hover:bg-bg-2 transition-colors duration-75"
+				>
+					<span
+						x-show={ "mode==='" + m.name + "'" }
+						class="w-3.5 text-[11px] text-accent shrink-0 leading-none"
+					>✓</span>
+					<span
+						x-show={ "mode!=='" + m.name + "'" }
+						class="w-3.5 shrink-0"
+					></span>
+					<span
+						:class={ "mode==='" + m.name + "'?'text-ink font-medium':'text-ink-3'" }
+						class="text-ui-label flex-1"
+					>{ m.name }</span>
+					<span class="text-[10px] text-ink-4 tracking-[0.01em]">{ m.desc }</span>
+				</div>
+			}
+			<!-- divider -->
+			<div class="h-px bg-line-soft my-1"></div>
+			<!-- ── RECALL (stub — not yet implemented) ── -->
+			<div class="flex items-center gap-2.5 px-3.5 pt-2 pb-3">
+				<div class="flex-1">
+					<div class="text-ui-label text-ink-3 font-medium leading-none mb-1">recall</div>
+					<div class="text-[10px] text-ink-4">Memory retrieval</div>
+				</div>
+				<div class="relative w-[34px] h-[19px] rounded-full border border-line bg-bg-2 opacity-40 cursor-not-allowed shrink-0">
+					<div class="absolute top-[3px] left-[2px] w-[13px] h-[13px] rounded-full bg-ink-4"></div>
+				</div>
+			</div>
+		</div>
+		<!-- ── Trigger button — matches btn-accent height ── -->
+		<button
+			type="button"
+			@click="open = !open"
+			class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-line bg-bg-2 font-mono text-ui-ctrl cursor-pointer hover:bg-bg-3 hover:border-line-strong transition-colors"
+		>
+			<span class="text-accent font-semibold" x-text="language">en</span>
+			<span class="text-line">·</span>
+			<span class="text-ink-3" x-text="mode">{ currentMode }</span>
+			<span class="text-ink-4 text-[9px] ml-0.5">▾</span>
+		</button>
+	</div>
+}

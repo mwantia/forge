@@ -46,11 +46,11 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"{ sidebar: window.innerWidth >= 1010, rightPanel: window.innerWidth >= 1290, wideMode: document.documentElement.classList.contains('forge-wide') }\" @resize.window=\"sidebar = window.innerWidth >= 1010; rightPanel = window.innerWidth >= 1290; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }\" class=\"flex flex-col flex-1 overflow-hidden\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"{ sidebar: $persist(window.innerWidth >= 1010).as('forge:sidebar'), rightPanel: $persist(window.innerWidth >= 1290).as('forge:rightPanel'), wideMode: document.documentElement.classList.contains('forge-wide') }\" @resize.window=\"if(window.innerWidth < 1010) sidebar = false; if(window.innerWidth < 1290) rightPanel = false; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }\" class=\"flex flex-col flex-1 overflow-hidden\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = layout.TopbarSession(sessionDisplayName(meta), activeRef).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = layout.Topbar(layout.Crumb{Label: "sessions", Href: "/ui/sessions"}, layout.Crumb{Label: sessionDisplayName(meta), Tag: activeRef}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -265,156 +265,59 @@ func Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"> <textarea id=\"composer-input\" name=\"content\" rows=\"3\" placeholder=\"Message… (⌘↵ or Ctrl↵ to commit)\" class=\"w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50\" x-model=\"draft\" @keydown.meta.enter.prevent=\"if(!streaming && draft.trim()) $el.closest('form').requestSubmit()\" @keydown.ctrl.enter.prevent=\"if(!streaming && draft.trim()) $el.closest('form').requestSubmit()\"></textarea><div class=\"flex items-center gap-1.5 mt-2\"><span class=\"text-ink-4 text-ui-code\" x-show=\"streaming\" x-cloak>Streaming…</span> <span class=\"text-ink-4 text-ui-code shrink-0\" x-show=\"!streaming\">⌘↵ / Ctrl↵</span><div class=\"flex items-center gap-1 flex-1 justify-end\"><select name=\"language\" class=\"cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\"> <textarea id=\"composer-input\" name=\"content\" rows=\"3\" placeholder=\"Message… (⌘↵ or Ctrl↵ to commit)\" class=\"w-full bg-bg-2 border border-line rounded-md px-3 py-2 text-ui-body text-ink placeholder-ink-4 resize-none focus:outline-none focus:border-accent/50\" x-model=\"draft\" @keydown.meta.enter.prevent=\"if(!streaming && draft.trim()) $el.closest('form').requestSubmit()\" @keydown.ctrl.enter.prevent=\"if(!streaming && draft.trim()) $el.closest('form').requestSubmit()\"></textarea><div class=\"flex items-center gap-1.5 mt-2\"><span class=\"text-ink-4 text-ui-code\" x-show=\"streaming\" x-cloak>Streaming…</span> <span class=\"text-ink-4 text-ui-code shrink-0\" x-show=\"!streaming\">⌘↵ / Ctrl↵</span><div class=\"flex items-center gap-1 flex-1 justify-end\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				for _, l := range appsession.AllowedLanguages {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<option value=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var15 string
-					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(l.Code)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 160, Col: 38}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var16 string
-					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(l.Code)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 160, Col: 49}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</option>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</select> <select name=\"mode\" class=\"cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors\">")
+				templ_7745c5c3_Err = RequestConfigDropdown(appsession.ModeOrDefault(meta.Mode)).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				for _, m := range []string{"chat", "plan", "code", "research"} {
-					if m == appsession.ModeOrDefault(meta.Mode) {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<option value=\"")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var17 string
-						templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(m)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 169, Col: 34}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\" selected>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var18 string
-						templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(m)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 169, Col: 49}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</option>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-					} else {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<option value=\"")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var19 string
-						templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(m)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 171, Col: 34}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\">")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						var templ_7745c5c3_Var20 string
-						templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(m)
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 171, Col: 40}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</option>")
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</select></div><button id=\"composer-submit\" type=\"submit\" class=\"btn-accent items-center gap-1.5\" :disabled=\"streaming || !draft.trim()\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg> <span>Commit</span></button></div></form></div></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div><button id=\"composer-submit\" type=\"submit\" class=\"btn-accent items-center gap-1.5\" :disabled=\"streaming || !draft.trim()\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg> <span>Commit</span></button></div></form></div></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</div></div></div><!-- RIGHT PANEL: siblings + session DAG + refs + path --><aside style=\"transition:width .15s ease\" :style=\"rightPanel ? 'width:280px' : 'width:0'\" class=\"bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0\"><!-- Siblings (OOB-populated from /node response) --><div id=\"siblings-section\" class=\"border-b border-line-soft shrink-0\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div><!-- Session DAG --><div class=\"flex items-center justify-between px-3 py-1.5 border-b border-line-soft shrink-0\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold\">Session DAG</span> <a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div></div></div><!-- RIGHT PANEL: siblings + session DAG + refs + path --><aside style=\"transition:width .15s ease\" :style=\"rightPanel ? 'width:280px' : 'width:0'\" class=\"bg-bg-1 border-l border-line flex flex-col overflow-hidden shrink-0\"><!-- Siblings (OOB-populated from /node response) --><div id=\"siblings-section\" class=\"border-b border-line-soft shrink-0\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div><!-- Session DAG --><div class=\"flex items-center justify-between px-3 py-1.5 border-b border-line-soft shrink-0\"><span class=\"text-ui-label uppercase tracking-[0.08em] text-ink-4 font-semibold\">Session DAG</span> <a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var21 templ.SafeURL
-			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/ui/sessions/" + meta.ID + "/dag"))
+			var templ_7745c5c3_Var15 templ.SafeURL
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/ui/sessions/" + meta.ID + "/dag"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 205, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 186, Col: 63}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" class=\"text-ui-meta text-ink-3 hover:text-ink transition-colors\">expand →</a></div><div id=\"mini-dag\" hx-get=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var22 string
-			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/dag/mini")
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 211, Col: 54}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" class=\"text-ui-meta text-ink-3 hover:text-ink transition-colors\">expand →</a></div><div id=\"mini-dag\" hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"shrink-0 border-b border-line-soft overflow-y-auto max-h-[200px]\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta\">Loading…</div></div><!-- Refs panel --><div id=\"refs-panel\" hx-get=\"")
+			var templ_7745c5c3_Var16 string
+			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/dag/mini")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 192, Col: 54}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var23 string
-			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/refs")
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 221, Col: 50}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"shrink-0 border-b border-line-soft overflow-y-auto max-h-[200px]\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta\">Loading…</div></div><!-- Refs panel --><div id=\"refs-panel\" hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0\"><div class=\"px-3 py-3 text-ink-3 text-ui-code\">Loading refs…</div></div><!-- Path (OOB-populated from /node response, fills remaining space) --><div id=\"path-section\" class=\"flex-1 min-h-0 overflow-hidden\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div></aside></div></div>")
+			var templ_7745c5c3_Var17 string
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue("/ui/sessions/" + meta.ID + "/refs")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/application/ui/templates/sessions/detail.templ`, Line: 202, Col: 50}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" hx-trigger=\"load\" hx-swap=\"innerHTML\" class=\"border-b border-line-soft overflow-y-auto max-h-[180px] shrink-0\"><div class=\"px-3 py-3 text-ink-3 text-ui-code\">Loading refs…</div></div><!-- Path (OOB-populated from /node response, fills remaining space) --><div id=\"path-section\" class=\"flex-1 min-h-0 overflow-hidden\"><div class=\"px-3 py-2 text-ink-4 text-ui-meta animate-pulse\">···</div></div></aside></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

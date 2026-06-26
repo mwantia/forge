@@ -7,8 +7,8 @@ import (
 
 templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs map[string]string, activeRef string) {
 	@layout.Base(sessionDisplayName(meta)) {
-		<div x-data="{ sidebar: window.innerWidth >= 1010, rightPanel: window.innerWidth >= 1290, wideMode: document.documentElement.classList.contains('forge-wide') }" @resize.window="sidebar = window.innerWidth >= 1010; rightPanel = window.innerWidth >= 1290; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }" class="flex flex-col flex-1 overflow-hidden">
-			@layout.TopbarSession(sessionDisplayName(meta), activeRef)
+		<div x-data="{ sidebar: $persist(window.innerWidth >= 1010).as('forge:sidebar'), rightPanel: $persist(window.innerWidth >= 1290).as('forge:rightPanel'), wideMode: document.documentElement.classList.contains('forge-wide') }" @resize.window="if(window.innerWidth < 1010) sidebar = false; if(window.innerWidth < 1290) rightPanel = false; if(window.innerWidth < 768 && wideMode) { wideMode = false; document.documentElement.classList.remove('forge-wide'); }" class="flex flex-col flex-1 overflow-hidden">
+			@layout.Topbar(layout.Crumb{Label: "sessions", Href: "/ui/sessions"}, layout.Crumb{Label: sessionDisplayName(meta), Tag: activeRef})
 			<!-- Content -->
 			<div class="flex flex-1 overflow-hidden">
 				<!-- LEFT PANEL: title/description + session info card + plugins + actions -->
@@ -152,26 +152,7 @@ templ Detail(meta *appsession.SessionMetadata, messages []*RenderedMessage, refs
 													<span class="text-ink-4 text-ui-code" x-show="streaming" x-cloak>Streaming…</span>
 													<span class="text-ink-4 text-ui-code shrink-0" x-show="!streaming">⌘↵ / Ctrl↵</span>
 													<div class="flex items-center gap-1 flex-1 justify-end">
-														<select
-															name="language"
-															class="cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors"
-														>
-															for _, l := range appsession.AllowedLanguages {
-																<option value={ l.Code }>{ l.Code }</option>
-															}
-														</select>
-														<select
-															name="mode"
-															class="cursor-pointer bg-bg-2 border border-line rounded px-1.5 py-0.5 text-ui-code text-ink-3 focus:outline-none focus:border-accent/50 transition-colors"
-														>
-															for _, m := range []string{"chat", "plan", "code", "research"} {
-																if m == appsession.ModeOrDefault(meta.Mode) {
-																	<option value={ m } selected>{ m }</option>
-																} else {
-																	<option value={ m }>{ m }</option>
-																}
-															}
-														</select>
+														@RequestConfigDropdown(appsession.ModeOrDefault(meta.Mode))
 													</div>
 													<button id="composer-submit" type="submit" class="btn-accent items-center gap-1.5" :disabled="streaming || !draft.trim()">
 														<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
