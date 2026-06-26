@@ -66,7 +66,7 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 	for i := range s.config.MaxToolIterations {
 		s.logger.Trace("Pipeline iteration", "iteration", i+1, "session", sess.SessionID)
 
-		content, toolCalls, finalChunk, err := s.chatWithRetry(ctx, providerName, modelName, messages, sess.ToolCalls, out, sess.Output, i+1)
+		content, toolCalls, finalChunk, err := s.chatWithRetry(ctx, providerName, modelName, messages, sess.ToolCalls, out, sess.Policy, i+1)
 		if err != nil {
 			out <- ErrorEvent{Message: fmt.Sprintf("provider error (iteration %d): %s", i+1, err)}
 			return fmt.Errorf("provider chat error (iteration %d): %w", i+1, err)
@@ -207,7 +207,7 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 // streamFromProvider reads from a provider ChatStream, feeding deltas through
 // a chunker that emits ChunkEvents at the configured boundary. Returns when
 // the stream signals Done. finalChunk carries Done=true plus any tool calls.
-func (s *PipelineService) streamFromProvider(ctx context.Context, stream provider.ChatStream, out chan<- PipelineEvent, policy resolvedOutput) (content string, toolCalls []provider.ChatToolCall, final *provider.ChatChunk, err error) {
+func (s *PipelineService) streamFromProvider(ctx context.Context, stream provider.ChatStream, out chan<- PipelineEvent, policy ResolveOutputPolicy) (content string, toolCalls []provider.ChatToolCall, final *provider.ChatChunk, err error) {
 	defer stream.Close()
 
 	ch := newChunker(out, policy)
@@ -254,14 +254,16 @@ func (s *PipelineService) streamFromProvider(ctx context.Context, stream provide
 //
 // ctx cancellation aborts immediately; all other errors are treated as
 // transient and retried with exponential backoff.
-func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, modelName string, messages []provider.ChatMessage, tools []provider.ToolCall, out chan<- PipelineEvent, policy resolvedOutput, iteration int) (string, []provider.ChatToolCall, *provider.ChatChunk, error) {
+func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, modelName string, messages []provider.ChatMessage, tools []provider.ToolCall, out chan<- PipelineEvent, policy ResolveOutputPolicy, iteration int) (string, []provider.ChatToolCall, *provider.ChatChunk, error) {
 	//
-	attempts := 3
-	if s.config.Retry.Attempts > 0 {
-		attempts = s.config.Retry.Attempts
+	attempts := s.config.Retry.GetAttempts()
+
+	base, err := s.config.Retry.Backoff.GetBase()
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to resolve backoff config: %w", err)
 	}
 
-	baseRetry, maxRetry, err := s.config.Retry.Backoff.Resolve()
+	max, err := s.config.Retry.Backoff.GetMax()
 	if err != nil {
 		return "", nil, nil, fmt.Errorf("failed to resolve backoff config: %w", err)
 	}
@@ -298,7 +300,7 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 			break
 		}
 
-		backoff := min(baseRetry*(1<<(attempt-1)), maxRetry)
+		backoff := min(base*(1<<(attempt-1)), max)
 		select {
 		case <-ctx.Done():
 			return "", nil, nil, ctx.Err()

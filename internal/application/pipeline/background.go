@@ -25,7 +25,8 @@ func (s *PipelineService) DispatchBackground(ctx context.Context, sessionID, ref
 		return fmt.Errorf("resolve session: %w", err)
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", s.config.Output.resolve(), true)
+	policy := s.config.Output.ResolveOutputPolicy()
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", policy, true)
 	if err != nil {
 		return err
 	}
@@ -37,7 +38,10 @@ func (s *PipelineService) DispatchBackground(ctx context.Context, sessionID, ref
 			s.logger.Error("background pipeline error", "session", meta.ID, "ref", ref, "error", err)
 		}
 	}()
-	go func() { for range out {} }()
+	go func() {
+		for range out {
+		}
+	}()
 
 	return nil
 }
@@ -52,7 +56,8 @@ func (s *PipelineService) DispatchSync(ctx context.Context, sessionID, ref, cont
 		return "", fmt.Errorf("resolve session: %w", err)
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", s.config.Output.resolve(), true)
+	policy := s.config.Output.ResolveOutputPolicy()
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", policy, true)
 	if err != nil {
 		return "", err
 	}

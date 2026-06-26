@@ -146,7 +146,7 @@ func (s *PipelineService) handleReplayContext() gin.HandlerFunc {
 		}
 
 		out := make(chan PipelineEvent, 32)
-		policy := s.config.Output.resolve()
+		policy := s.config.Output.ResolveOutputPolicy()
 		go func() {
 			defer close(out)
 

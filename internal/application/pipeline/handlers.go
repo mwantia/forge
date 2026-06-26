@@ -78,14 +78,14 @@ func (s *PipelineService) handleCommit() gin.HandlerFunc {
 			return
 		}
 
-		output := s.config.Output.resolve()
+		policy := s.config.Output.ResolveOutputPolicy()
 		if raw, _ := strconv.ParseBool(c.Query("raw")); raw {
-			output = rawOverride()
+			policy = RawOverwriteOutputPolicy()
 		}
 
 		recall := req.Recall == nil || *req.Recall
 
-		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, resolvedLanguage, output, recall)
+		run, err := s.preparePipelineRun(ctx, meta, ref, req.Content, resolvedLanguage, policy, recall)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

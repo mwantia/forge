@@ -27,10 +27,12 @@ func (s *PipelineService) RenderContent(ctx context.Context, sessionID, content 
 	if err != nil {
 		return content, err
 	}
+
 	scoped, err := s.buildScopedTemplate(ctx, meta, "")
 	if err != nil {
 		return content, err
 	}
+
 	return scoped.RenderBody(content)
 }
 
@@ -84,7 +86,7 @@ func buildModelData(ctx context.Context, provider domprovider.ProviderRegistar, 
 //     rendered form to the chat slice.
 //  6. Resolves and filters available tool calls.
 //  7. Records the PromptContext and stamps its hash.
-func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsession.SessionMetadata, ref, content, language string, output resolvedOutput, recall bool) (*pipelineRun, error) {
+func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsession.SessionMetadata, ref, content, language string, policy ResolveOutputPolicy, recall bool) (*pipelineRun, error) {
 	var history []*appsession.Message
 	var err error
 	if ref == dag.HEAD {
@@ -173,7 +175,7 @@ func (s *PipelineService) preparePipelineRun(ctx context.Context, meta *appsessi
 			ToolCalls:   toolCalls,
 			Ref:         ref,
 			ContextHash: ctxHash,
-			Output:      output,
+			Policy:      policy,
 		},
 	}, nil
 }
@@ -190,7 +192,8 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 		ref = dag.HEAD
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", s.config.Output.resolve(), true)
+	policy := s.config.Output.ResolveOutputPolicy()
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, "", policy, true)
 	if err != nil {
 		return "", err
 	}
@@ -204,17 +207,21 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 
 	var sb strings.Builder
 	var pipeErr error
+
 	for ev := range out {
 		switch e := ev.(type) {
 		case ChunkEvent:
 			sb.WriteString(e.Text)
+
 		case ErrorEvent:
 			pipeErr = fmt.Errorf("%s", e.Message)
 		}
 	}
+
 	if pipeErr != nil {
 		return "", pipeErr
 	}
+
 	return sb.String(), nil
 }
 
@@ -241,16 +248,19 @@ func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, cont
 		meta = &copy
 	}
 
-	run, err := s.preparePipelineRun(ctx, meta, ref, content, language, s.config.Output.resolve(), recall)
+	policy := s.config.Output.ResolveOutputPolicy()
+	run, err := s.preparePipelineRun(ctx, meta, ref, content, language, policy, recall)
 	if err != nil {
 		return nil, err
 	}
+
 	out := make(chan PipelineEvent, 32)
 	go func() {
 		if err := s.RunSessionPipeline(ctx, run.sess, out); err != nil {
 			s.logger.Error("commit_events pipeline error", "session", meta.ID, "error", err)
 		}
 	}()
+
 	return out, nil
 }
 
