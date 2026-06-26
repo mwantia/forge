@@ -13,11 +13,12 @@ type pendingJob struct {
 	Content   string
 	Mode      string
 	Language  string
+	Recall    bool
 }
 
 var streamJobs sync.Map
 
-func newStreamToken(sessionID, ref, content, mode, language string) string {
+func newStreamToken(sessionID, ref, content, mode, language string, recall bool) string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 
@@ -28,6 +29,7 @@ func newStreamToken(sessionID, ref, content, mode, language string) string {
 		Content:   content,
 		Mode:      mode,
 		Language:  language,
+		Recall:    recall,
 	})
 
 	go func() {

@@ -19,13 +19,14 @@ func (h *pipelineHandlers) handleCommit() gin.HandlerFunc {
 		content := c.PostForm("content")
 		mode := c.PostForm("mode")
 		language := c.PostForm("language")
+		recall := c.PostForm("recall") != "false"
 
 		if content == "" {
 			c.String(http.StatusBadRequest, "content is required")
 			return
 		}
 
-		token := newStreamToken(id, ref, content, mode, language)
+		token := newStreamToken(id, ref, content, mode, language, recall)
 		streamURL := fmt.Sprintf("/ui/sessions/%s/stream?token=%s&ref=%s", id, token, ref)
 
 		c.Header("Content-Type", "text/html; charset=utf-8")
