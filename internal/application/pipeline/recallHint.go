@@ -2,10 +2,10 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 
+	sdkdata "github.com/mwantia/forge-sdk/pkg/data"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	domresource "github.com/mwantia/forge/internal/domain/resource"
 )
@@ -92,11 +92,17 @@ func (s *PipelineService) buildRecallHint(ctx context.Context, history []*appses
 		return ""
 	}
 
-	var sb strings.Builder
-	sb.WriteString("# Relevant Resources (recall)\n")
+	p := sdkdata.NewPrompt()
+	p.Header(1, "Relevant Resources (recall)")
+	p.Section(`
+	The following resources were automatically retrieved from the memory database based via a builtin 'recall' feature on the current turn's query enabled by the user.
+	This section is injected fresh on every turn and changes per turn to recall existing information based on the users input. Absence in a prior turn means nothing matched above threshold.
+	`)
+
 	for _, h := range hits {
-		fmt.Fprintf(&sb, "\n<!-- from: %s score: %.2f -->\n## %s\n\n%s\n",
-			h.msgHashPrefix, h.resource.Score, h.resource.ID, h.resource.Content)
+		p.Sectionf("<!-- from: %s score: %.2f -->", h.msgHashPrefix, h.resource.Score)
+		p.Header(2, h.resource.ID)
+		p.Section(h.resource.Content)
 	}
-	return sb.String()
+	return p.String()
 }
