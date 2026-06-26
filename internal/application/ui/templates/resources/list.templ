@@ -9,11 +9,12 @@ import (
 
 templ List(resources []*domresource.Resource, histories map[string][]*domresource.ResourceRevision) {
 	@layout.Base("Resources") {
-		@layout.TopbarSimple()
+		<script type="text/javascript" src={ layout.VersionedAssetUrl("resources.js") }></script>
+		@layout.Topbar(layout.Crumb{Label: "resources"})
 		<div
 			class="flex flex-col overflow-hidden"
 			style="height: calc(100vh - 44px)"
-			x-data={ resourcesPageData(resources, histories) }
+			x-data={ "resourcesPage(" + resourcesPageData(resources, histories) + ")" }
 		>
 			<!-- Page header -->
 			<div class="shrink-0 px-6 pt-[22px]">
@@ -48,10 +49,9 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 				<!-- Filter row -->
 				<div
 					class="flex flex-col gap-[8px] mt-4 mb-[18px]"
-					@type-filter="filterType = $event.detail.value; selectFirst()"
 					@session-filter="filterSession = $event.detail.value; selectFirst()"
 				>
-					<!-- Row 1: mode toggle + search/textarea + type + session filters -->
+					<!-- Row 1: mode toggle + search/textarea + type badges + session filter -->
 					<div class="flex flex-wrap items-start gap-[10px]">
 						<!-- Mode toggle -->
 						<div class="inline-flex gap-0.5 p-0.5 rounded-[8px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)] shrink-0 self-start mt-0.5">
@@ -93,66 +93,78 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 								class="absolute right-2 bottom-2 font-mono text-[10px] text-ink-4 animate-pulse"
 							>searching…</span>
 						</div>
-						<!-- Right column: type/session filters stacked above recall controls -->
+						<!-- Right column: type badges + session filter -->
 						<div class="flex flex-col gap-[8px] shrink-0">
-							<!-- Top row: type + session filters (always visible) -->
-							<div class="flex items-center gap-[10px]">
-								<!-- Type filter -->
+							<!-- Top row: type badge chips + session filter -->
+							<div class="flex items-center gap-[10px] flex-wrap">
+								<!-- Type filter: multi-select dropdown -->
 								<div
-									x-data="{ open: false, value: '', label: 'All types' }"
+									x-data="{ open: false }"
 									@click.outside="open = false"
 									class="relative"
 								>
-									<button
-										type="button"
+									<!-- Trigger -->
+									<div
 										@click="open = !open"
-										class="flex items-center gap-2 bg-bg-1 border border-line rounded-md px-2.5 h-[38px] text-ui-ctrl text-ink-2 hover:border-line-strong focus:outline-none focus:border-line-strong transition-colors min-w-[120px]"
+										:title="filterTypes.length > 0 ? filterTypes.length + ' / 4 selected · click a badge to remove' : 'All types'"
+										class="relative cursor-pointer select-none rounded-xl border-[1.5px] border-line bg-bg-1 px-2.5 py-1.5 pr-9 flex flex-wrap items-center gap-1.5 min-h-[38px] min-w-[180px] transition-all duration-150 hover:border-line-strong"
 									>
-										<span class="flex-1 text-left" x-text="label"></span>
-										<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-ink-4"><polyline points="6 9 12 15 18 9"></polyline></svg>
-									</button>
+										<span x-show="filterTypes.length === 0" class="text-[13px] text-ink-4 px-0.5">All types…</span>
+										<template x-for="t in filterTypes" :key="t">
+											<span
+												@click.stop="toggleType(t)"
+												class="inline-flex cursor-pointer select-none items-center rounded-md px-2.5 py-[3px] text-[12px] font-medium transition-colors duration-100 hover:opacity-80"
+												:style="`background:${typeBadge(t)};color:${typeColor(t)}`"
+												x-text="t"
+											></span>
+										</template>
+										<span
+											class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center text-ink-4 transition-transform duration-200"
+											:class="open ? 'rotate-180' : ''"
+										>
+											<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 5.5L8 10L12.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+										</span>
+									</div>
+									<!-- Dropdown panel -->
 									<div
 										x-show="open"
-										x-transition:enter="transition ease-out duration-75"
-										x-transition:enter-start="opacity-0 -translate-y-1"
+										x-transition:enter="transition ease-out duration-[140ms]"
+										x-transition:enter-start="opacity-0 -translate-y-1.5"
 										x-transition:enter-end="opacity-100 translate-y-0"
-										class="absolute right-0 top-full mt-1 bg-bg-1 border border-line rounded-md shadow-lg z-20 overflow-hidden min-w-full"
+										x-transition:leave="transition ease-in duration-100"
+										x-transition:leave-start="opacity-100 translate-y-0"
+										x-transition:leave-end="opacity-0 -translate-y-1.5"
+										class="absolute left-0 z-50 mt-1.5 overflow-hidden rounded-xl border-[1.5px] border-line bg-bg-2 shadow-[0_8px_32px_rgba(0,0,0,0.30)] min-w-full"
 									>
-										<ul class="py-1">
-											<li>
-												<button type="button" @click="value=''; label='All types'; open=false; $dispatch('type-filter',{value:''})"
-													:class="value==='' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
-													class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors">All types</button>
-											</li>
-											<li>
-												<button type="button" @click="value='memory'; label='memory'; open=false; $dispatch('type-filter',{value:'memory'})"
-													:class="value==='memory' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
-													class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
-													<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#e0a45e"></span>memory
-												</button>
-											</li>
-											<li>
-												<button type="button" @click="value='reference'; label='reference'; open=false; $dispatch('type-filter',{value:'reference'})"
-													:class="value==='reference' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
-													class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
-													<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#86c275"></span>reference
-												</button>
-											</li>
-											<li>
-												<button type="button" @click="value='online'; label='online'; open=false; $dispatch('type-filter',{value:'online'})"
-													:class="value==='online' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
-													class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
-													<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#6fa9d6"></span>online
-												</button>
-											</li>
-											<li>
-												<button type="button" @click="value='archive'; label='archive'; open=false; $dispatch('type-filter',{value:'archive'})"
-													:class="value==='archive' ? 'text-ink bg-bg-2' : 'text-ink-2 hover:bg-bg-2 hover:text-ink'"
-													class="w-full text-left px-3 py-1.5 text-ui-ctrl transition-colors flex items-center gap-2">
-													<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:#9a9aa2"></span>archive
-												</button>
-											</li>
-										</ul>
+										<template x-for="t in ['memory','reference','online','archive']" :key="t">
+											<div
+												@click="toggleType(t)"
+												class="flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 text-[13px] font-medium text-ink transition-colors duration-100 hover:bg-[rgba(255,255,255,0.04)]"
+											>
+												<span
+													x-show="filterTypes.includes(t)"
+													class="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px]"
+													:style="`border-color:${typeColor(t)};background:${typeColor(t)}`"
+												>
+													<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1.5" stroke="#161619" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+												</span>
+												<span
+													x-show="!filterTypes.includes(t)"
+													class="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] border-[rgba(255,255,255,0.15)] bg-transparent"
+												></span>
+												<span class="flex items-center gap-1.5">
+													<span class="w-1.5 h-1.5 rounded-full shrink-0" :style="`background:${typeColor(t)}`"></span>
+													<span x-text="t"></span>
+												</span>
+											</div>
+										</template>
+										<div
+											x-show="filterTypes.length >= 4"
+											class="flex items-center justify-center gap-1.5 border-t border-line px-3.5 pb-2.5 pt-2"
+										>
+											<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#7e828c" stroke-width="1.3"/><path d="M6 4v3M6 8.5v.5" stroke="#7e828c" stroke-width="1.3" stroke-linecap="round"/></svg>
+											<span class="text-[11px] font-medium text-ink-3">All types selected</span>
+										</div>
 									</div>
 								</div>
 								<!-- Session filter -->
@@ -198,7 +210,7 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									</div>
 								}
 							</div>
-							<!-- Bottom row: recall controls, directly underneath filters -->
+							<!-- Bottom row: recall controls -->
 							<div x-show="mode === 'recall'" class="flex items-center gap-[10px]">
 								<label class="flex items-center gap-2 text-[11px] text-ink-3">
 									<span>Min score</span>
@@ -289,7 +301,7 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 					<div x-show="selected" class="flex flex-col h-full">
 						<!-- Header row -->
 						<div class="flex items-start justify-between gap-4">
-							<!-- Left: badge + id / name -->
+							<!-- Left: badge + id / name + tags -->
 							<div class="min-w-0">
 								<div class="flex items-center gap-2">
 									<span
@@ -306,19 +318,34 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									class="text-[17px] font-semibold text-[#f0f0f2] mt-[9px] leading-tight"
 									x-text="selected?.name || selected?.id"
 								></h3>
-								<!-- Tags -->
-								<div x-show="selected?.tags?.length > 0" class="flex flex-wrap gap-1 mt-2">
+								<!-- Tags: badge + input (read-only in edit mode) -->
+								<div class="flex flex-wrap items-center gap-1 mt-2">
 									<template x-for="tag in (selected?.tags || [])" :key="tag">
-										<span
-											class="font-mono text-[10px] border border-[rgba(255,255,255,0.09)] rounded px-1.5 py-0.5 text-[#5f5f67]"
-											x-text="tag"
-										></span>
+										<span class="inline-flex items-center gap-0.5 font-mono text-[10px] border border-[rgba(255,255,255,0.09)] rounded px-1.5 py-0.5 text-[#5f5f67]">
+											<span x-text="tag"></span>
+											<button
+												x-show="!editing"
+												type="button"
+												@click.stop="removeTag(tag)"
+												class="ml-0.5 leading-none text-[#5f5f67] hover:text-rem transition-colors"
+												title="Remove tag"
+											>×</button>
+										</span>
 									</template>
+									<input
+										x-show="!editing"
+										x-model="newTag"
+										@keydown="onNewTagKey($event)"
+										@blur="if(newTag.trim()){addTag(newTag)}"
+										type="text"
+										placeholder="+ tag"
+										class="font-mono text-[10px] bg-transparent border-b border-dashed border-[rgba(255,255,255,0.12)] text-ink-4 placeholder:text-ink-4 focus:outline-none focus:border-accent/50 w-[50px] px-0.5 py-0.5"
+									/>
 								</div>
 							</div>
-							<!-- Right: Edit + L0/L1 toggle + compare placeholder -->
+							<!-- Right: action buttons -->
 							<div class="flex items-center gap-2 shrink-0 mt-0.5">
-								<!-- Segmented toggle -->
+								<!-- Segmented L0/L1 toggle -->
 								<div x-show="!editing" class="inline-flex gap-0.5 p-0.5 rounded-[8px] bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.07)]">
 									<button
 										type="button"
@@ -362,6 +389,16 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
 									Edit
 								</button>
+								<!-- Delete button -->
+								<button
+									x-show="!editing"
+									type="button"
+									@click="doDelete()"
+									class="flex items-center gap-1.5 px-3 h-[30px] rounded-[7px] border border-rem/30 text-rem text-[11px] font-semibold hover:bg-rem/10 transition-colors"
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+									Delete
+								</button>
 							</div>
 						</div>
 						<!-- Metadata strip -->
@@ -391,7 +428,18 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 						<!-- Content section -->
 						<div class="mt-4 flex flex-col flex-1 min-h-0">
 							<div class="flex items-center justify-between shrink-0">
-								<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">Content</p>
+								<div class="flex items-center gap-2">
+									<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">Content</p>
+									<button
+										x-show="!editing"
+										type="button"
+										@click="showContent = !showContent"
+										class="text-[#5f5f67] hover:text-ink-3 transition-colors"
+										:title="showContent ? 'Collapse' : 'Expand'"
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="showContent ? '' : 'rotate-180'" class="transition-transform"><polyline points="6 9 12 15 18 9"></polyline></svg>
+									</button>
+								</div>
 								<template x-if="!editing">
 									<div class="flex items-center gap-2">
 										<button
@@ -410,7 +458,7 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 								</template>
 							</div>
 							<!-- view mode -->
-							<div x-show="!editing" class="flex flex-col flex-1 min-h-0">
+							<div x-show="!editing && showContent" class="flex flex-col flex-1 min-h-0">
 								<!-- rendered: server-side markdown HTML -->
 								<div
 									x-show="!raw && displayContent"
@@ -432,7 +480,7 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 									<p class="text-ink-4 text-[13px]">No distilled summary available for this resource.</p>
 								</div>
 							</div>
-							<!-- edit mode -->
+							<!-- edit mode (always show content area in edit mode) -->
 							<div x-show="editing" class="flex flex-col flex-1 min-h-0 mt-[10px]">
 								<textarea
 									x-model="editContent"
@@ -477,42 +525,53 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 					</div>
 					<!-- History list -->
 					<div x-show="selected" class="flex flex-col h-full overflow-hidden">
-						<div class="shrink-0 px-4 pt-[18px] pb-[10px] border-b border-[rgba(255,255,255,0.06)]">
+						<div class="shrink-0 px-4 pt-[18px] pb-[10px] border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between">
 							<p class="font-mono text-[10px] font-semibold tracking-[.12em] uppercase text-[#6f6f77]">History</p>
+							<button
+								type="button"
+								@click="showHistory = !showHistory"
+								class="text-[#5f5f67] hover:text-ink-3 transition-colors"
+								:title="showHistory ? 'Collapse' : 'Expand'"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="showHistory ? '' : 'rotate-180'" class="transition-transform"><polyline points="6 9 12 15 18 9"></polyline></svg>
+							</button>
 						</div>
-						<!-- Empty -->
-						<div x-show="!selected?.history?.length" class="flex items-center justify-center flex-1">
-							<p class="text-[#5f5f67] text-[12px]">No commits yet.</p>
-						</div>
-						<!-- Commits -->
-						<div x-show="selected?.history?.length" class="overflow-auto flex-1 [scrollbar-gutter:stable]">
-							<template x-for="(rev, i) in (selected?.history || [])" :key="rev.hash">
-								<div
-									class="px-4 py-[11px] border-b border-[rgba(255,255,255,0.04)] transition-colors"
-									:class="i === 0 ? 'bg-[rgba(227,163,90,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'"
-								>
-									<!-- Hash + HEAD badge -->
-									<div class="flex items-center gap-1.5 mb-[5px]">
-										<span
-											class="font-mono text-[10px]"
-											:class="i === 0 ? 'text-[#e3a35a]' : 'text-[#5f5f67]'"
-											x-text="rev.hash.slice(0,8)"
-										></span>
-										<span
-											x-show="i === 0"
-											class="font-mono text-[9px] px-[5px] py-[1px] rounded-[3px] bg-[rgba(227,163,90,0.12)] text-[#e3a35a] leading-none"
-										>HEAD</span>
+						<!-- Collapsible history body -->
+						<div x-show="showHistory" class="flex flex-col flex-1 overflow-hidden">
+							<!-- Empty -->
+							<div x-show="!selected?.history?.length" class="flex items-center justify-center flex-1">
+								<p class="text-[#5f5f67] text-[12px]">No commits yet.</p>
+							</div>
+							<!-- Commits -->
+							<div x-show="selected?.history?.length" class="overflow-auto flex-1 [scrollbar-gutter:stable]">
+								<template x-for="(rev, i) in (selected?.history || [])" :key="rev.hash">
+									<div
+										class="px-4 py-[11px] border-b border-[rgba(255,255,255,0.04)] transition-colors"
+										:class="i === 0 ? 'bg-[rgba(227,163,90,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'"
+									>
+										<!-- Hash + HEAD badge -->
+										<div class="flex items-center gap-1.5 mb-[5px]">
+											<span
+												class="font-mono text-[10px]"
+												:class="i === 0 ? 'text-[#e3a35a]' : 'text-[#5f5f67]'"
+												x-text="rev.hash.slice(0,8)"
+											></span>
+											<span
+												x-show="i === 0"
+												class="font-mono text-[9px] px-[5px] py-[1px] rounded-[3px] bg-[rgba(227,163,90,0.12)] text-[#e3a35a] leading-none"
+											>HEAD</span>
+										</div>
+										<!-- Commit message -->
+										<p
+											class="text-[11.5px] leading-snug break-words"
+											:class="rev.message ? 'text-[#c7c7cd]' : 'text-[#5f5f67] italic'"
+											x-text="rev.message || 'no message'"
+										></p>
+										<!-- Timestamp -->
+										<p class="font-mono text-[10px] text-[#5f5f67] mt-[4px]" x-text="rev.when"></p>
 									</div>
-									<!-- Commit message -->
-									<p
-										class="text-[11.5px] leading-snug break-words"
-										:class="rev.message ? 'text-[#c7c7cd]' : 'text-[#5f5f67] italic'"
-										x-text="rev.message || 'no message'"
-									></p>
-									<!-- Timestamp -->
-									<p class="font-mono text-[10px] text-[#5f5f67] mt-[4px]" x-text="rev.when"></p>
-								</div>
-							</template>
+								</template>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -520,102 +579,113 @@ templ List(resources []*domresource.Resource, histories map[string][]*domresourc
 			<!-- Upload modal -->
 			<div
 				x-show="uploadOpen"
-			x-cloak
-			class="fixed inset-0 z-50 flex items-center justify-center"
-		>
-			<!-- backdrop -->
-			<div class="absolute inset-0 bg-black/60" @click="closeUpload()"></div>
-			<!-- dialog -->
-			<div class="relative z-10 w-[480px] bg-bg-2 border border-line rounded-[12px] shadow-2xl p-6 flex flex-col gap-5">
-				<!-- header -->
-				<div class="flex items-center justify-between">
-					<h3 class="text-[15px] font-semibold text-ink">Upload resource</h3>
-					<button type="button" @click="closeUpload()" class="text-ink-4 hover:text-ink-3 transition-colors">
-						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-					</button>
-				</div>
-				<!-- drop zone -->
-				<label
-					@dragover.prevent
-					@drop.prevent="onFileChange($event)"
-					class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-[8px] p-8 cursor-pointer hover:border-line-strong transition-colors"
-					:class="uploadContent ? 'border-accent/40 bg-accent/5' : ''"
-				>
-					<input
-						type="file"
-						accept=".txt,.md"
-						class="sr-only"
-						@change="onFileChange($event)"
-					/>
-					<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-					<p x-show="!uploadContent" class="text-[12px] text-ink-4 text-center">Drop <span class="font-mono">.txt</span> / <span class="font-mono">.md</span> here<br/>or click to browse</p>
-					<p x-show="uploadContent" class="text-[12px] text-accent font-mono" x-text="uploadName || 'file loaded'"></p>
-				</label>
-				<!-- form fields -->
-				<div class="flex flex-col gap-3">
-					<div class="flex flex-col gap-1">
-						<label class="text-[11px] text-ink-3 font-medium">Name</label>
-						<input
-							type="text"
-							x-model="uploadName"
-							placeholder="resource name"
-							class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
-						/>
+				x-cloak
+				class="fixed inset-0 z-50 flex items-center justify-center"
+			>
+				<!-- backdrop -->
+				<div class="absolute inset-0 bg-black/60" @click="closeUpload()"></div>
+				<!-- dialog -->
+				<div class="relative z-10 w-[480px] bg-bg-2 border border-line rounded-[12px] shadow-2xl p-6 flex flex-col gap-5">
+					<!-- header -->
+					<div class="flex items-center justify-between">
+						<h3 class="text-[15px] font-semibold text-ink">Upload resource</h3>
+						<button type="button" @click="closeUpload()" class="text-ink-4 hover:text-ink-3 transition-colors">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						</button>
 					</div>
-					<div class="flex gap-3">
-						<div class="flex flex-col gap-1 flex-1">
-							<label class="text-[11px] text-ink-3 font-medium">Type</label>
-							<select
-								x-model="uploadType"
-								class="bg-bg-1 border border-line rounded-md px-2 h-[34px] text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors text-[12px]"
-							>
-								<option value="memory">memory</option>
-								<option value="reference">reference</option>
-								<option value="online">online</option>
-							</select>
-						</div>
-						<div class="flex flex-col gap-1 flex-1">
-							<label class="text-[11px] text-ink-3 font-medium">Tags</label>
+					<!-- drop zone -->
+					<label
+						@dragover.prevent
+						@drop.prevent="onFileChange($event)"
+						class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line rounded-[8px] p-8 cursor-pointer hover:border-line-strong transition-colors"
+						:class="uploadContent ? 'border-accent/40 bg-accent/5' : ''"
+					>
+						<input
+							type="file"
+							accept=".txt,.md"
+							class="sr-only"
+							@change="onFileChange($event)"
+						/>
+						<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+						<p x-show="!uploadContent" class="text-[12px] text-ink-4 text-center">Drop <span class="font-mono">.txt</span> / <span class="font-mono">.md</span> here<br/>or click to browse</p>
+						<p x-show="uploadContent" class="text-[12px] text-accent font-mono" x-text="uploadName || 'file loaded'"></p>
+					</label>
+					<!-- form fields -->
+					<div class="flex flex-col gap-3">
+						<div class="flex flex-col gap-1">
+							<label class="text-[11px] text-ink-3 font-medium">Name</label>
 							<input
 								type="text"
-								x-model="uploadTags"
-								placeholder="comma-separated"
+								x-model="uploadName"
+								placeholder="resource name"
+								class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+							/>
+						</div>
+						<div class="flex gap-3">
+							<div class="flex flex-col gap-1 flex-1">
+								<label class="text-[11px] text-ink-3 font-medium">Type</label>
+								<select
+									x-model="uploadType"
+									class="bg-bg-1 border border-line rounded-md px-2 h-[34px] text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors text-[12px]"
+								>
+									<option value="memory">memory</option>
+									<option value="reference">reference</option>
+									<option value="online">online</option>
+								</select>
+							</div>
+							<div class="flex flex-col gap-1 flex-1">
+								<label class="text-[11px] text-ink-3 font-medium">Tags</label>
+								<!-- Tag badge input -->
+								<div class="min-h-[34px] flex flex-wrap items-center gap-1 bg-bg-1 border border-line rounded-md px-2 py-1 focus-within:border-line-strong transition-colors cursor-text" @click="$el.querySelector('input').focus()">
+									<template x-for="tag in uploadTags" :key="tag">
+										<span class="inline-flex items-center gap-0.5 font-mono text-[10px] bg-[rgba(255,255,255,0.06)] rounded px-1.5 py-0.5 text-ink-3">
+											<span x-text="tag"></span>
+											<button type="button" @click.stop="removeUploadTag(tag)" class="hover:text-rem transition-colors ml-0.5">×</button>
+										</span>
+									</template>
+									<input
+										x-model="newUploadTag"
+										@keydown="onUploadTagKey($event)"
+										@blur="if(newUploadTag.trim()){addUploadTag(newUploadTag)}"
+										type="text"
+										placeholder="add tag…"
+										class="flex-1 min-w-[60px] bg-transparent text-[11px] text-ink placeholder:text-ink-4 focus:outline-none"
+									/>
+								</div>
+							</div>
+						</div>
+						<div class="flex flex-col gap-1">
+							<label class="text-[11px] text-ink-3 font-medium">Commit message</label>
+							<input
+								type="text"
+								x-model="uploadCommit"
+								placeholder="describe this resource (optional)"
 								class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
 							/>
 						</div>
 					</div>
-					<div class="flex flex-col gap-1">
-						<label class="text-[11px] text-ink-3 font-medium">Commit message</label>
-						<input
-							type="text"
-							x-model="uploadCommit"
-							placeholder="describe this resource (optional)"
-							class="bg-bg-1 border border-line rounded-md px-3 h-[34px] text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors text-[12px]"
-						/>
+					<!-- error -->
+					<p x-show="uploadError" x-text="uploadError" class="text-[11px] text-rem -mt-2"></p>
+					<!-- actions -->
+					<div class="flex items-center justify-end gap-3 pt-1">
+						<button
+							type="button"
+							@click="closeUpload()"
+							:disabled="uploadWorking"
+							class="text-[12px] text-ink-3 hover:text-ink transition-colors disabled:opacity-40"
+						>Cancel</button>
+						<button
+							type="button"
+							@click="doUpload()"
+							:disabled="uploadWorking || !uploadContent || !uploadName"
+							class="flex items-center gap-1.5 px-4 h-[34px] rounded-[7px] bg-accent text-[#161619] text-[12px] font-semibold hover:bg-accent/90 transition-colors disabled:opacity-40"
+						>
+							<span x-show="!uploadWorking">Upload</span>
+							<span x-show="uploadWorking" class="animate-pulse">uploading…</span>
+						</button>
 					</div>
 				</div>
-				<!-- error -->
-				<p x-show="uploadError" x-text="uploadError" class="text-[11px] text-rem -mt-2"></p>
-				<!-- actions -->
-				<div class="flex items-center justify-end gap-3 pt-1">
-					<button
-						type="button"
-						@click="closeUpload()"
-						:disabled="uploadWorking"
-						class="text-[12px] text-ink-3 hover:text-ink transition-colors disabled:opacity-40"
-					>Cancel</button>
-					<button
-						type="button"
-						@click="doUpload()"
-						:disabled="uploadWorking || !uploadContent || !uploadName"
-						class="flex items-center gap-1.5 px-4 h-[34px] rounded-[7px] bg-accent text-[#161619] text-[12px] font-semibold hover:bg-accent/90 transition-colors disabled:opacity-40"
-					>
-						<span x-show="!uploadWorking">Upload</span>
-						<span x-show="uploadWorking" class="animate-pulse">uploading…</span>
-					</button>
-				</div>
 			</div>
-		</div>
 		</div>
 	}
 }

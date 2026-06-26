@@ -81,6 +81,44 @@ func (h *resourceHandlers) handleList() gin.HandlerFunc {
 	}
 }
 
+func (h *resourceHandlers) handleDelete() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		if err := h.resources.Forget(c.Request.Context(), id); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}
+}
+
+func (h *resourceHandlers) handleUpdateMeta() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		var req struct {
+			Tags []string `json:"tags"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		res, err := h.resources.Get(c.Request.Context(), id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		meta := res.Meta
+		if req.Tags != nil {
+			meta.Tags = req.Tags
+		}
+		if err := h.resources.UpdateMeta(c.Request.Context(), id, meta); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}
+}
+
 type recallRequest struct {
 	Query string `json:"query"`
 	Limit int    `json:"limit"`
