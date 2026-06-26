@@ -9,7 +9,7 @@ import (
 
 templ List(sessions []*appsession.SessionMetadata, availablePlugins []string) {
 	@layout.Base("Sessions") {
-		@layout.TopbarSimple()
+		@layout.Topbar(layout.Crumb{Label: "sessions"})
 		<main class="flex-1 overflow-auto [scrollbar-gutter:stable]">
 			<div class="max-w-3xl mx-auto px-6 py-10">
 				<div class="flex items-end justify-between mb-6">
@@ -30,9 +30,9 @@ templ List(sessions []*appsession.SessionMetadata, availablePlugins []string) {
 				<div
 					x-data="{
 						search: '',
-						showActive: true,
-						showArchived: false,
-						showSiblings: false,
+						showActive: $persist(true).as('forge:sessions:showActive'),
+						showArchived: $persist(false).as('forge:sessions:showArchived'),
+						showSiblings: $persist(false).as('forge:sessions:showSiblings'),
 						selectedPlugins: [],
 						matches(el) {
 							const s = this.search.toLowerCase();
@@ -44,7 +44,7 @@ templ List(sessions []*appsession.SessionMetadata, availablePlugins []string) {
 							return true;
 						}
 					}"
-					@plugin-filter="selectedPlugins = $event.detail.selected"
+					@multiselect-change="selectedPlugins = $event.detail.selected"
 				>
 					<div class="flex flex-wrap items-center gap-2 mb-4">
 						<div class="relative flex-1 min-w-48">
