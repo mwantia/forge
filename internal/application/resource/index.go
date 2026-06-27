@@ -130,7 +130,13 @@ func (s *ResourceService) indexContent(ctx context.Context, id string, res *domr
 		return
 	}
 
-	vecs, err := s.provider.Embed(ctx, s.embedProvider, s.embedModel, res.Content)
+	content, err := s.applyEmbedTemplate(res.Content)
+	if err != nil {
+		s.logger.Warn("Embed template render failed; skipping index", "id", id, "error", err)
+		return
+	}
+
+	vecs, err := s.provider.Embed(ctx, s.embedProvider, s.embedModel, content)
 	if err != nil || len(vecs) == 0 {
 		s.logger.Warn("Embed failed for resource; skipping index", "id", id, "error", err)
 		return
@@ -165,7 +171,13 @@ func (s *ResourceService) recallSemantic(ctx context.Context, query string, q do
 		return nil, false
 	}
 
-	qvecs, err := s.provider.Embed(ctx, s.embedProvider, s.embedModel, query)
+	rendered, err := s.applyEmbedTemplate(query)
+	if err != nil {
+		s.logger.Warn("Embed template render failed; falling back to substring", "error", err)
+		return nil, false
+	}
+
+	qvecs, err := s.provider.Embed(ctx, s.embedProvider, s.embedModel, rendered)
 	if err != nil || len(qvecs) == 0 {
 		s.logger.Warn("Embed failed for recall query; falling back to substring", "error", err)
 		return nil, false

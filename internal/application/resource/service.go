@@ -13,6 +13,7 @@ import (
 	inframetrics "github.com/mwantia/forge/internal/infrastructure/metrics"
 	infraserver "github.com/mwantia/forge/internal/infrastructure/server"
 	infrastorage "github.com/mwantia/forge/internal/infrastructure/storage"
+	infratemplate "github.com/mwantia/forge/internal/infrastructure/template"
 )
 
 type ResourceService struct {
@@ -21,16 +22,22 @@ type ResourceService struct {
 	defaultStore resourceStore // built-in DAG store, sole storage backend
 	idx          *vectorIndex  // shared flat vector index for semantic recall
 
-	provider domprovider.ProviderRegistar `fabric:"inject"`
-	metrics  inframetrics.MetricsRegistar `fabric:"inject"`
-	router   infraserver.HttpRouter       `fabric:"inject"`
-	storage  infrastorage.StorageBackend  `fabric:"inject"`
-	tools    domtool.ToolsRegistar        `fabric:"inject"`
-	config   ResourceConfig               `fabric:"config=resource"`
-	logger   hclog.Logger                 `fabric:"logger=resource"`
+	provider domprovider.ProviderRegistar        `fabric:"inject"`
+	metrics  inframetrics.MetricsRegistar        `fabric:"inject"`
+	router   infraserver.HttpRouter              `fabric:"inject"`
+	storage  infrastorage.StorageBackend         `fabric:"inject"`
+	tools    domtool.ToolsRegistar               `fabric:"inject"`
+	tmpl     infratemplate.TemplateRenderer      `fabric:"inject"`
+	config   ResourceConfig                      `fabric:"config=resource"`
+	logger   hclog.Logger                        `fabric:"logger=resource"`
 
 	embedProvider string
 	embedModel    string
+	embedTemplate string
+
+	uploadMaxBytes uint64
+	uploadExts     []string
+	uploadOptimize bool
 }
 
 func init() {
@@ -54,14 +61,23 @@ func (s *ResourceService) PostInit(ctx context.Context) error {
 	s.defaultStore = newDagResourceStore(s.storage)
 	s.idx = newVectorIndex()
 
-	if s.config.EmbedModel != "" {
-		p, m, err := s.provider.ResolveEmbedModel(ctx, s.config.EmbedModel)
+	maxBytes, err := s.config.Upload.GetFilesize()
+	if err != nil {
+		return fmt.Errorf("resource upload.filesize: %w", err)
+	}
+	s.uploadMaxBytes = maxBytes
+	s.uploadExts = s.config.Upload.GetExtensions()
+	s.uploadOptimize = s.config.Upload.GetOptimize()
+
+	if alias := s.config.Embed.GetModel(); alias != "" {
+		p, m, err := s.provider.ResolveEmbedModel(ctx, alias)
 		if err != nil {
-			return fmt.Errorf("resource embed_model: %w", err)
+			return fmt.Errorf("resource embed.model: %w", err)
 		}
 		s.embedProvider = p
 		s.embedModel = m
-		s.logger.Debug("Resolved resource embed model", "alias", s.config.EmbedModel, "provider", p, "model", m)
+		s.embedTemplate = s.config.Embed.GetTemplate()
+		s.logger.Debug("Resolved resource embed model", "alias", alias, "provider", p, "model", m)
 	}
 
 	for _, definition := range ToolsDefinitions {
@@ -100,6 +116,17 @@ func (s *ResourceService) Serve(_ context.Context) error {
 
 func (s *ResourceService) Cleanup(context.Context) error {
 	return nil
+}
+
+// applyEmbedTemplate renders s.embedTemplate with the given content bound to
+// {{ .embed }}. All base template vars (runtime, env, …) remain accessible.
+func (s *ResourceService) applyEmbedTemplate(content string) (string, error) {
+	t, err := s.tmpl.Clone(infratemplate.WithAnyValue("embed", content))
+	if err != nil {
+		return "", fmt.Errorf("clone embed template: %w", err)
+	}
+
+	return t.RenderBody(s.embedTemplate)
 }
 
 var _ approot.Service = (*ResourceService)(nil)

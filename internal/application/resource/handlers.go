@@ -30,6 +30,10 @@ func (s *ResourceService) handleStoreResource() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		if s.uploadMaxBytes > 0 && uint64(len(req.Content)) > s.uploadMaxBytes {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "content exceeds upload.filesize limit"})
+			return
+		}
 		res, err := s.Store(c.Request.Context(), req.Content, req.CommitMessage, req.Meta)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -48,6 +52,10 @@ func (s *ResourceService) handleCommitResource() gin.HandlerFunc {
 		var req commitResourceRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if s.uploadMaxBytes > 0 && uint64(len(req.Content)) > s.uploadMaxBytes {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "content exceeds upload.filesize limit"})
 			return
 		}
 		res, err := s.Commit(c.Request.Context(), id, req.Content, req.CommitMessage)
