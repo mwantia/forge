@@ -55,16 +55,19 @@ func (s *PipelineService) RunSessionPipeline(ctx context.Context, sess *Session,
 
 	start := time.Now()
 
-	providerName, modelName, ok := s.splitModelName(sess.Metadata.Model)
-	if !ok {
-		return fmt.Errorf("invalid model format, expected '<provider>/<model>', got '%s'", sess.Metadata.Model)
+	providerName, modelName, _ := s.splitModelName(sess.Metadata.Model)
+
+	if providerName == "" {
+		s.logger.Debug("Pipeline start", "session", sess.SessionID, "agent", modelName, "ref", sess.Ref)
+	} else {
+		s.logger.Debug("Pipeline start", "session", sess.SessionID, "provider", providerName, "model", modelName, "ref", sess.Ref)
 	}
 
 	messages := make([]provider.ChatMessage, len(sess.Messages))
 	copy(messages, sess.Messages)
 
 	for i := range s.config.MaxToolIterations {
-		s.logger.Trace("Pipeline iteration", "iteration", i+1, "session", sess.SessionID)
+		s.logger.Trace("Pipeline iteration", "iteration", i+1, "session", sess.SessionID, "messages", len(messages))
 
 		content, toolCalls, finalChunk, err := s.chatWithRetry(ctx, providerName, modelName, messages, sess.ToolCalls, out, sess.Policy, i+1)
 		if err != nil {
@@ -274,6 +277,12 @@ func (s *PipelineService) chatWithRetry(ctx context.Context, providerName, model
 			return "", nil, nil, err
 		}
 
+		if providerName == "" {
+			s.logger.Debug("Chat dispatch", "iteration", iteration, "attempt", attempt, "agent", modelName, "messages", len(messages), "tools", len(tools))
+		} else {
+			s.logger.Debug("Chat dispatch", "iteration", iteration, "attempt", attempt, "provider", providerName, "model", modelName, "messages", len(messages), "tools", len(tools))
+		}
+
 		stream, err := s.provider.Chat(ctx, providerName, modelName, messages, tools)
 		if err != nil {
 			lastErr = err
@@ -425,13 +434,15 @@ func marshalResult(v any) string {
 	return string(b)
 }
 
+// splitModelName splits "provider/model" into its parts. Bare names (no slash)
+// are treated as agent names and returned with an empty provider component.
+// The bool return is always true; it exists to satisfy the buildModelData
+// function signature without breaking callers.
 func (s *PipelineService) splitModelName(modelName string) (string, string, bool) {
-	parts := strings.SplitN(modelName, "/", 2)
-	if len(parts) != 2 {
-		return "", "", false
+	if p, m, ok := strings.Cut(modelName, "/"); ok {
+		return strings.ToLower(p), m, true
 	}
-
-	return strings.ToLower(parts[0]), strings.ToLower(parts[1]), true
+	return "", modelName, true
 }
 
 var _ PipelineExecutor = (*PipelineService)(nil)

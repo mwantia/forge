@@ -198,6 +198,17 @@ func (s *PipelineService) CommitSync(ctx context.Context, sessionID, ref, conten
 		return "", err
 	}
 
+	turns := 0
+	for _, m := range run.sess.Messages {
+		if m.Role != "system" {
+			turns++
+		}
+	}
+	ctx = domprovider.WithConstraintContext(ctx, domprovider.ConstraintContext{
+		Mode:  appsession.ModeOrDefault(meta.Mode),
+		Turns: turns,
+	})
+
 	out := make(chan PipelineEvent, 32)
 	go func() {
 		if err := s.RunSessionPipeline(ctx, run.sess, out); err != nil {
@@ -253,6 +264,17 @@ func (s *PipelineService) CommitEvents(ctx context.Context, sessionID, ref, cont
 	if err != nil {
 		return nil, err
 	}
+
+	turns := 0
+	for _, m := range run.sess.Messages {
+		if m.Role != "system" {
+			turns++
+		}
+	}
+	ctx = domprovider.WithConstraintContext(ctx, domprovider.ConstraintContext{
+		Mode:  resolvedMode,
+		Turns: turns,
+	})
 
 	out := make(chan PipelineEvent, 32)
 	go func() {
