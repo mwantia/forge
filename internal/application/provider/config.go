@@ -3,12 +3,15 @@ package provider
 import domprovider "github.com/mwantia/forge/internal/domain/provider"
 
 const (
-	ModelTypeChat  = domprovider.ModelTypeChat
-	ModelTypeEmbed = domprovider.ModelTypeEmbed
+	ModelTypeAgent = domprovider.ModelTypeAgent
+	ModelTypeModel = domprovider.ModelTypeModel
 )
 
 type (
-	ProviderConfig        = domprovider.ProviderConfig
-	ProviderModelTemplate = domprovider.ProviderModelTemplate
-	ProviderModelOptions  = domprovider.ProviderModelOptions
+	ProviderConfig       = domprovider.ProviderConfig
+	AgentConfig          = domprovider.AgentConfig
+	AgentModelCandidate  = domprovider.AgentModelCandidate
+	AgentConstraint      = domprovider.AgentConstraint
+	ProviderModelOptions = domprovider.ProviderModelOptions
+	ListModelsQuery      = domprovider.ListModelsQuery
 )

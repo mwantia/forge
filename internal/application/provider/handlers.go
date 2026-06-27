@@ -2,30 +2,26 @@ package provider
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 // handleListAllModels godoc
 //
-//	@Description	Returns a unified flat list of all models: forge aliases (without the forge/ prefix) followed by provider-supplied models.
-//	@Description	Pass ?type=chat or ?type=embed to filter to locally configured aliases of that type.
+//	@Description	Returns a unified flat list of agents and raw provider models.
+//	@Description	Query params: type=agent|model, provider=<name>, name=<substr>, sort=name|size|modified_at, order=asc|desc
 func (s *ProviderService) handleListAllModels() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		models, err := s.ListAllModels(c.Request.Context())
+		q := ListModelsQuery{
+			Type:     c.Query("type"),
+			Provider: c.Query("provider"),
+			Name:     c.Query("name"),
+			Sort:     c.Query("sort"),
+			Order:    c.Query("order"),
+		}
+		models, err := s.ListAllModels(c.Request.Context(), q)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		if kind := c.Query("type"); kind != "" {
-			filtered := models[:0:0]
-			for _, m := range models {
-				if m.Type == kind {
-					filtered = append(filtered, m)
-				}
-			}
-			c.JSON(http.StatusOK, gin.H{"models": filtered})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"models": models})
@@ -120,19 +116,9 @@ func (s *ProviderService) handleEmbed() gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 
-		// Resolve forge alias or split "provider/model".
-		var providerName, modelName string
-		if strings.HasPrefix(req.Model, "forge/") {
-			p, m, err := s.ResolveEmbedModel(ctx, strings.TrimPrefix(req.Model, "forge/"))
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-			providerName, modelName = p, m
-		} else if p, m, ok := strings.Cut(req.Model, "/"); ok {
-			providerName, modelName = p, m
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "model must be \"provider/model\" or \"forge/<alias>\""})
+		providerName, modelName, err := s.ResolveEmbedModel(ctx, req.Model)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
