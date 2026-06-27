@@ -11,7 +11,7 @@ type ProviderRegistar interface {
 	Chat(ctx context.Context, providerName, modelName string, messages []provider.ChatMessage, tools []provider.ToolCall) (provider.ChatStream, error)
 	Embed(ctx context.Context, providerName, modelName, content string) ([][]float32, error)
 
-	ListAllModels(ctx context.Context) (map[string][]*provider.Model, []*ProviderModelTemplate, error)
+	ListAllModels(ctx context.Context) ([]*ModelInfo, error)
 	ListModels(ctx context.Context, providerName string) ([]*provider.Model, error)
 	ListModelsByType(ctx context.Context, kind string) ([]*ProviderModelTemplate, error)
 	GetModel(ctx context.Context, providerName, modelName string) (*provider.Model, error)

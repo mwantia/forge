@@ -119,22 +119,55 @@ func (s *ProviderService) Embed(ctx context.Context, providerName, modelName, co
 	return p.Embed(ctx, content, s.resolveModel(providerName, modelName))
 }
 
-func (s *ProviderService) ListAllModels(ctx context.Context) (map[string][]*provider.Model, []*ProviderModelTemplate, error) {
+func (s *ProviderService) ListAllModels(ctx context.Context) ([]*domprovider.ModelInfo, error) {
 	s.mu.RLock()
 	providers := make(map[string]provider.ProviderPlugin, len(s.providers))
 	maps.Copy(providers, s.providers)
 	s.mu.RUnlock()
 
-	result := make(map[string][]*provider.Model, len(providers))
+	var result []*domprovider.ModelInfo
+
+	for _, tmpl := range s.configs.Models {
+		info := &domprovider.ModelInfo{
+			Name:      tmpl.Name,
+			Type:      modelType(tmpl),
+			BaseModel: tmpl.BaseModel,
+			System:    tmpl.System,
+			Options:   tmpl.Options,
+		}
+		if tmpl.CostPerInputToken != 0 || tmpl.CostPerOutputToken != 0 {
+			info.Cost = &domprovider.ModelCost{
+				InputToken:  tmpl.CostPerInputToken,
+				OutputToken: tmpl.CostPerOutputToken,
+			}
+		}
+		if tmpl.ContextWindowSize != "" {
+			info.Context = &domprovider.ModelContext{
+				WindowSize: tmpl.ContextWindowSize,
+			}
+		}
+		result = append(result, info)
+	}
+
 	for name, p := range providers {
 		models, err := p.ListModels(ctx)
 		if err != nil {
 			s.logger.Warn("Failed to list models", "provider", name, "error", err)
 			continue
 		}
-		result[name] = models
+		for _, m := range models {
+			result = append(result, &domprovider.ModelInfo{
+				Name:       name + "/" + m.ModelName,
+				ModifiedAt: m.ModifiedAt,
+				Size:       m.Size,
+				Digest:     m.Digest,
+				Details:    m.Details,
+				Metadata:   m.Metadata,
+			})
+		}
 	}
-	return result, s.configs.Models, nil
+
+	return result, nil
 }
 
 func (s *ProviderService) ListModels(ctx context.Context, providerName string) ([]*provider.Model, error) {

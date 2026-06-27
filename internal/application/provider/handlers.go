@@ -9,24 +9,26 @@ import (
 
 // handleListAllModels godoc
 //
-//	@Description	Returns all models from every provider alongside locally configured model templates
+//	@Description	Returns a unified flat list of all models: forge aliases (without the forge/ prefix) followed by provider-supplied models.
+//	@Description	Pass ?type=chat or ?type=embed to filter to locally configured aliases of that type.
 func (s *ProviderService) handleListAllModels() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if kind := c.Query("type"); kind != "" {
-			local, err := s.ListModelsByType(c.Request.Context(), kind)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"local": local})
-			return
-		}
-		models, local, err := s.ListAllModels(c.Request.Context())
+		models, err := s.ListAllModels(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"models": models, "local": local})
+		if kind := c.Query("type"); kind != "" {
+			filtered := models[:0:0]
+			for _, m := range models {
+				if m.Type == kind {
+					filtered = append(filtered, m)
+				}
+			}
+			c.JSON(http.StatusOK, gin.H{"models": filtered})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"models": models})
 	}
 }
 

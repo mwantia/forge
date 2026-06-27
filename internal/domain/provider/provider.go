@@ -3,6 +3,8 @@ package provider
 import (
 	"strconv"
 	"strings"
+
+	sdkprovider "github.com/mwantia/forge-sdk/pkg/plugin/provider"
 )
 
 const (
@@ -60,8 +62,39 @@ func parseTokenCount(s string) int {
 // ProviderModelOptions maps to model generation parameters.
 // All fields are pointers so zero values can be distinguished from "not set".
 type ProviderModelOptions struct {
-	Temperature *float64 `hcl:"temperature,optional"`
-	NumPredict  *int     `hcl:"num_predict,optional"`
-	TopP        *float64 `hcl:"top_p,optional"`
-	TopK        *int     `hcl:"top_k,optional"`
+	Temperature *float64 `hcl:"temperature,optional" json:"temperature,omitempty"`
+	NumPredict  *int     `hcl:"num_predict,optional" json:"num_predict,omitempty"`
+	TopP        *float64 `hcl:"top_p,optional"       json:"top_p,omitempty"`
+	TopK        *int     `hcl:"top_k,optional"       json:"top_k,omitempty"`
+}
+
+// ModelCost holds per-token pricing for a model.
+type ModelCost struct {
+	InputToken  float64 `json:"input_token,omitempty"`
+	OutputToken float64 `json:"output_token,omitempty"`
+}
+
+// ModelContext holds context-window metadata for a model.
+type ModelContext struct {
+	WindowSize string `json:"window_size,omitempty"`
+}
+
+// ModelInfo is the unified model representation returned by GET /v1/provider/models.
+// Forge-alias fields are populated for locally configured models; Name carries the
+// bare alias without the "forge/" prefix. Provider models use "provider/model" as
+// Name; alias fields are absent and provider-supplied fields are populated instead.
+type ModelInfo struct {
+	Name      string                `json:"name"`
+	Type      string                `json:"type,omitempty"`
+	BaseModel string                `json:"base_model,omitempty"`
+	System    string                `json:"system,omitempty"`
+	Options   *ProviderModelOptions `json:"options,omitempty"`
+	Cost      *ModelCost            `json:"cost,omitempty"`
+	Context   *ModelContext         `json:"context,omitempty"`
+
+	ModifiedAt string                  `json:"modified_at,omitempty"`
+	Size       int64                   `json:"size,omitempty"`
+	Digest     string                  `json:"digest,omitempty"`
+	Details    *sdkprovider.ModelDetails `json:"details,omitempty"`
+	Metadata   map[string]any          `json:"metadata,omitempty"`
 }
