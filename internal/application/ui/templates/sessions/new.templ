@@ -5,7 +5,7 @@ import (
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
 
-templ New(models []*domprovider.ProviderModelTemplate, availablePlugins []string) {
+templ New(models []*domprovider.ModelInfo, availablePlugins []string) {
 	@layout.Base("New Session") {
 		@layout.Topbar(layout.Crumb{Label: "sessions", Href: "/ui/sessions"}, layout.Crumb{Label: "new"})
 		<main class="flex-1 overflow-auto [scrollbar-gutter:stable]">
@@ -31,7 +31,11 @@ templ New(models []*domprovider.ProviderModelTemplate, availablePlugins []string
 								class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors"
 							>
 								for _, m := range models {
-									<option value={ "forge/" + m.Name }>{ m.Name }</option>
+									if m.BaseModel != "" {
+										<option value={ "forge/" + m.Name }>{ m.Name }</option>
+									} else {
+										<option value={ m.Name }>{ m.Name }</option>
+									}
 								}
 							</select>
 						} else {

@@ -7,7 +7,7 @@ import (
 
 // SessionEditForm renders an inline edit form for session metadata.
 // Submitted via hx-patch; on success the server returns SessionInfoCard.
-templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models []*domprovider.ProviderModelTemplate) {
+templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models []*domprovider.ModelInfo) {
 	<form
 		hx-patch={ "/ui/sessions/" + sessionID }
 		hx-target="#left-panel-content"
@@ -86,13 +86,21 @@ templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models
 						class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink focus:outline-none focus:border-accent/50 transition-colors"
 					>
 						for _, m := range models {
-							if "forge/" + m.Name == meta.Model {
-								<option value={ "forge/" + m.Name } selected>{ m.Name }</option>
+							if m.BaseModel != "" {
+								if "forge/" + m.Name == meta.Model {
+									<option value={ "forge/" + m.Name } selected>{ m.Name }</option>
+								} else {
+									<option value={ "forge/" + m.Name }>{ m.Name }</option>
+								}
 							} else {
-								<option value={ "forge/" + m.Name }>{ m.Name }</option>
+								if m.Name == meta.Model {
+									<option value={ m.Name } selected>{ m.Name }</option>
+								} else {
+									<option value={ m.Name }>{ m.Name }</option>
+								}
 							}
 						}
-						<!-- allow current model even if not in alias list -->
+						<!-- allow current model even if not in list -->
 						if !modelInList(models, meta.Model) {
 							<option value={ meta.Model } selected>{ meta.Model }</option>
 						}
@@ -122,9 +130,13 @@ templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models
 	</form>
 }
 
-func modelInList(models []*domprovider.ProviderModelTemplate, current string) bool {
+func modelInList(models []*domprovider.ModelInfo, current string) bool {
 	for _, m := range models {
-		if "forge/"+m.Name == current {
+		val := m.Name
+		if m.BaseModel != "" {
+			val = "forge/" + m.Name
+		}
+		if val == current {
 			return true
 		}
 	}

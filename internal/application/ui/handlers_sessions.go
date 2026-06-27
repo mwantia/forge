@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	appsession "github.com/mwantia/forge/internal/application/session"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
-	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
 
 type sessionHandlers struct {
@@ -54,11 +53,7 @@ func (h *sessionHandlers) handleList() gin.HandlerFunc {
 
 func (h *sessionHandlers) handleNew() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var models []*domprovider.ProviderModelTemplate
-		if h.providers != nil {
-			models, _ = h.providers.ListModelsByType(c.Request.Context(), domprovider.ModelTypeChat)
-		}
-
+		models := chatModels(c.Request.Context(), h.providers)
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		_ = tmplsessions.New(models, h.pluginNamespaces()).Render(c.Request.Context(), c.Writer)
@@ -191,11 +186,7 @@ func (h *sessionHandlers) handleEdit() gin.HandlerFunc {
 			return
 		}
 
-		var models []*domprovider.ProviderModelTemplate
-		if h.providers != nil {
-			models, _ = h.providers.ListModelsByType(ctx, domprovider.ModelTypeChat)
-		}
-
+		models := chatModels(ctx, h.providers)
 		c.Status(http.StatusOK)
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		_ = tmplsessions.SessionEditForm(meta.ID, meta, models).Render(ctx, c.Writer)

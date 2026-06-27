@@ -6,7 +6,27 @@ import (
 
 	appsession "github.com/mwantia/forge/internal/application/session"
 	tmplsessions "github.com/mwantia/forge/internal/application/ui/templates/sessions"
+	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
+
+// chatModels returns all models suitable for chat sessions: all forge aliases
+// except embed-type, plus every raw provider model (which has no declared type).
+func chatModels(ctx context.Context, providers modelLister) []*domprovider.ModelInfo {
+	if providers == nil {
+		return nil
+	}
+	all, err := providers.ListAllModels(ctx)
+	if err != nil {
+		return nil
+	}
+	out := make([]*domprovider.ModelInfo, 0, len(all))
+	for _, m := range all {
+		if m.Type != domprovider.ModelTypeEmbed {
+			out = append(out, m)
+		}
+	}
+	return out
+}
 
 // lastAssistantTokens returns the TotalTokens from the last assistant message
 // in msgs that carries usage data. Returns 0 if no such message exists.
