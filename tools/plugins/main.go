@@ -42,13 +42,14 @@ var fileTmpl = template.Must(template.New("plugins").Parse(
 //go:build all
 
 package main
-
+{{if .}}
 import (
 {{- range .}}
 	_ "{{.ResolvedImport}}"
 {{- end}}
 )
-`))
+{{end}}`))
+
 
 func main() {
 	manifest := flag.String("manifest", "plugins.yaml", "path to plugins manifest")
@@ -65,25 +66,21 @@ func main() {
 		log.Fatalf("parse manifest: %v", err)
 	}
 
-	if len(m.Plugins) == 0 {
-		log.Fatal("manifest contains no plugins")
-	}
-
 	manifestAbs, err := filepath.Abs(*manifest)
 	if err != nil {
 		log.Fatalf("resolve manifest path: %v", err)
 	}
 	manifestDir := filepath.Dir(manifestAbs)
 
-	// If any plugin uses a local path, rebuild go.work from scratch so it
-	// always mirrors exactly what is in plugins.yaml. This prevents stale
-	// `use` entries from accumulating when plugins are added or removed.
-	// Also reset go.mod replace directives for plugins so go mod tidy can
-	// resolve them locally instead of hitting the network.
+	// Drop stale plugin replace directives — any forge-plugin-* replace not
+	// present in the current manifest is removed so go.mod stays in sync.
+	if err := dropStalePluginReplaces(manifestDir, m.Plugins); err != nil {
+		log.Fatalf("drop stale plugin replaces: %v", err)
+	}
+
+	// Reset go.mod replace directives for local plugins so go mod tidy can
+	// resolve them locally without hitting the network.
 	if hasLocalPlugins(m.Plugins) {
-		if err := resetWorkspace(manifestDir); err != nil {
-			log.Fatalf("reset workspace: %v", err)
-		}
 		if err := resetGoModPluginReplaces(manifestDir, m.Plugins); err != nil {
 			log.Fatalf("reset go.mod plugin replaces: %v", err)
 		}
@@ -125,34 +122,6 @@ func hasLocalPlugins(plugins []Plugin) bool {
 	return false
 }
 
-// resetWorkspace deletes any existing go.work / go.work.sum and creates a
-// fresh workspace containing just the service module and ../shared. Plugin
-// modules are added afterwards by resolveModule.
-func resetWorkspace(moduleDir string) error {
-	for _, f := range []string{"go.work", "go.work.sum"} {
-		path := filepath.Join(moduleDir, f)
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("remove %s: %w", f, err)
-		}
-	}
-	log.Printf("  go work init .")
-	if err := run(moduleDir, "go", "work", "init", "."); err != nil {
-		return fmt.Errorf("go work init: %w", err)
-	}
-	// Include the SDK so the ../shared replace in go.mod is workspace-aware.
-	sharedAbs, err := filepath.Abs(filepath.Join(moduleDir, "../shared"))
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stat(sharedAbs); err == nil {
-		log.Printf("  go work use %s", sharedAbs)
-		if err := run(moduleDir, "go", "work", "use", sharedAbs); err != nil {
-			return fmt.Errorf("go work use shared: %w", err)
-		}
-	}
-	return nil
-}
-
 func resolveModule(manifestDir string, p Plugin) error {
 	if p.Local != "" && p.Version != "" {
 		log.Printf("warning: %q has both local and version set — local takes precedence", p.Name)
@@ -166,10 +135,6 @@ func resolveModule(manifestDir string, p Plugin) error {
 		if _, err := os.Stat(localAbs); err != nil {
 			return fmt.Errorf("local path %q does not exist: %w", localAbs, err)
 		}
-		log.Printf("  go work use %s", localAbs)
-		if err := run(manifestDir, "go", "work", "use", localAbs); err != nil {
-			return err
-		}
 		// go mod tidy does not use go.work for resolution; add a replace
 		// directive so it can resolve the package locally without network access.
 		replace := p.Module + "=" + localAbs
@@ -182,6 +147,43 @@ func resolveModule(manifestDir string, p Plugin) error {
 		return run(manifestDir, "go", "get", p.Module+"@"+p.Version)
 	}
 
+	return nil
+}
+
+// dropStalePluginReplaces removes any go.mod replace directives whose old
+// path contains "forge-plugin-" but whose module is not in the current
+// manifest. This keeps go.mod in sync when plugins are removed or renamed.
+func dropStalePluginReplaces(moduleDir string, plugins []Plugin) error {
+	inManifest := make(map[string]bool, len(plugins))
+	for _, p := range plugins {
+		inManifest[p.Module] = true
+	}
+
+	gomod := filepath.Join(moduleDir, "go.mod")
+	data, err := os.ReadFile(gomod)
+	if err != nil {
+		return err
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "github.com/mwantia/forge-plugin-") {
+			continue
+		}
+		// replace line format: <module> <version> => <path>
+		module := strings.Fields(line)[0]
+		if inManifest[module] {
+			continue
+		}
+		log.Printf("  go mod edit -dropreplace=%s", module)
+		if err := run(moduleDir, "go", "mod", "edit", "-dropreplace="+module); err != nil {
+			return fmt.Errorf("dropreplace %s: %w", module, err)
+		}
+		log.Printf("  go mod edit -droprequire=%s", module)
+		if err := run(moduleDir, "go", "mod", "edit", "-droprequire="+module); err != nil {
+			return fmt.Errorf("droprequire %s: %w", module, err)
+		}
+	}
 	return nil
 }
 
