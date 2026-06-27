@@ -9,23 +9,18 @@ import (
 	domprovider "github.com/mwantia/forge/internal/domain/provider"
 )
 
-// chatModels returns all models suitable for chat sessions: all forge aliases
-// except embed-type, plus every raw provider model (which has no declared type).
+// chatModels returns all models and agents from the provider registry.
+// No embed filtering is applied — providers do not reliably signal modality,
+// so all items are presented and the user chooses.
 func chatModels(ctx context.Context, providers modelLister) []*domprovider.ModelInfo {
 	if providers == nil {
 		return nil
 	}
-	all, err := providers.ListAllModels(ctx)
+	all, err := providers.ListAllModels(ctx, domprovider.ListModelsQuery{})
 	if err != nil {
 		return nil
 	}
-	out := make([]*domprovider.ModelInfo, 0, len(all))
-	for _, m := range all {
-		if m.Type != domprovider.ModelTypeEmbed {
-			out = append(out, m)
-		}
-	}
-	return out
+	return all
 }
 
 // lastAssistantTokens returns the TotalTokens from the last assistant message
@@ -40,16 +35,18 @@ func lastAssistantTokens(msgs []*appsession.Message) int {
 	return 0
 }
 
-// resolveWindowSize returns the context window size for the model declared on
-// meta. It splits meta.Model on "/" and calls GetModel; returns 0 when the
-// provider is unavailable or the model doesn't declare a context window.
+// resolveWindowSize returns the context window size for the model or agent
+// declared on meta. For "provider/model" strings it calls GetModel directly;
+// for bare agent names it passes an empty provider so GetModel resolves the
+// agent and reads ContextWindowSize from the agent's context block.
 func resolveWindowSize(ctx context.Context, providers modelLister, meta *appsession.SessionMetadata) int {
 	if providers == nil || meta == nil {
 		return 0
 	}
 	pname, mname, ok := strings.Cut(meta.Model, "/")
 	if !ok {
-		return 0
+		// bare agent name
+		pname, mname = "", meta.Model
 	}
 	m, err := providers.GetModel(ctx, pname, mname)
 	if err != nil || m == nil {

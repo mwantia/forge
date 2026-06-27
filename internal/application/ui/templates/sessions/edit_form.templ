@@ -86,18 +86,10 @@ templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models
 						class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink focus:outline-none focus:border-accent/50 transition-colors"
 					>
 						for _, m := range models {
-							if m.BaseModel != "" {
-								if "forge/" + m.Name == meta.Model {
-									<option value={ "forge/" + m.Name } selected>{ m.Name }</option>
-								} else {
-									<option value={ "forge/" + m.Name }>{ m.Name }</option>
-								}
+							if m.Name == meta.Model {
+								<option value={ m.Name } selected>{ m.Name }</option>
 							} else {
-								if m.Name == meta.Model {
-									<option value={ m.Name } selected>{ m.Name }</option>
-								} else {
-									<option value={ m.Name }>{ m.Name }</option>
-								}
+								<option value={ m.Name }>{ m.Name }</option>
 							}
 						}
 						<!-- allow current model even if not in list -->
@@ -110,7 +102,7 @@ templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models
 						type="text"
 						name="model"
 						value={ meta.Model }
-						placeholder="e.g. forge/assistant"
+						placeholder="e.g. assistant or ollama/llama3.2"
 						class="w-full bg-bg border border-line rounded px-2 py-1 text-ui-code text-ink placeholder:text-ink-4 focus:outline-none focus:border-accent/50 transition-colors"
 					/>
 				}
@@ -132,11 +124,7 @@ templ SessionEditForm(sessionID string, meta *appsession.SessionMetadata, models
 
 func modelInList(models []*domprovider.ModelInfo, current string) bool {
 	for _, m := range models {
-		val := m.Name
-		if m.BaseModel != "" {
-			val = "forge/" + m.Name
-		}
-		if val == current {
+		if m.Name == current {
 			return true
 		}
 	}

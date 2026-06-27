@@ -31,11 +31,7 @@ templ New(models []*domprovider.ModelInfo, availablePlugins []string) {
 								class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink focus:outline-none focus:border-line-strong transition-colors"
 							>
 								for _, m := range models {
-									if m.BaseModel != "" {
-										<option value={ "forge/" + m.Name }>{ m.Name }</option>
-									} else {
-										<option value={ m.Name }>{ m.Name }</option>
-									}
+									<option value={ m.Name }>{ m.Name }</option>
 								}
 							</select>
 						} else {
@@ -44,7 +40,7 @@ templ New(models []*domprovider.ModelInfo, availablePlugins []string) {
 								name="model"
 								type="text"
 								required
-								placeholder="e.g. forge/assistant or ollama/llama3.2"
+								placeholder="e.g. assistant or ollama/llama3.2"
 								class="w-full bg-bg-1 border border-line rounded-md px-3 py-2 text-ui-ctrl text-ink placeholder:text-ink-4 focus:outline-none focus:border-line-strong transition-colors"
 							/>
 							<p class="text-ui-meta text-ink-4">No model aliases configured — enter a model reference manually.</p>

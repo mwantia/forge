@@ -35,7 +35,7 @@ type namespaceLister interface {
 
 // modelLister is the narrow surface UIService needs from ProviderRegistar.
 type modelLister interface {
-	ListAllModels(ctx context.Context) ([]*domprovider.ModelInfo, error)
+	ListAllModels(ctx context.Context, q domprovider.ListModelsQuery) ([]*domprovider.ModelInfo, error)
 	GetModel(ctx context.Context, providerName, modelName string) (*provider.Model, error)
 }
 
