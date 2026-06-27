@@ -139,8 +139,6 @@ require (
 
 replace github.com/mwantia/forge-sdk => ../sdk
 
-replace github.com/mwantia/forge-plugin-plane => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/plane
-
 replace github.com/mwantia/forge-plugin-openai => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/openai
 
 replace github.com/mwantia/forge-plugin-skills => /home/mwantia/Repositories/02-projects/01-github/01-golang/forge/plugins/skills
